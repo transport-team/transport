@@ -21,6 +21,7 @@
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
+| GET | /api/health | 서버 동작 확인 → `{"status":"ok"}` | 전체 |
 | POST | /api/auth/signup | 회원가입 (필수 약관 동의, 기사는 PENDING) | 전체 |
 | POST | /api/auth/login | 로그인 → 토큰 · 역할 | 전체 |
 | POST | /api/auth/refresh | 토큰 재발급 | 전체 |
