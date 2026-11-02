@@ -1,0 +1,15 @@
+# Windows · Mac이 섞여 있어도 줄바꿈 차이로 충돌이 나지 않게 통일
+* text=auto eol=lf
+
+# Windows 스크립트는 CRLF 유지
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 바이너리
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.jar binary

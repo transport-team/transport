@@ -1,0 +1,24 @@
+# 로컬 개발용 MariaDB — 팀원 모두 같은 DB를 각자 PC에 띄운다
+# 실행: docker compose up -d   /   중지: docker compose down   /   초기화: docker compose down -v
+services:
+  db:
+    image: mariadb:11.4            # 수업에서 쓰는 MariaDB 버전과 맞출 것
+    container_name: transport-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root1234
+      MARIADB_DATABASE: transportdb
+      MARIADB_USER: transport
+      MARIADB_PASSWORD: transport1234
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"                # PC에 MariaDB가 이미 있으면 "3307:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+09:00
+    volumes:
+      - db-data:/var/lib/mysql
+
+volumes:
+  db-data:

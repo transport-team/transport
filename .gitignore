@@ -1,0 +1,43 @@
+# ===== 비밀 · 개인 설정 (절대 커밋 금지) =====
+application-local.yml
+application-prod.yml
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ===== Backend (Gradle · STS · IntelliJ) =====
+backend/build/
+backend/.gradle/
+backend/bin/
+backend/out/
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.settings/
+.project
+.classpath
+.factorypath
+.springBeans
+.sts4-cache/
+.apt_generated/
+.idea/
+*.iml
+
+# 업로드 파일
+upload/
+uploads/
+
+# ===== Frontend =====
+node_modules/
+frontend/dist/
+dist/
+*.local
+
+# ===== 로그 · OS · 에디터 =====
+*.log
+logs/
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json

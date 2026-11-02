@@ -1,0 +1,22 @@
+# 공통 설정 (공통 파일 — 수정은 PR로, 관리: 팀원 1)
+# 개인 설정 · 키는 application-local.yml (Git 제외)에 둔다
+spring:
+  application:
+    name: transport-api
+  profiles:
+    active: local
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Seoul
+  servlet:
+    multipart:
+      max-file-size: 10MB        # 기본값 1MB면 휴대폰 사진 업로드가 실패한다
+      max-request-size: 30MB
+  jackson:
+    time-zone: Asia/Seoul
+
+server:
+  port: 8080

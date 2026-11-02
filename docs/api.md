@@ -1,0 +1,112 @@
+# API 명세
+
+- 관리: 팀원 3 (Swagger UI와 함께 최신 유지). API를 바꾸는 PR에는 이 문서 수정을 포함한다.
+
+## 공통 규칙
+- 기본 경로 `/api` · 관리자 `/api/admin/**` · 기사 `/api/driver/**`
+- 인증 `Authorization: Bearer {accessToken}` — 401 = 로그인 필요(없음·만료), 403 = 권한 없음
+- 목록: 수업의 `PageRequestDTO`(page, size) / `PageResponseDTO`. 검색 파라미터 이름 `status, from, to, keyword`
+- 에러 응답: `{ "code": "INVALID_STATUS_CHANGE", "message": "배차완료 상태에서만 상차 처리할 수 있습니다." }`
+
+## 에러 코드 (ErrorCode — 도메인별 구역에 각자 추가)
+
+| 구역 | 코드 예시 |
+|---|---|
+| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, TERMS_REQUIRED, DUPLICATE_EMAIL, DRIVER_NOT_APPROVED |
+| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
+| 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
+| 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
+
+## 팀원 1 — 회원 · 인증 · 운영
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| POST | /api/auth/signup | 회원가입 (필수 약관 동의, 기사는 PENDING) | 전체 |
+| POST | /api/auth/login | 로그인 → 토큰 · 역할 | 전체 |
+| POST | /api/auth/refresh | 토큰 재발급 | 전체 |
+| GET · PUT | /api/members/me | 내 정보 조회 · 수정 | 로그인 |
+| GET | /api/terms | 가입 화면 약관 목록 | 전체 |
+| GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
+| GET | /api/faqs | FAQ (category) | 전체 |
+| POST · GET | /api/inquiries, /api/inquiries/my | 문의 등록 · 내 문의 | 로그인 |
+| GET | /api/admin/dashboard | KPI | ADMIN |
+| GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
+| GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
+| POST · PUT · DELETE | /api/admin/notices · /faqs · /terms (/{id}) | 공지 · FAQ · 약관 관리 | ADMIN |
+| PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
+
+## 팀원 2 — 기사 · 차량 · 배차 · 정산
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| GET | /api/vehicle-types | 차종 목록 | 전체 |
+| GET · POST · PUT | /api/admin/vehicle-types(/{id}) | 차종 · 요금 관리 | ADMIN |
+| GET · POST · PUT · DELETE | /api/admin/vehicles(/{id}) | 차량 관리 (DELETE = 비활성화) | ADMIN |
+| GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
+| GET · POST · DELETE | /api/driver/schedules(/{id}) | 내 근무 일정 (month) | DRIVER |
+| GET | /api/admin/dispatches/candidates | 배차 후보 (shipmentId) | ADMIN |
+| POST | /api/admin/dispatches | 배차 { shipmentId, driverId, vehicleId } | ADMIN |
+| PATCH | /api/admin/dispatches/{id}/release | 배차 해제 | ADMIN |
+| GET | /api/driver/dispatches | 내 배차 (tab = today · upcoming · done) | DRIVER |
+| GET | /api/driver/stats | 내 실적 · 평점 (month) | DRIVER |
+| POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
+| PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
+| GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
+
+## 팀원 3 — 배송 접수 · 운임 · 결제
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| GET | /api/cargo-types | 화물 종류 목록 | 전체 |
+| GET · POST · PUT | /api/admin/cargo-types(/{id}) | 화물 종류 관리 | ADMIN |
+| POST | /api/fares/estimate | 예상 운임 → 좌표 · 거리 · 추천 차종 · 운임 내역 | CUSTOMER |
+| POST | /api/shipments | 신청 → 결제대기 + 결제 준비(orderId · amount) | CUSTOMER |
+| POST | /api/payments/confirm | 결제 승인 { paymentKey, orderId, amount } → 접수 | CUSTOMER |
+| POST | /api/shipments/{id}/payment/retry | 재시도 (새 orderId) | CUSTOMER |
+| POST | /api/dev/shipments/{id}/skip-payment | 개발용 결제 건너뛰기 (local 프로필만) | 로그인 |
+| GET | /api/shipments/my | 내 배송 목록 (page, status, from, to) | CUSTOMER |
+| GET | /api/shipments/{id} | 상세 (본인 · 배정 기사 · 관리자) | 로그인 |
+| PATCH | /api/shipments/{id}/cancel | 취소 { reason } → 자동 환불 | CUSTOMER · ADMIN |
+| GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
+| GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
+
+## 팀원 4 — 배송 진행 · 실시간 · 리뷰
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| PATCH | /api/shipments/{id}/status | 상태 변경 { nextStatus, memo } — 배정 기사만 | DRIVER |
+| GET | /api/shipments/{id}/history | 상태 이력 | 로그인 |
+| POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type) | DRIVER |
+| GET | /api/files/{fileName} | 사진 보기 (썸네일 `s_`) — `<img>` 때문에 인증 없이, UUID 파일명 | 전체 |
+| POST | /api/shipments/{id}/locations | 위치 전송 { lat, lng } — IN_TRANSIT만 | DRIVER |
+| GET | /api/shipments/{id}/locations/latest | 마지막 위치 | 로그인 |
+| GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트) | 로그인 |
+| GET · PATCH | /api/notifications, /{id}/read | 알림 목록 · 읽음 | 로그인 |
+| POST | /api/shipments/{id}/review | 리뷰 (배송완료 · 1회) | CUSTOMER |
+| GET | /api/drivers/{id}/reviews | 기사 리뷰 · 평균 평점 | 로그인 |
+
+## 결제 흐름
+
+1. `POST /api/shipments` → 서버가 운임 계산, 배송 PENDING_PAYMENT + payment READY(orderId, amount) 저장
+2. 프론트가 orderId · amount로 토스 결제창(테스트 키) 열기
+3. 성공 → successUrl(`/customer/payments/success`) → `POST /api/payments/confirm`
+4. 서버: 저장된 amount와 요청 amount 비교 → 토스 승인 API → PAID · REQUESTED · 관리자 알림
+5. 실패 · 창 닫기 → failUrl에서 재시도 / 30분 지나면 스케줄러가 자동 취소
+
+```jsonc
+// POST /api/shipments
+{
+  "originAddress": "서울특별시 강남구 OO로 12", "originDetail": "1층 하역장",
+  "destAddress": "경기도 수원시 영통구 OO로 34", "destDetail": "B동 창고",
+  "cargoTypeId": 2, "cargoName": "유리 진열장", "cargoWeightKg": 600, "vehicleTypeId": 2,
+  "pickupAt": "2026-12-03T09:00:00",
+  "receiverName": "김수령", "receiverPhone": "010-0000-0000", "memo": "엘리베이터 없음"
+}
+// 201 — 1톤 · 38.4km · 평일 오전 · 파손주의 → 98,500원 (fare.md 예시 ③)
+{ "id": 1024, "status": "PENDING_PAYMENT", "orderId": "SHP-1024-7f3a", "orderName": "1톤 운송 · 유리 진열장", "amount": 98500 }
+
+// POST /api/payments/confirm
+{ "paymentKey": "{토스가 넘겨준 값}", "orderId": "SHP-1024-7f3a", "amount": 98500 }
+// 200
+{ "shipmentId": 1024, "status": "REQUESTED", "paymentStatus": "PAID" }
+```
