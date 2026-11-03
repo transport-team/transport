@@ -38,6 +38,21 @@
 | POST · PUT · DELETE | /api/admin/notices · /faqs · /terms (/{id}) | 공지 · FAQ · 약관 관리 | ADMIN |
 | PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
 
+### 회원가입 예시
+
+```jsonc
+// GET /api/terms → 가입 화면 약관 (required = 필수 동의)
+[{ "id": 1, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.0" }]
+
+// POST /api/auth/signup — 지금은 CUSTOMER만 (기사 가입은 J단계 PR 3에서 licenseType · careerYears 추가)
+{ "email": "kim@test.com", "password": "password1!", "name": "김고객", "phone": "010-1234-5678",
+  "role": "CUSTOMER", "agreedTermIds": [1, 2] }
+// 201
+{ "memberId": 4 }
+// 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없는 약관 · ADMIN 가입)
+```
+- 비밀번호 8~64자, 연락처 `010-0000-0000` 형식
+
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
 | 메서드 | URL | 설명 | 권한 |
