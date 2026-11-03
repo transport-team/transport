@@ -13,6 +13,7 @@ import com.transport.domain.Member;
 import com.transport.domain.Term;
 import com.transport.domain.TermAgreement;
 import com.transport.domain.enums.MemberRole;
+import com.transport.dto.MemberDTO;
 import com.transport.dto.SignupRequestDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -59,6 +60,14 @@ public class MemberServiceImpl implements MemberService {
 
 		log.info("회원가입: id={}, role={}", member.getId(), member.getRole());
 		return member.getId();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public MemberDTO getMember(Long memberId) {
+		return memberRepository.findById(memberId)
+				.map(this::entityToDTO)
+				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 	}
 
 	// 지금은 고객만 가입할 수 있다 (기사는 팀원 2의 DriverService가 나오면 J단계 PR 3에서 연결)

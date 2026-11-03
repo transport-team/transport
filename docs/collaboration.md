@@ -35,6 +35,18 @@
 
 다른 도메인은 위 Service 메서드로만 호출한다. 다른 사람의 Repository를 직접 쓰지 않는다. 약속이 늦어지면 데일리 스크럼에서 바로 공유한다.
 
+### 로그인 사용자 꺼내기 (3주차 초 약속)
+
+```java
+@GetMapping("/my")
+@PreAuthorize("hasRole('CUSTOMER')")  // 로그인만 필요하면 isAuthenticated(), 관리자는 hasRole('ADMIN')
+public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember loginMember, @Valid PageRequestDTO pageRequestDTO) {
+	return shipmentService.getMyList(loginMember.getId(), pageRequestDTO);  // getId() · getEmail() · getRole()
+}
+```
+- `LoginMember`는 액세스 토큰 안의 값이라 DB를 다시 조회하지 않는다. 회원 정보가 더 필요하면 `MemberService.getMember(id)`
+- 권한 전환일 전에는 토큰 없이 부르면 `loginMember`가 null이다 → 로그인이 필요한 API에는 `@PreAuthorize`를 붙인다 (예: `MemberController.me`)
+
 ## Git
 
 - `main`: 발표 · 배포용. 직접 push 금지. 주차 완료 기준을 통과한 develop만 팀원 2가 병합

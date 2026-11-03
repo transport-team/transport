@@ -15,12 +15,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.transport.domain.enums.MemberRole;
+import com.transport.dto.LoginRequestDTO;
+import com.transport.dto.LoginResponseDTO;
 import com.transport.dto.SignupRequestDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
+import com.transport.service.AuthService;
 import com.transport.service.MemberService;
 
-// 회원가입 API: 응답 코드 · 입력 검사 (보안 필터는 끄고 확인)
+// 회원가입 · 로그인 · 재발급 API: 응답 코드 · 입력 검사 (보안 필터는 끄고 확인)
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
@@ -30,6 +34,9 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private MemberService memberService;
+
+	@MockitoBean
+	private AuthService authService;
 
 	@Test
 	void signup() throws Exception {
@@ -64,11 +71,47 @@ class AuthControllerTest {
 				.andExpect(jsonPath("$.code").value("DUPLICATE_EMAIL"));
 	}
 
+	@Test
+	void login() throws Exception {
+		when(authService.login(any(LoginRequestDTO.class))).thenReturn(LoginResponseDTO.builder()
+				.accessToken("access-token").refreshToken("refresh-token")
+				.memberId(4L).email("kim@test.com").name("김고객").role(MemberRole.CUSTOMER).build());
+
+		postJson("/api/auth/login", """
+				{"email": "kim@test.com", "password": "password1!"}
+				""")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.accessToken").value("access-token"))
+				.andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+				.andExpect(jsonPath("$.role").value("CUSTOMER"));
+	}
+
+	@Test
+	void loginFailed() throws Exception {
+		when(authService.login(any(LoginRequestDTO.class))).thenThrow(new CustomException(ErrorCode.LOGIN_FAILED));
+
+		postJson("/api/auth/login", """
+				{"email": "kim@test.com", "password": "wrong-password"}
+				""")
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("LOGIN_FAILED"));
+	}
+
+	@Test
+	void refreshWithoutToken() throws Exception {
+		postJson("/api/auth/refresh", "{}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("리프레시 토큰이 없습니다."));
+	}
+
 	private ResultActions signup(String email, String password) throws Exception {
-		String body = """
+		return postJson("/api/auth/signup", """
 				{"email": "%s", "password": "%s", "name": "김고객", "phone": "010-1234-5678",
 				 "role": "CUSTOMER", "agreedTermIds": [1, 2]}
-				""".formatted(email, password);
-		return mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(body));
+				""".formatted(email, password));
+	}
+
+	private ResultActions postJson(String url, String body) throws Exception {
+		return mockMvc.perform(post(url).contentType(MediaType.APPLICATION_JSON).content(body));
 	}
 }

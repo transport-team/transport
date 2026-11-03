@@ -5,6 +5,8 @@
 ## 공통 규칙
 - 기본 경로 `/api` · 관리자 `/api/admin/**` · 기사 `/api/driver/**`
 - 인증 `Authorization: Bearer {accessToken}` — 401 = 로그인 필요(없음·만료), 403 = 권한 없음
+  - 401 `UNAUTHORIZED` 토큰 없음 · `TOKEN_EXPIRED` 만료 → `/api/auth/refresh`로 재발급 후 다시 요청 · `INVALID_TOKEN` 다시 로그인
+  - 권한 전환일 전까지는 토큰 없이도 대부분 API가 열려 있다 (잘못되거나 만료된 토큰을 보내면 401)
 - 목록: 수업의 `PageRequestDTO`(page는 1부터 · size 기본 10 · 최대 100) / `PageResponseDTO`(dtoList, pageNumList, prev · next, prevPage · nextPage, totalCount, totalPage, current). 검색 파라미터 이름 `status, from, to, keyword`
 - 에러 응답: `{ "code": "INVALID_STATUS_CHANGE", "message": "배차완료 상태에서만 상차 처리할 수 있습니다." }`
 
@@ -14,7 +16,7 @@
 
 | 구역 | 코드 예시 |
 |---|---|
-| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, DRIVER_NOT_APPROVED |
+| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED |
 | 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
 | 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
@@ -52,6 +54,24 @@
 // 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없는 약관 · ADMIN 가입)
 ```
 - 비밀번호 8~64자, 연락처 `010-0000-0000` 형식
+
+### 로그인 · 재발급 예시
+
+```jsonc
+// POST /api/auth/login (시드 계정: admin · customer · driver @transport.test / 1234)
+{ "email": "customer@transport.test", "password": "1234" }
+// 200 — role로 역할별 첫 화면 이동
+{ "accessToken": "eyJ…", "refreshToken": "eyJ…", "memberId": 2, "email": "customer@transport.test", "name": "테스트고객", "role": "CUSTOMER" }
+// 401 LOGIN_FAILED(없는 이메일 · 틀린 비밀번호 같은 응답) · 403 ACCOUNT_DISABLED(비활성 계정)
+
+// POST /api/auth/refresh — 액세스 토큰이 TOKEN_EXPIRED일 때. 응답은 로그인과 같은 모양 (두 토큰 모두 새로 발급)
+{ "refreshToken": "eyJ…" }
+// 401 TOKEN_EXPIRED · INVALID_TOKEN → 로그인 화면으로
+
+// GET /api/members/me (Authorization: Bearer {accessToken})
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-0000-0002", "role": "CUSTOMER" }
+```
+- 토큰 유효 시간: 액세스 30분 · 리프레시 1일 (`application.yml`의 `app.jwt.*`)
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
