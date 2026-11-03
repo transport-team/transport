@@ -35,4 +35,12 @@ public class Driver extends BaseEntity {
 	private DriverStatus status;
 
 	private LocalDateTime approvedAt;
+
+	// 관리자 승인(ACTIVE) · 중지(INACTIVE). 처음 승인할 때만 승인 시각을 남긴다 (중지 후 다시 승인해도 유지)
+	public void changeStatus(DriverStatus status) {
+		this.status = status;
+		if (status == DriverStatus.ACTIVE && approvedAt == null) {
+			this.approvedAt = LocalDateTime.now();
+		}
+	}
 }
