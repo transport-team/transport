@@ -20,8 +20,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${app.cors.allowed-origins}")
-    private List<String> allowedOrigins; // application.yml / properties에 등록된 프론트엔드 주소
+    // yml에 설정이 없을 경우 기본값으로 localhost:5173, localhost:3000 지정 (서버 튕김 방지)
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {

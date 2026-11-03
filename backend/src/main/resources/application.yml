@@ -19,5 +19,12 @@ spring:
   jackson:
     time-zone: Asia/Seoul
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
+
 server:
   port: 8080
