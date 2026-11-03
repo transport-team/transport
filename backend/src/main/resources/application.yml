@@ -6,6 +6,7 @@ spring:
   profiles:
     active: local
   jpa:
+    open-in-view: false          # 컨트롤러에서 지연 로딩 금지 → DTO 변환은 서비스(@Transactional) 안에서
     properties:
       hibernate:
         format_sql: true

@@ -5,14 +5,16 @@
 ## 공통 규칙
 - 기본 경로 `/api` · 관리자 `/api/admin/**` · 기사 `/api/driver/**`
 - 인증 `Authorization: Bearer {accessToken}` — 401 = 로그인 필요(없음·만료), 403 = 권한 없음
-- 목록: 수업의 `PageRequestDTO`(page, size) / `PageResponseDTO`. 검색 파라미터 이름 `status, from, to, keyword`
+- 목록: 수업의 `PageRequestDTO`(page는 1부터 · size 기본 10 · 최대 100) / `PageResponseDTO`(dtoList, pageNumList, prev · next, prevPage · nextPage, totalCount, totalPage, current). 검색 파라미터 이름 `status, from, to, keyword`
 - 에러 응답: `{ "code": "INVALID_STATUS_CHANGE", "message": "배차완료 상태에서만 상차 처리할 수 있습니다." }`
 
 ## 에러 코드 (ErrorCode — 도메인별 구역에 각자 추가)
 
+사용: `throw new CustomException(ErrorCode.NOT_FOUND)` → HTTP 상태 · 기본 메시지는 ErrorCode에 둔다. 상황별 문구는 `new CustomException(ErrorCode.X, "문구")`. `@Valid` 실패는 `INVALID_INPUT` + DTO에 적은 message
+
 | 구역 | 코드 예시 |
 |---|---|
-| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, TERMS_REQUIRED, DUPLICATE_EMAIL, DRIVER_NOT_APPROVED |
+| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, DRIVER_NOT_APPROVED |
 | 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
 | 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
@@ -21,6 +23,7 @@
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
+| GET | /api/health | 서버 동작 확인 → `{"status":"ok"}` | 전체 |
 | POST | /api/auth/signup | 회원가입 (필수 약관 동의, 기사는 PENDING) | 전체 |
 | POST | /api/auth/login | 로그인 → 토큰 · 역할 | 전체 |
 | POST | /api/auth/refresh | 토큰 재발급 | 전체 |
