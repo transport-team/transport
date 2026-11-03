@@ -8,6 +8,7 @@ import java.util.Set;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.transport.domain.Member;
 import com.transport.domain.Term;
@@ -35,10 +36,11 @@ public class MemberServiceImpl implements MemberService {
 	private final TermRepository termRepository;
 	private final TermAgreementRepository termAgreementRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final DriverService driverService;
 
 	@Override
 	public Long signup(SignupRequestDTO signupRequestDTO) {
-		checkRole(signupRequestDTO.getRole());
+		checkRole(signupRequestDTO);
 		List<Term> agreedTerms = checkTerms(signupRequestDTO.getAgreedTermIds());
 		if (memberRepository.existsByEmail(signupRequestDTO.getEmail())) {
 			throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
@@ -58,6 +60,10 @@ public class MemberServiceImpl implements MemberService {
 				.map(term -> TermAgreement.builder().member(member).term(term).agreedAt(now).build())
 				.toList());
 
+		if (member.getRole() == MemberRole.DRIVER) {  // 승인 대기 기사 (같은 트랜잭션이라 실패하면 회원도 저장되지 않는다)
+			driverService.register(member, signupRequestDTO.getLicenseType(), signupRequestDTO.getCareerYears());
+		}
+
 		log.info("회원가입: id={}, role={}", member.getId(), member.getRole());
 		return member.getId();
 	}
@@ -70,13 +76,15 @@ public class MemberServiceImpl implements MemberService {
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 	}
 
-	// 지금은 고객만 가입할 수 있다 (기사는 팀원 2의 DriverService가 나오면 J단계 PR 3에서 연결)
-	private void checkRole(MemberRole role) {
+	// 관리자는 가입할 수 없고, 기사는 면허 종류 · 경력이 있어야 한다
+	private void checkRole(SignupRequestDTO signupRequestDTO) {
+		MemberRole role = signupRequestDTO.getRole();
 		if (role == MemberRole.ADMIN) {
 			throw new CustomException(ErrorCode.INVALID_INPUT, "관리자는 가입할 수 없습니다.");
 		}
-		if (role == MemberRole.DRIVER) {
-			throw new CustomException(ErrorCode.INVALID_INPUT, "기사 가입은 준비 중입니다.");
+		if (role == MemberRole.DRIVER
+				&& (!StringUtils.hasText(signupRequestDTO.getLicenseType()) || signupRequestDTO.getCareerYears() == null)) {
+			throw new CustomException(ErrorCode.INVALID_INPUT, "기사는 면허 종류와 경력을 입력해 주세요.");
 		}
 	}
 

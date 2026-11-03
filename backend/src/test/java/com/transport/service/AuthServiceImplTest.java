@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.transport.domain.Member;
+import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.MemberRole;
 import com.transport.dto.LoginRequestDTO;
 import com.transport.dto.LoginResponseDTO;
@@ -31,6 +32,9 @@ class AuthServiceImplTest {
 	@Mock
 	private MemberRepository memberRepository;
 
+	@Mock
+	private DriverService driverService;
+
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 	private final JWTUtil jwtUtil = new JWTUtil("test-secret-key-for-jwt-signing-32bytes-or-more", 30, 1440);
@@ -39,7 +43,33 @@ class AuthServiceImplTest {
 
 	@BeforeEach
 	void setUp() {
-		authService = new AuthServiceImpl(memberRepository, passwordEncoder, jwtUtil);
+		authService = new AuthServiceImpl(memberRepository, passwordEncoder, jwtUtil, driverService);
+	}
+
+	@Test
+	void approvedDriverCanLogin() {
+		when(memberRepository.findByEmail("driver@test.com")).thenReturn(Optional.of(driver()));
+		when(driverService.getStatus(5L)).thenReturn(DriverStatus.ACTIVE);
+
+		LoginResponseDTO response = authService.login(new LoginRequestDTO("driver@test.com", "password1!"));
+
+		assertThat(response.getRole()).isEqualTo(MemberRole.DRIVER);
+	}
+
+	@Test
+	void pendingDriverCannotLogin() {
+		when(memberRepository.findByEmail("driver@test.com")).thenReturn(Optional.of(driver()));
+		when(driverService.getStatus(5L)).thenReturn(DriverStatus.PENDING);
+
+		assertErrorCode(() -> authService.login(new LoginRequestDTO("driver@test.com", "password1!")), ErrorCode.DRIVER_NOT_APPROVED);
+	}
+
+	@Test
+	void stoppedDriverCannotLogin() {
+		when(memberRepository.findByEmail("driver@test.com")).thenReturn(Optional.of(driver()));
+		when(driverService.getStatus(5L)).thenReturn(DriverStatus.INACTIVE);
+
+		assertErrorCode(() -> authService.login(new LoginRequestDTO("driver@test.com", "password1!")), ErrorCode.ACCOUNT_DISABLED);
 	}
 
 	@Test
@@ -107,6 +137,18 @@ class AuthServiceImplTest {
 				.phone("010-1234-5678")
 				.role(MemberRole.CUSTOMER)
 				.enabled(enabled)
+				.build();
+	}
+
+	private Member driver() {
+		return Member.builder()
+				.id(5L)
+				.email("driver@test.com")
+				.password(passwordEncoder.encode("password1!"))
+				.name("김기사")
+				.phone("010-2222-3333")
+				.role(MemberRole.DRIVER)
+				.enabled(true)
 				.build();
 	}
 

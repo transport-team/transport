@@ -3,6 +3,8 @@ package com.transport.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +46,9 @@ class MemberServiceImplTest {
 	@Mock
 	private TermAgreementRepository termAgreementRepository;
 
+	@Mock
+	private DriverService driverService;
+
 	@Captor
 	private ArgumentCaptor<Member> memberCaptor;
 
@@ -56,7 +61,7 @@ class MemberServiceImplTest {
 
 	@BeforeEach
 	void setUp() {
-		memberService = new MemberServiceImpl(memberRepository, termRepository, termAgreementRepository, passwordEncoder);
+		memberService = new MemberServiceImpl(memberRepository, termRepository, termAgreementRepository, passwordEncoder, driverService);
 	}
 
 	@Test
@@ -81,6 +86,7 @@ class MemberServiceImplTest {
 		assertThat(agreementCaptor.getValue())
 				.extracting(agreement -> agreement.getTerm().getId())
 				.containsExactly(1L, 2L, 3L);
+		verify(driverService, never()).register(any(), any(), anyInt());  // 고객은 기사 정보를 만들지 않는다
 	}
 
 	@Test
@@ -122,10 +128,26 @@ class MemberServiceImplTest {
 	}
 
 	@Test
-	void driverSignupNotReady() {
-		assertThatThrownBy(() -> memberService.signup(request(MemberRole.DRIVER, List.of(1L, 2L))))
+	void signupDriver() {
+		givenTerms();
+		when(memberRepository.save(any(Member.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		memberService.signup(driverRequest("1종 보통", 5));
+
+		verify(memberRepository).save(memberCaptor.capture());
+		assertThat(memberCaptor.getValue().getRole()).isEqualTo(MemberRole.DRIVER);
+		verify(driverService).register(any(Member.class), eq("1종 보통"), eq(5));  // 승인 대기 기사 생성
+	}
+
+	@Test
+	void driverWithoutLicenseOrCareer() {
+		assertThatThrownBy(() -> memberService.signup(driverRequest(" ", 5)))
 				.isInstanceOf(CustomException.class)
-				.hasMessage("기사 가입은 준비 중입니다.");
+				.hasMessage("기사는 면허 종류와 경력을 입력해 주세요.");
+		assertThatThrownBy(() -> memberService.signup(driverRequest("1종 보통", null)))
+				.isInstanceOf(CustomException.class)
+				.hasMessage("기사는 면허 종류와 경력을 입력해 주세요.");
+		verify(memberRepository, never()).save(any());
 	}
 
 	// 필수 1 · 2, 선택 3 (data.sql 시드와 같은 구성)
@@ -147,5 +169,12 @@ class MemberServiceImplTest {
 				.role(role)
 				.agreedTermIds(agreedTermIds)
 				.build();
+	}
+
+	private SignupRequestDTO driverRequest(String licenseType, Integer careerYears) {
+		SignupRequestDTO request = request(MemberRole.DRIVER, List.of(1L, 2L));
+		request.setLicenseType(licenseType);
+		request.setCareerYears(careerYears);
+		return request;
 	}
 }
