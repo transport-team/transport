@@ -14,7 +14,7 @@ spring:
     defer-datasource-initialization: true   # 테이블을 만든 뒤 data.sql 실행
   sql:
     init:
-      mode: never                 # data.sql에 나오는 엔티티가 모두 생기면 always로 바꾼다
+      mode: always                # 엔티티가 모두 생겨 data.sql 시드를 실행한다 (INSERT IGNORE라 중복 없음)
 
 app:
   upload-path: upload
