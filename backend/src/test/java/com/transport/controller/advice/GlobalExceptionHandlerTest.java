@@ -27,7 +27,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 // 에러 응답 형식 확인 (보안 필터는 끄고 예외 처리만 본다)
-@WebMvcTest
+@WebMvcTest(GlobalExceptionHandlerTest.TestController.class)  // 지정하지 않으면 모든 컨트롤러를 불러와 서비스 빈이 없다고 실패한다
 @AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandlerTest.TestController.class)
 class GlobalExceptionHandlerTest {
