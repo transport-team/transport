@@ -14,10 +14,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.transport.controller.HealthController;
+import com.transport.util.JWTUtil;
 
 // 임시 전체 허용 · CORS 확인 (DB 없이 웹 계층만 띄운다)
-@WebMvcTest(controllers = HealthController.class, properties = "app.cors.allowed-origins=http://localhost:5173")
-@Import(SecurityConfig.class)
+@WebMvcTest(controllers = HealthController.class, properties = {
+		"app.cors.allowed-origins=http://localhost:5173",
+		"app.jwt.secret=test-secret-key-for-jwt-signing-32bytes-or-more"})
+@Import({SecurityConfig.class, JWTUtil.class})
 class SecurityConfigTest {
 
 	@Autowired
