@@ -5,7 +5,7 @@
 ## 공통 규칙
 - 기본 경로 `/api` · 관리자 `/api/admin/**` · 기사 `/api/driver/**`
 - 인증 `Authorization: Bearer {accessToken}` — 401 = 로그인 필요(없음·만료), 403 = 권한 없음
-- 목록: 수업의 `PageRequestDTO`(page, size) / `PageResponseDTO`. 검색 파라미터 이름 `status, from, to, keyword`
+- 목록: 수업의 `PageRequestDTO`(page는 1부터 · size 기본 10 · 최대 100) / `PageResponseDTO`(dtoList, pageNumList, prev · next, prevPage · nextPage, totalCount, totalPage, current). 검색 파라미터 이름 `status, from, to, keyword`
 - 에러 응답: `{ "code": "INVALID_STATUS_CHANGE", "message": "배차완료 상태에서만 상차 처리할 수 있습니다." }`
 
 ## 에러 코드 (ErrorCode — 도메인별 구역에 각자 추가)
