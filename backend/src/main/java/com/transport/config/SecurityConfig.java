@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -12,13 +13,29 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.transport.security.filter.JWTCheckFilter;
+import com.transport.security.handler.CustomAccessDeniedHandler;
+import com.transport.security.handler.CustomAuthenticationEntryPoint;
+import com.transport.security.handler.ErrorResponseWriter;
+import com.transport.util.JWTUtil;
+
+import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.json.JsonMapper;
+
+// 보안 · CORS 설정 (공통 파일 — 관리: 팀원 1)
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity  // 컨트롤러 메서드에 @PreAuthorize("hasRole('ADMIN')") 같은 권한 검사
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+	private final JWTUtil jwtUtil;
+	private final JsonMapper jsonMapper;
 
 	// yml에 설정이 없을 경우 기본값으로 localhost:5173, localhost:3000 지정 (서버 튕김 방지)
 	@Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
@@ -41,6 +58,13 @@ public class SecurityConfig {
 		// =========================================================================
 		http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
+		// 토큰 확인 (J단계): 토큰이 있으면 로그인 사용자로 등록, 없으면 통과. 401 · 403도 {code, message} 형식
+		ErrorResponseWriter errorResponseWriter = new ErrorResponseWriter(jsonMapper);
+		http.addFilterBefore(new JWTCheckFilter(jwtUtil, errorResponseWriter), UsernamePasswordAuthenticationFilter.class);
+		http.exceptionHandling(exception -> exception
+				.authenticationEntryPoint(new CustomAuthenticationEntryPoint(errorResponseWriter))
+				.accessDeniedHandler(new CustomAccessDeniedHandler(errorResponseWriter)));
+
 
 		// =========================================================================
 		// 2. [추후 실제 보안/JWT 적용 시 전환 예시]
@@ -57,7 +81,6 @@ public class SecurityConfig {
 			// 그 외 모든 요청은 인증 필수
 			.anyRequest().authenticated()
 		);
-		// .addFilterBefore(jwtCheckFilter, UsernamePasswordAuthenticationFilter.class);
 		*/
 
 		return http.build();

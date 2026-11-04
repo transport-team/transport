@@ -1,16 +1,40 @@
-# React + Vite
+# frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite · React Router · Redux Toolkit · axios · Tailwind CSS v4
 
-Currently, two official plugins are available:
+실행 방법은 루트 [README](../README.md)를 따른다: `cp .env.example .env` → `npm ci` → `npm run dev` (http://localhost:5173)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 포트는 5173 고정이다. 사용 중이면 다른 포트로 뜨지 않고 멈춘다 (백엔드 CORS가 5173만 허용)
+- `.env`를 바꾸면 `npm run dev`를 다시 실행해야 반영된다
 
-## React Compiler
+## 폴더 (src/)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| 폴더 | 넣는 것 |
+|---|---|
+| `api/` | 백엔드 호출 함수. 로그인 없이 부르면 `apiClient`, 로그인이 필요하면 `util/jwtUtil.js`의 `jwtAxios` |
+| `components/common/` | 공통 컴포넌트 (버튼 · 모달 · 표 · 페이지 번호 등) |
+| `layouts/` | 역할별 레이아웃 |
+| `pages/` | 화면. 역할별로 `customer/` · `driver/` · `admin/` |
+| `router/` | 화면 경로. 공개는 `root.jsx`, 역할별은 `customerRouter.jsx` · `driverRouter.jsx` · `adminRouter.jsx` |
+| `slices/` | Redux 상태 (로그인 등) |
+| `hooks/` | 여러 화면이 같이 쓰는 훅 |
+| `util/` | 쿠키 · JWT 같은 도구 |
 
-## Expanding the ESLint configuration
+## 로그인 · API 호출
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- 로그인 정보: `useCustomLogin()` → `loginState`(memberId · email · name · role), `isLogin`, `doLogout()`
+- 로그인이 필요한 API는 `jwtAxios`로 부른다. 토큰을 자동으로 붙이고, 만료(401 `TOKEN_EXPIRED`)되면 재발급해서 다시 보낸다
+  ```js
+  import jwtAxios from '../util/jwtUtil'
+  export const getMyShipments = async (params) => (await jwtAxios.get('/api/shipments/my', { params })).data
+  ```
+- 토큰과 회원 정보는 쿠키 `member`에 1일 동안 저장된다 (새로고침해도 로그인 유지)
+- `/customer` · `/driver` · `/admin` 아래 화면은 로그인 + 역할이 맞아야 열린다 (`router/RequireAuth.jsx`). 화면만 막는 것이고 실제 권한은 서버가 검사한다
+- 화면을 만들면: 역할별 router 파일에 경로를 추가하고, 레이아웃 메뉴(`layouts/*Layout.jsx`의 `MENUS`)에 `to`를 넣는다 → 공통 파일이라 PR로
+
+## 공통 파일
+
+직접 고치지 말고 PR로 관리자 승인을 받는다 ([docs/collaboration.md](../docs/collaboration.md))
+
+- `package.json` · `router/` · `layouts/` → 팀원 1
+- `components/common/` · Tailwind 설정(`src/index.css`) → 팀원 4
