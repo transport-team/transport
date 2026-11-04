@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getVehicleList } from '../../api/vehicleApi'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 const VehicleListPage = () => {
     const [vehicles, setVehicles] = useState([])
@@ -8,6 +8,22 @@ const VehicleListPage = () => {
     const [totalPage, setTotalPage] = useState(1)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    // 목록으로 전달된 토스트를 1초 후 제거
+    useEffect(() => {
+        if (!location.state?.toast) return
+
+        const timer = setTimeout(() => {
+            navigate(location.pathname + location.search, {
+                replace: true,
+                state: null
+            })
+        }, 1000)
+
+        return () => clearTimeout(timer)
+    }, [location.state, location.pathname, location.search, navigate])
 
     // 현재 페이지의 차량 목록 조회
     useEffect(() => {
@@ -39,6 +55,16 @@ const VehicleListPage = () => {
 
     return (
         <section className="space-y-6">
+            {/* 등록·수정 완료 토스트 */}
+            {location.state?.toast && (
+                <div
+                    role="status"
+                    className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-emerald-700 px-10 py-6 text-lg font-semibold text-white shadow-2xl"
+                >
+                    ✓ {location.state.toast}
+                </div>
+            )}
+
             <div className="flex items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">차량 관리</h1>
@@ -69,10 +95,34 @@ const VehicleListPage = () => {
 
                     <tbody>
                         {vehicles.map((vehicle) => (
-                            <tr key={vehicle.id} className="border-t border-gray-200">
+                            <tr
+                                key={vehicle.id}
+                                className={`border-t border-gray-200 ${vehicle.status === 'INACTIVE' ? 'bg-gray-100 text-gray-500' : ''
+                                    }`}
+                            >
                                 <td className="px-4 py-3">{vehicle.id}</td>
                                 <td className="px-4 py-3">{vehicle.plateNo}</td>
-                                <td className="px-4 py-3">{vehicle.status}</td>
+
+                                <td className="px-4 py-3">
+                                    {/* 차량 상태별 색상과 문구 표시 */}
+                                    <span
+                                        className={`inline-block rounded px-2 py-1 text-xs font-medium ${vehicle.status === 'AVAILABLE'
+                                            ? 'bg-emerald-100 text-emerald-800'
+                                            : vehicle.status === 'MAINTENANCE'
+                                                ? 'bg-amber-100 text-amber-800'
+                                                : 'bg-red-100 text-red-700'
+                                            }`}
+                                    >
+                                        {vehicle.status === 'AVAILABLE'
+                                            ? '✓ 운행 가능'
+                                            : vehicle.status === 'MAINTENANCE'
+                                                ? '⚒ 정비 중'
+                                                : vehicle.status === 'INACTIVE'
+                                                    ? '✕ 비활성'
+                                                    : vehicle.status}
+                                    </span>
+                                </td>
+
                                 <td className="px-4 py-3">
                                     {/* 선택한 차량 정보를 수정 페이지로 전달 */}
                                     <Link

@@ -13,18 +13,21 @@ import lombok.Setter;
 @Setter
 public class VehicleRequestDTO {
 
-	@NotBlank
-	@Size(max = 20)
+	@Size(max = 20, message = "차량번호는 20자 이내로 입력해 주세요.")
+	@NotBlank(message = "차량번호를 입력해 주세요.")
 	private String plateNo;
 
-	@NotNull
-	@Positive
+	// 차종 ID 검증
+	@NotNull(message = "차종을 선택해 주세요.")
+	@Positive(message = "차종 정보가 올바르지 않습니다.")
 	private Long vehicleTypeId;
 
-	@NotNull
+	// 차량 상태 검증
+	@NotNull(message = "차량 상태를 선택해 주세요.")
 	private VehicleStatus status;
 
-	@Positive
+	// 담당 기사 ID 검증 (선택 입력)
+	@Positive(message = "기사 정보가 올바르지 않습니다.")
 	private Long driverId;
 
 }
