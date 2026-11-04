@@ -29,6 +29,8 @@ public enum ErrorCode {
 	WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "현재 비밀번호가 맞지 않습니다."),
 
 	// 배차 · 정산 (팀원 2)
+	DUPLICATE_VEHICLE_PLATE(HttpStatus.CONFLICT, "이미 등록된 차량번호입니다."),
+	DRIVER_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "이미 차량에 배정된 기사입니다."),
 
 	// 배송 · 결제 (팀원 3)
 
