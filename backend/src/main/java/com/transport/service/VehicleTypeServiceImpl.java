@@ -1,6 +1,7 @@
 package com.transport.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +22,7 @@ public class VehicleTypeServiceImpl implements VehicleTypeService {
 	@Override
 	public List<VehicleTypeResponseDTO> getVehicleTypes() {
 
-		return vehicleTypeRepository.findAll()
-				.stream()
-				.map(this::toDTO)
-				.toList();
+		return vehicleTypeRepository.findAll().stream().map(this::toDTO).toList();
 	}
 
 	private VehicleTypeResponseDTO toDTO(VehicleType vehicleType) {
@@ -42,5 +40,11 @@ public class VehicleTypeServiceImpl implements VehicleTypeService {
 				.heavyRate(vehicleType.getHeavyRate())
 				.active(vehicleType.isActive())
 				.build();
+	}
+
+	@Override
+	public Optional<VehicleType> findById(Long id) {
+
+		return vehicleTypeRepository.findById(id);
 	}
 }

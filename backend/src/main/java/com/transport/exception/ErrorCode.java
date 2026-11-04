@@ -28,6 +28,8 @@ public enum ErrorCode {
 	DRIVER_NOT_APPROVED(HttpStatus.FORBIDDEN, "관리자 승인 후 로그인할 수 있습니다."),
 
 	// 배차 · 정산 (팀원 2)
+	DUPLICATE_VEHICLE_PLATE(HttpStatus.CONFLICT, "이미 등록된 차량번호입니다."),
+	DRIVER_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "이미 차량에 배정된 기사입니다."),
 
 	// 배송 · 결제 (팀원 3)
 

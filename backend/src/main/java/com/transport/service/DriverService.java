@@ -1,5 +1,7 @@
 package com.transport.service;
 
+import java.util.Optional;
+
 import com.transport.domain.Driver;
 import com.transport.domain.Member;
 import com.transport.domain.enums.DriverStatus;
@@ -22,6 +24,8 @@ public interface DriverService {
 
 	// 관리자 승인(ACTIVE) · 중지(INACTIVE) → 바뀐 기사 정보
 	DriverDTO changeStatus(Long driverId, DriverStatus status);
+
+	Optional<Driver> findById(Long id);
 
 	default DriverDTO entityToDTO(Driver driver) {
 		Member member = driver.getMember();
