@@ -17,4 +17,5 @@
 | 2026-11-03 | 권한 전환일 전까지 토큰 없는 요청은 통과, 잘못되거나 만료된 토큰만 401 | 로그인 기능이 들어가도 팀원 개발 · 테스트가 깨지지 않게 |
 | 2026-11-03 | 팀원 2 부재 중에는 기사 가입 · 로그인에 필요한 `DriverService` 최소 구현을 팀원 1이 작성 (복귀 후 인계) | 기사 가입 · 로그인 일정을 미루지 않기 위해 |
 | 2026-11-03 | 기사 로그인: 승인 대기(PENDING) → 403 DRIVER_NOT_APPROVED, 중지(INACTIVE) → 403 ACCOUNT_DISABLED | 승인 여부는 `Member.enabled`가 아니라 `Driver.status`로 판단 (enabled는 관리자 계정 비활성화용) |
+| 2026-11-09 | 권한 전환: 공개 API(api.md 권한 "전체") 외에는 로그인 필요. `/api/admin/**` ADMIN · `/api/driver/**` DRIVER는 URL 규칙, 그 밖의 역할은 컨트롤러 `@PreAuthorize` | 공통 파일(SecurityConfig)을 API마다 고치지 않고 역할 검사는 각 도메인에서. 11-03의 "토큰 없는 요청 통과"는 이날로 끝 |
 |  |  |  |
