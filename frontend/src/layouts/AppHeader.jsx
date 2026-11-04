@@ -3,7 +3,7 @@ import useCustomLogin from '../hooks/useCustomLogin'
 import { ROLE_HOME, ROLE_NAME } from '../util/roleUtil'
 import MenuLink from './MenuLink'
 
-// 모든 레이아웃의 윗부분: 로고 · 메뉴 · 로그인 사용자 · 로그아웃
+// 모든 레이아웃의 윗부분: 로고 · 메뉴 · 로그인 사용자 · 로그아웃 (로그인 전에는 회원가입 · 로그인)
 // menus: [{ label, to }] — to가 없으면 아직 화면이 없는 메뉴(준비 중)
 const AppHeader = ({ menus = [] }) => {
   const { loginState, isLogin, doLogout } = useCustomLogin()
@@ -28,9 +28,14 @@ const AppHeader = ({ menus = [] }) => {
               </button>
             </>
           ) : (
-            <Link to="/login" className="rounded bg-emerald-700 px-3 py-1.5 font-medium text-white hover:bg-emerald-800">
-              로그인
-            </Link>
+            <>
+              <Link to="/signup" className="text-gray-600 hover:text-emerald-800">
+                회원가입
+              </Link>
+              <Link to="/login" className="rounded bg-emerald-700 px-3 py-1.5 font-medium text-white hover:bg-emerald-800">
+                로그인
+              </Link>
+            </>
           )}
         </div>
       </div>
