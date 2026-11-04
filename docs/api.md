@@ -111,6 +111,22 @@
 - 비활성화된 회원은 로그인 · 토큰 재발급이 403 `ACCOUNT_DISABLED` (이미 받은 액세스 토큰은 최대 30분 남는다)
 - 기사 승인 · 중지는 `/api/admin/drivers`(Driver.status), 이건 계정 자체 사용 중지
 
+### 공지 예시
+
+```jsonc
+// GET /api/notices?keyword=오픈&page=1 — 로그인 없이, 제목 검색 · 최신순 (keyword는 빼도 된다)
+{ "dtoList": [{ "id": 1, "title": "서비스 오픈 안내", "content": "운송서비스 운용 사이트가 열렸습니다.", "writerName": "관리자",
+                "viewCount": 3, "createdAt": "2026-11-02T10:00:00", "updatedAt": "2026-11-02T10:00:00" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// GET /api/notices/{id} — 로그인 없이, 볼 때마다 viewCount + 1 · 404 NOT_FOUND
+
+// POST /api/admin/notices (PUT /api/admin/notices/{id}도 같은 본문) — 작성자는 로그인한 관리자
+{ "title": "추석 연휴 배송 안내", "content": "9/28 ~ 10/1은 배차가 늦어질 수 있어요." }
+// POST 201 { "noticeId": 2 } · PUT 200 바뀐 공지 · DELETE 204 · 400 INVALID_INPUT(제목 100자 · 내용 5,000자 이하) · 404 · 403(관리자 아님)
+```
+- 관리자 화면 목록 · 수정도 공개 목록 API를 같이 쓴다 (상세를 열면 조회수가 오르니까 목록에 내용까지 담는다)
+
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
 | 메서드 | URL | 설명 | 권한 |

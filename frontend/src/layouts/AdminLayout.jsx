@@ -11,7 +11,7 @@ const MENUS = [
   { label: '차량 · 차종', to: '/admin/vehicles' },
   { label: '정산' },
   { label: '회원 관리', to: '/admin/members' },
-  { label: '공지 · FAQ · 문의' },
+  { label: '공지 · FAQ · 문의', to: '/admin/notices' },
 ]
 
 // 관리자 레이아웃: 왼쪽 메뉴 (좁은 화면에서는 위쪽 가로 메뉴)
