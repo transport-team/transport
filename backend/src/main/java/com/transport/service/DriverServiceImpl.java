@@ -1,6 +1,7 @@
 package com.transport.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -73,9 +74,15 @@ public class DriverServiceImpl implements DriverService {
 		}
 		Driver driver = driverRepository.findById(driverId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "기사 정보가 없습니다."));
-		driver.changeStatus(status);  // 변경 감지로 저장 (트랜잭션이 끝날 때 UPDATE)
+		driver.changeStatus(status); // 변경 감지로 저장 (트랜잭션이 끝날 때 UPDATE)
 
 		log.info("기사 상태 변경: driverId={}, status={}", driverId, status);
 		return entityToDTO(driver);
+	}
+
+	// 기사 ID로 기사 정보 조회
+	@Override
+	public Optional<Driver> findById(Long id) {
+		return driverRepository.findById(id);
 	}
 }

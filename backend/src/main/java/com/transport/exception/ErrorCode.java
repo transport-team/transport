@@ -26,8 +26,11 @@ public enum ErrorCode {
 	INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "로그인 정보가 올바르지 않습니다. 다시 로그인해 주세요."),
 	ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "이용이 중지된 계정입니다. 관리자에게 문의해 주세요."),
 	DRIVER_NOT_APPROVED(HttpStatus.FORBIDDEN, "관리자 승인 후 로그인할 수 있습니다."),
+	WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "현재 비밀번호가 맞지 않습니다."),
 
 	// 배차 · 정산 (팀원 2)
+	DUPLICATE_VEHICLE_PLATE(HttpStatus.CONFLICT, "이미 등록된 차량번호입니다."),
+	DRIVER_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "이미 차량에 배정된 기사입니다."),
 
 	// 배송 · 결제 (팀원 3)
 
