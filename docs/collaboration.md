@@ -46,7 +46,9 @@ public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember logi
 }
 ```
 - `LoginMember`는 액세스 토큰 안의 값이라 DB를 다시 조회하지 않는다. 회원 정보가 더 필요하면 `MemberService.getMember(id)`
-- 권한 전환일 전에는 토큰 없이 부르면 `loginMember`가 null이다 → 로그인이 필요한 API에는 `@PreAuthorize`를 붙인다 (예: `MemberController.me`)
+- 2026-11-09 권한 전환부터 공개 API가 아니면 토큰 없이 부를 수 없다(401) → `loginMember`는 null이 아니다
+- `/api/admin/**` · `/api/driver/**`는 URL 규칙이 역할까지 검사한다. 그 밖의 주소에서 역할이 정해진 API(예: 고객만 배송 신청)는 `@PreAuthorize`를 꼭 붙인다
+- 로그인 없이 써야 하는 API를 새로 만들면 SecurityConfig 공개 목록에 넣어 달라고 팀원 1에게 요청한다 (api.md 권한 "전체")
 
 ## Git
 

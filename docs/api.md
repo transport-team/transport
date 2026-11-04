@@ -6,7 +6,9 @@
 - 기본 경로 `/api` · 관리자 `/api/admin/**` · 기사 `/api/driver/**`
 - 인증 `Authorization: Bearer {accessToken}` — 401 = 로그인 필요(없음·만료), 403 = 권한 없음
   - 401 `UNAUTHORIZED` 토큰 없음 · `TOKEN_EXPIRED` 만료 → `/api/auth/refresh`로 재발급 후 다시 요청 · `INVALID_TOKEN` 다시 로그인
-  - 권한 전환일 전까지는 토큰 없이도 대부분 API가 열려 있다 (잘못되거나 만료된 토큰을 보내면 401)
+  - 2026-11-09 권한 전환부터: 공개 API 외에는 모두 로그인이 필요하다. `/api/admin/**`는 ADMIN, `/api/driver/**`는 DRIVER만 (SecurityConfig URL 규칙)
+  - 공개 API(아래 표의 권한 "전체"): `/api/auth/**` · GET `/api/health` · `/api/terms` · `/api/notices`(`/{id}`) · `/api/faqs` · `/api/vehicle-types` · `/api/cargo-types` · `/api/files/{fileName}` · Swagger. 새로 공개할 API는 팀원 1에게 요청
+  - 그 밖의 역할(예: 배송 신청은 CUSTOMER)은 각 컨트롤러의 `@PreAuthorize`로 검사한다. 공개 API에도 잘못되거나 만료된 토큰을 보내면 401
 - 목록: 수업의 `PageRequestDTO`(page는 1부터 · size 기본 10 · 최대 100) / `PageResponseDTO`(dtoList, pageNumList, prev · next, prevPage · nextPage, totalCount, totalPage, current). 검색 파라미터 이름 `status, from, to, keyword`
 - 에러 응답: `{ "code": "INVALID_STATUS_CHANGE", "message": "배차완료 상태에서만 상차 처리할 수 있습니다." }`
 
