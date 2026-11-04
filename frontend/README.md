@@ -18,10 +18,11 @@ React 19 + Vite · React Router · Redux Toolkit · axios · Tailwind CSS v4
 | `router/` | 화면 경로. 공개는 `root.jsx`, 역할별은 `customerRouter.jsx` · `driverRouter.jsx` · `adminRouter.jsx` |
 | `slices/` | Redux 상태 (로그인 등) |
 | `hooks/` | 여러 화면이 같이 쓰는 훅 |
-| `util/` | 쿠키 · JWT 같은 도구 |
+| `util/` | 쿠키 · JWT · 입력 형식(`formatUtil.js`) 같은 도구 |
 
 ## 로그인 · API 호출
 
+- 공개 화면: `/` 메인 · `/login` 로그인 · `/signup` 회원가입 (고객 · 기사 + 약관 동의, 기사는 관리자 승인 후 로그인)
 - 로그인 정보: `useCustomLogin()` → `loginState`(memberId · email · name · role), `isLogin`, `doLogout()`
 - 로그인이 필요한 API는 `jwtAxios`로 부른다. 토큰을 자동으로 붙이고, 만료(401 `TOKEN_EXPIRED`)되면 재발급해서 다시 보낸다
   ```js
@@ -31,6 +32,10 @@ React 19 + Vite · React Router · Redux Toolkit · axios · Tailwind CSS v4
 - 토큰과 회원 정보는 쿠키 `member`에 1일 동안 저장된다 (새로고침해도 로그인 유지)
 - `/customer` · `/driver` · `/admin` 아래 화면은 로그인 + 역할이 맞아야 열린다 (`router/RequireAuth.jsx`). 화면만 막는 것이고 실제 권한은 서버가 검사한다
 - 화면을 만들면: 역할별 router 파일에 경로를 추가하고, 레이아웃 메뉴(`layouts/*Layout.jsx`의 `MENUS`)에 `to`를 넣는다 → 공통 파일이라 PR로
+
+## 입력 형식
+
+- 연락처: `util/formatUtil.js`의 `formatPhone()`으로 숫자만 입력해도 `010-1234-5678`이 되게 하고, `PHONE_PATTERN`으로 검사한다 (서버 검사와 같은 규칙). 배송 신청 · 내 정보 수정에서도 같이 쓴다
 
 ## 공통 파일
 
