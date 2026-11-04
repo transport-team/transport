@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createVehicle } from '../../api/vehicleApi'
+import { createVehicle, getActiveDrivers, getVehicleTypes } from '../../api/vehicleApi'
 
 const initForm = {
     plateNo: '',
@@ -14,6 +14,32 @@ const VehicleRegisterPage = () => {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const navigate = useNavigate()
+    const [vehicleTypes, setVehicleTypes] = useState([])
+    const [drivers, setDrivers] = useState([])
+
+    // 차량에 배정할 활성 기사 목록 조회
+    useEffect(() => {
+        getActiveDrivers()
+            .then((data) => {
+                setDrivers(data)
+            })
+            .catch((err) => {
+                console.error('기사 목록 조회 실패:', err)
+                setError('기사 목록을 불러오지 못했습니다.')
+            })
+    }, [])
+
+    // 페이지가 열릴 때 차종 목록 조회
+    useEffect(() => {
+        getVehicleTypes()
+            .then((data) => {
+                setVehicleTypes(data.filter((type) => type.active))
+            })
+            .catch((err) => {
+                console.error('차종 목록 조회 실패:', err)
+                setError('차종 목록을 불러오지 못했습니다.')
+            })
+    }, [])
 
     // 입력값 변경 시 form 상태 업데이트
     const handleChange = (e) => {
@@ -78,17 +104,22 @@ const VehicleRegisterPage = () => {
                 </label>
 
                 <label className="grid gap-2 text-sm">
-                    <span className="font-medium">차종 ID</span>
-                    <input
-                        type="number"
+                    <span className="font-medium">차종 선택</span>
+                    <select
                         name="vehicleTypeId"
                         value={form.vehicleTypeId}
                         onChange={handleChange}
-                        placeholder="등록된 차종 ID 입력"
-                        min="1"
                         required
                         className="rounded border border-gray-300 px-3 py-2"
-                    />
+                    >
+                        <option value="">차종을 선택해 주세요</option>
+
+                        {vehicleTypes.map((type) => (
+                            <option key={type.id} value={type.id}>
+                                {type.id} ({type.name})
+                            </option>
+                        ))}
+                    </select>
                 </label>
 
                 <label className="grid gap-2 text-sm">
@@ -105,16 +136,21 @@ const VehicleRegisterPage = () => {
                 </label>
 
                 <label className="grid gap-2 text-sm">
-                    <span className="font-medium">담당 기사 ID (선택)</span>
-                    <input
-                        type="number"
+                    <span className="font-medium">담당 기사 선택 (선택)</span>
+                    <select
                         name="driverId"
                         value={form.driverId}
                         onChange={handleChange}
-                        placeholder="미배정 시 비워두세요"
-                        min="1"
                         className="rounded border border-gray-300 px-3 py-2"
-                    />
+                    >
+                        <option value="">담당 기사 미배정</option>
+
+                        {drivers.map((driver) => (
+                            <option key={driver.id} value={driver.id}>
+                                {driver.id} ({driver.name} · {driver.phone})
+                            </option>
+                        ))}
+                    </select>
                 </label>
 
                 {error && (

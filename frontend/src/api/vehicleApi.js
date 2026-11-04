@@ -29,3 +29,23 @@ export const deactivateVehicle = async (id) => {
 
     return res.data
 }
+
+// 등록된 차종 목록 조회
+export const getVehicleTypes = async () => {
+    const res = await jwtAxios.get('/api/vehicle-types')
+
+    return res.data
+}
+
+// 활성 상태인 기사 목록 조회
+export const getActiveDrivers = async () => {
+    const res = await jwtAxios.get('/api/admin/drivers', {
+        params: {
+            page: 1,
+            size: 100,
+            status: 'ACTIVE',
+        },
+    })
+
+    return res.data.dtoList ?? []
+}
