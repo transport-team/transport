@@ -46,4 +46,9 @@ public class Member extends BaseEntity {
 	public void changePassword(String encodedPassword) {
 		this.password = encodedPassword;
 	}
+
+	// 관리자 회원 관리: 비활성화(false)하면 로그인 · 토큰 재발급이 막힌다
+	public void changeEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
 }
