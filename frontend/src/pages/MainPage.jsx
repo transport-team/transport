@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { API_SERVER_HOST } from '../api/apiClient'
 import { getHealth } from '../api/healthApi'
+import BasicLayout from '../layouts/BasicLayout'
 
 const HEALTH_URL = `${API_SERVER_HOST}/api/health`
 
@@ -28,7 +29,7 @@ const STATUS = {
   },
 }
 
-// 임시 메인 화면: 백엔드 연결 확인 (K단계에서 실제 메인 화면으로 바꾼다)
+// 임시 메인 화면: 백엔드 연결 확인 (서비스 소개 화면은 나중에)
 const MainPage = () => {
   const [health, setHealth] = useState('checking')
 
@@ -42,15 +43,18 @@ const MainPage = () => {
   const status = STATUS[API_SERVER_HOST ? health : 'noEnv']
 
   return (
-    <div className="mx-auto max-w-xl p-8">
-      <h1 className="text-2xl font-bold">운송서비스</h1>
-      <p className="mt-1 text-gray-500">화물 운송 접수 · 결제 · 배차 · 실시간 추적 · 정산</p>
+    <BasicLayout>
+      <div className="mx-auto max-w-xl">
+        <h1 className="text-2xl font-bold">운송서비스</h1>
+        <p className="mt-1 text-gray-500">화물 운송 접수 · 결제 · 배차 · 실시간 추적 · 정산</p>
 
-      <div className={`mt-6 rounded-lg border p-4 ${status.box}`}>
-        <p className="font-semibold">{status.title}</p>
-        <p className="mt-1 break-all text-sm">{status.detail}</p>
+        <div className={`mt-6 rounded-lg border p-4 ${status.box}`}>
+          <p className="font-semibold">{status.title}</p>
+          <p className="mt-1 break-all text-sm">{status.detail}</p>
+        </div>
+        <p className="mt-4 text-sm text-gray-600">오른쪽 위 로그인 버튼으로 로그인하면 역할(고객 · 기사 · 관리자)별 화면으로 이동해요.</p>
       </div>
-    </div>
+    </BasicLayout>
   )
 }
 
