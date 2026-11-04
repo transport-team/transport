@@ -28,4 +28,15 @@ public class Notice extends BaseEntity {
 	private Member writer;  // 작성 관리자
 
 	private int viewCount;
+
+	// 공지 수정: 제목 · 내용
+	public void change(String title, String content) {
+		this.title = title;
+		this.content = content;
+	}
+
+	// 상세를 볼 때마다 조회수 1 증가
+	public void increaseViewCount() {
+		this.viewCount++;
+	}
 }

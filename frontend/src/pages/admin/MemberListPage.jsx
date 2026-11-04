@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getMembers, patchMemberEnabled } from '../../api/adminMemberApi'
+import Pagination from '../../components/common/Pagination'
 import { ROLE_NAME } from '../../util/roleUtil'
 
 const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
@@ -13,26 +14,6 @@ const toParams = ({ role, enabled, keyword, page }) => ({
   ...(enabled && { enabled }),
   ...(keyword.trim() && { keyword: keyword.trim() }),
 })
-
-// 페이지 번호: PageResponseDTO의 pageNumList · prev · next (공통 Pagination 컴포넌트가 생기면 바꾼다)
-const Pagination = ({ pageData, onMove }) => (
-  <nav aria-label="페이지" className="flex flex-wrap items-center gap-1 text-sm">
-    {pageData.prev && (
-      <button type="button" onClick={() => onMove(pageData.prevPage)} className="rounded px-3 py-1 hover:bg-gray-100">이전</button>
-    )}
-    {pageData.pageNumList.map((num) => (
-      <button
-        key={num} type="button" onClick={() => onMove(num)} aria-current={num === pageData.current ? 'page' : undefined}
-        className={`rounded px-3 py-1 ${num === pageData.current ? 'bg-emerald-700 text-white' : 'hover:bg-gray-100'}`}
-      >
-        {num}
-      </button>
-    ))}
-    {pageData.next && (
-      <button type="button" onClick={() => onMove(pageData.nextPage)} className="rounded px-3 py-1 hover:bg-gray-100">다음</button>
-    )}
-  </nav>
-)
 
 // 관리자 회원 관리 (ADM-10): 역할 · 상태 · 이름/이메일 검색, 비활성화 · 다시 활성화 (관리자 계정은 바꿀 수 없다)
 const MemberListPage = () => {
