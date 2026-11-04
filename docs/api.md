@@ -18,7 +18,7 @@
 
 | 구역 | 코드 예시 |
 |---|---|
-| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED |
+| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
 | 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
 | 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
@@ -31,7 +31,8 @@
 | POST | /api/auth/signup | 회원가입 (필수 약관 동의, 기사는 PENDING) | 전체 |
 | POST | /api/auth/login | 로그인 → 토큰 · 역할 | 전체 |
 | POST | /api/auth/refresh | 토큰 재발급 | 전체 |
-| GET · PUT | /api/members/me | 내 정보 조회 · 수정 | 로그인 |
+| GET · PUT | /api/members/me | 내 정보 조회 · 수정(연락처) | 로그인 |
+| PATCH | /api/members/me/password | 비밀번호 변경 (현재 비밀번호 확인) | 로그인 |
 | GET | /api/terms | 가입 화면 약관 목록 | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
@@ -77,6 +78,21 @@
 { "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-0000-0002", "role": "CUSTOMER" }
 ```
 - 토큰 유효 시간: 액세스 30분 · 리프레시 1일 (`application.yml`의 `app.jwt.*`)
+
+### 내 정보 수정 예시
+
+```jsonc
+// PUT /api/members/me — 연락처만 바꿀 수 있다 (이름 · 이메일 · 역할은 그대로)
+{ "phone": "010-9999-8888" }
+// 200 바뀐 내 정보
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-9999-8888", "role": "CUSTOMER" }
+// 400 INVALID_INPUT(연락처 형식)
+
+// PATCH /api/members/me/password
+{ "currentPassword": "1234", "newPassword": "newPassword1!" }
+// 204 (본문 없음) · 400 WRONG_PASSWORD(현재 비밀번호 틀림) · 400 INVALID_INPUT(새 비밀번호 8~64자 · 지금과 같은 비밀번호)
+```
+- 비밀번호를 바꿔도 이미 받은 토큰은 만료될 때까지 쓸 수 있다 (로그아웃시키지 않음)
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 

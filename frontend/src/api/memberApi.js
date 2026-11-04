@@ -18,3 +18,14 @@ export const getMyInfo = async () => {
   const res = await jwtAxios.get('/api/members/me')
   return res.data
 }
+
+// 내 정보 수정 { phone } → 바뀐 내 정보
+export const putMyInfo = async (memberModify) => {
+  const res = await jwtAxios.put('/api/members/me', memberModify)
+  return res.data
+}
+
+// 비밀번호 변경 { currentPassword, newPassword } → 본문 없음 (204)
+export const patchMyPassword = async (passwordChange) => {
+  await jwtAxios.patch('/api/members/me/password', passwordChange)
+}

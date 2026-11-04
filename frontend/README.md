@@ -31,6 +31,7 @@ React 19 + Vite · React Router · Redux Toolkit · axios · Tailwind CSS v4
   ```
 - 토큰과 회원 정보는 쿠키 `member`에 1일 동안 저장된다 (새로고침해도 로그인 유지)
 - `/customer` · `/driver` · `/admin` 아래 화면은 로그인 + 역할이 맞아야 열린다 (`router/RequireAuth.jsx`). 화면만 막는 것이고 실제 권한은 서버가 검사한다
+- 내 정보(연락처 · 비밀번호 변경): `/customer/me` · `/driver/me` · `/admin/me` — 세 역할이 `pages/MyPage.jsx`를 같이 쓰고, 오른쪽 위 이름을 누르면 이동한다
 - 화면을 만들면: 역할별 router 파일에 경로를 추가하고, 레이아웃 메뉴(`layouts/*Layout.jsx`의 `MENUS`)에 `to`를 넣는다 → 공통 파일이라 PR로
 
 ## 입력 형식
