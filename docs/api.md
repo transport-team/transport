@@ -41,6 +41,7 @@
 | GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
 | POST · PUT · DELETE | /api/admin/notices · /faqs · /terms (/{id}) | 공지 · FAQ · 약관 관리 | ADMIN |
+| GET | /api/admin/faqs | FAQ 전체 (숨긴 것 포함) | ADMIN |
 | PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
 
 ### 회원가입 예시
@@ -126,6 +127,19 @@
 // POST 201 { "noticeId": 2 } · PUT 200 바뀐 공지 · DELETE 204 · 400 INVALID_INPUT(제목 100자 · 내용 5,000자 이하) · 404 · 403(관리자 아님)
 ```
 - 관리자 화면 목록 · 수정도 공개 목록 API를 같이 쓴다 (상세를 열면 조회수가 오르니까 목록에 내용까지 담는다)
+
+### FAQ 예시
+
+```jsonc
+// GET /api/faqs?category=결제 — 로그인 없이, 노출 중인 것만 sortOrder → id 순 (category는 빼도 된다, 페이지 없음)
+[{ "id": 1, "category": "결제", "question": "결제하지 않으면 어떻게 되나요?", "answer": "신청 후 30분 안에 …", "sortOrder": 1, "active": true }]
+
+// GET /api/admin/faqs — 관리자, 숨긴 것(active: false)까지 같은 모양
+
+// POST /api/admin/faqs (PUT /api/admin/faqs/{id}도 같은 본문) — 숨기기는 active: false
+{ "category": "회원", "question": "비밀번호를 바꾸려면?", "answer": "내 정보 화면에서 바꿀 수 있어요.", "sortOrder": 3, "active": true }
+// POST 201 { "faqId": 3 } · PUT 200 바뀐 FAQ · DELETE 204 · 400 INVALID_INPUT(분류는 배송 · 결제 · 회원, 질문 255자 · 답변 5,000자, 순서 0 이상) · 404 · 403(관리자 아님)
+```
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
