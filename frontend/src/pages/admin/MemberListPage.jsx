@@ -81,22 +81,43 @@ const MemberListPage = () => {
     if (member.role === 'ADMIN') {
       return <span className="text-xs text-gray-400">변경 불가</span>
     }
+
     if (confirmId === member.id) {
       return (
-        <span className="inline-flex items-center gap-2">
-          <span className="text-xs text-gray-600">로그인을 막을까요?</span>
-          <button
-            type="button" disabled={changingId === member.id} onClick={() => changeEnabled(member, false)}
-            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="회원 비활성화 확인"
+            className="w-80 rounded-lg bg-white p-6 text-center shadow-xl"
           >
-            비활성화
-          </button>
-          <button type="button" onClick={() => setConfirmId(null)} className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">
-            취소
-          </button>
-        </span>
+            <p className="mb-5 text-sm font-medium text-gray-800">
+              이 회원의 로그인을 막을까요?
+            </p>
+
+            <div className="flex justify-center gap-2">
+              <button
+                type="button"
+                disabled={changingId === member.id}
+                onClick={() => changeEnabled(member, false)}
+                className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                비활성화
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setConfirmId(null)}
+                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
       )
     }
+
     if (member.enabled) {
       return (
         <button
