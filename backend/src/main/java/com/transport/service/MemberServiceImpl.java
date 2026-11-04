@@ -15,6 +15,8 @@ import com.transport.domain.Term;
 import com.transport.domain.TermAgreement;
 import com.transport.domain.enums.MemberRole;
 import com.transport.dto.MemberDTO;
+import com.transport.dto.MemberModifyDTO;
+import com.transport.dto.PasswordChangeDTO;
 import com.transport.dto.SignupRequestDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -71,8 +73,31 @@ public class MemberServiceImpl implements MemberService {
 	@Override
 	@Transactional(readOnly = true)
 	public MemberDTO getMember(Long memberId) {
+		return entityToDTO(findMember(memberId));
+	}
+
+	@Override
+	public MemberDTO modify(Long memberId, MemberModifyDTO memberModifyDTO) {
+		Member member = findMember(memberId);
+		member.changePhone(memberModifyDTO.getPhone());
+		return entityToDTO(member);
+	}
+
+	@Override
+	public void changePassword(Long memberId, PasswordChangeDTO passwordChangeDTO) {
+		Member member = findMember(memberId);
+		if (!passwordEncoder.matches(passwordChangeDTO.getCurrentPassword(), member.getPassword())) {
+			throw new CustomException(ErrorCode.WRONG_PASSWORD);
+		}
+		if (passwordEncoder.matches(passwordChangeDTO.getNewPassword(), member.getPassword())) {
+			throw new CustomException(ErrorCode.INVALID_INPUT, "새 비밀번호가 지금 비밀번호와 같습니다.");
+		}
+		member.changePassword(passwordEncoder.encode(passwordChangeDTO.getNewPassword()));
+		log.info("비밀번호 변경: id={}", memberId);
+	}
+
+	private Member findMember(Long memberId) {
 		return memberRepository.findById(memberId)
-				.map(this::entityToDTO)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 	}
 

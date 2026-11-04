@@ -36,4 +36,14 @@ public class Member extends BaseEntity {
 	private MemberRole role;
 
 	private boolean enabled;
+
+	// 내 정보 수정: 연락처
+	public void changePhone(String phone) {
+		this.phone = phone;
+	}
+
+	// 비밀번호 변경: 암호화(BCrypt)한 값을 받는다
+	public void changePassword(String encodedPassword) {
+		this.password = encodedPassword;
+	}
 }
