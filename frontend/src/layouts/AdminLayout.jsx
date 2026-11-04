@@ -10,7 +10,7 @@ const MENUS = [
   { label: '기사 관리' },
   { label: '차량 · 차종', to: '/admin/vehicles' },
   { label: '정산' },
-  { label: '회원 관리' },
+  { label: '회원 관리', to: '/admin/members' },
   { label: '공지 · FAQ · 문의' },
 ]
 

@@ -4,6 +4,7 @@ const Loading = <div className="p-8 text-gray-500">불러오는 중...</div>
 
 const AdminHome = lazy(() => import('../pages/admin/AdminHomePage'))
 const MyPage = lazy(() => import('../pages/MyPage'))
+const MemberList = lazy(() => import('../pages/admin/MemberListPage'))
 
 // 차량 관리 페이지
 const VehicleListPage = lazy(() => import('../pages/admin/VehicleListPage'))
@@ -16,6 +17,7 @@ const adminRouter = () => [
   { path: 'me', element: <Suspense fallback={Loading}><MyPage /></Suspense> },
   { path: 'vehicles', element: <Suspense fallback={Loading}><VehicleListPage /></Suspense> }, // 차량 관리 경로
   { path: 'vehicles/new', element: <Suspense fallback={Loading}><VehicleRegisterPage /></Suspense> },
+  { path: 'members', element: <Suspense fallback={Loading}><MemberList /></Suspense> },
 ]
 
 export default adminRouter

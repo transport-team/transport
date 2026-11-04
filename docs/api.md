@@ -75,7 +75,8 @@
 // 401 TOKEN_EXPIRED · INVALID_TOKEN → 로그인 화면으로
 
 // GET /api/members/me (Authorization: Bearer {accessToken})
-{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-0000-0002", "role": "CUSTOMER" }
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-0000-0002", "role": "CUSTOMER",
+  "enabled": true, "createdAt": "2026-11-02T10:00:00" }
 ```
 - 토큰 유효 시간: 액세스 30분 · 리프레시 1일 (`application.yml`의 `app.jwt.*`)
 
@@ -85,7 +86,8 @@
 // PUT /api/members/me — 연락처만 바꿀 수 있다 (이름 · 이메일 · 역할은 그대로)
 { "phone": "010-9999-8888" }
 // 200 바뀐 내 정보
-{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-9999-8888", "role": "CUSTOMER" }
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-9999-8888", "role": "CUSTOMER",
+  "enabled": true, "createdAt": "2026-11-02T10:00:00" }
 // 400 INVALID_INPUT(연락처 형식)
 
 // PATCH /api/members/me/password
@@ -93,6 +95,21 @@
 // 204 (본문 없음) · 400 WRONG_PASSWORD(현재 비밀번호 틀림) · 400 INVALID_INPUT(새 비밀번호 8~64자 · 지금과 같은 비밀번호)
 ```
 - 비밀번호를 바꿔도 이미 받은 토큰은 만료될 때까지 쓸 수 있다 (로그아웃시키지 않음)
+
+### 회원 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/members?role=CUSTOMER&enabled=false&keyword=김&page=1 — role · enabled · keyword는 빼도 된다, 최신 가입 순
+{ "dtoList": [{ "id": 4, "email": "kim@test.com", "name": "김고객", "phone": "010-1234-5678", "role": "CUSTOMER",
+                "enabled": false, "createdAt": "2026-11-03T16:58:01" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// PATCH /api/admin/members/{id}/enabled — 비활성화 false · 다시 활성화 true
+{ "enabled": false }
+// 200 바뀐 회원 정보 · 400 INVALID_INPUT(enabled 빠짐 · 관리자 계정) · 404 NOT_FOUND · 403 FORBIDDEN(관리자 아님)
+```
+- 비활성화된 회원은 로그인 · 토큰 재발급이 403 `ACCOUNT_DISABLED` (이미 받은 액세스 토큰은 최대 30분 남는다)
+- 기사 승인 · 중지는 `/api/admin/drivers`(Driver.status), 이건 계정 자체 사용 중지
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
