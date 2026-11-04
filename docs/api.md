@@ -94,6 +94,19 @@
 | PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
 | GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
 
+### 기사 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/drivers?status=PENDING&keyword=김&page=1 — status · keyword(이름 · 이메일 일부)는 빼도 된다, 최신 가입 순
+{ "dtoList": [{ "id": 2, "memberId": 5, "name": "김기사", "email": "kim@test.com", "phone": "010-2222-3333",
+                "licenseType": "1종 보통", "careerYears": 5, "status": "PENDING", "approvedAt": null, "createdAt": "2026-11-03T16:58:01" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// PATCH /api/admin/drivers/{id}/status — 승인 ACTIVE · 중지 INACTIVE (PENDING으로는 되돌릴 수 없음)
+{ "status": "ACTIVE" }
+// 200 바뀐 기사 정보 (처음 승인할 때 approvedAt 기록) · 400 INVALID_INPUT · 404 NOT_FOUND · 403 FORBIDDEN(관리자 아님)
+```
+
 ## 팀원 3 — 배송 접수 · 운임 · 결제
 
 | 메서드 | URL | 설명 | 권한 |
