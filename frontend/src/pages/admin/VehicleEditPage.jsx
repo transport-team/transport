@@ -6,7 +6,21 @@ const VehicleEditPage = () => {
     const { id } = useParams()
     const { state } = useLocation()
     const navigate = useNavigate()
+
+    // 목록에서 전달받은 차량 정보
+    const vehicle = state?.vehicle
+
+    // 상태 선언은 effect보다 위에 둔다 (effect 안에서 setError를 쓴다 — react-hooks/immutability)
+    const [form, setForm] = useState({
+        plateNo: vehicle?.plateNo ?? '',
+        vehicleTypeId: vehicle?.vehicleTypeId ?? '',
+        status: vehicle?.status ?? 'AVAILABLE',
+        driverId: vehicle?.driverId ?? '',
+    })
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
     const [drivers, setDrivers] = useState([])
+    const [vehicleTypes, setVehicleTypes] = useState([])
 
     // 수정 화면에서 선택할 활성 기사 목록 조회
     useEffect(() => {
@@ -19,19 +33,6 @@ const VehicleEditPage = () => {
                 setError('기사 목록을 불러오지 못했습니다.')
             })
     }, [])
-
-    // 목록에서 전달받은 차량 정보
-    const vehicle = state?.vehicle
-
-    const [form, setForm] = useState({
-        plateNo: vehicle?.plateNo ?? '',
-        vehicleTypeId: vehicle?.vehicleTypeId ?? '',
-        status: vehicle?.status ?? 'AVAILABLE',
-        driverId: vehicle?.driverId ?? '',
-    })
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
-    const [vehicleTypes, setVehicleTypes] = useState([])
 
     // 수정 화면에서 선택할 차종 목록 조회
     useEffect(() => {
