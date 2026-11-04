@@ -1,78 +1,73 @@
 package com.transport.service;
 
+import java.util.Comparator;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.transport.dto.FareCalculateRequestDTO;
 import com.transport.dto.FareCalculateResponseDTO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import com.transport.entity.CargoType;
+import com.transport.entity.VehicleType;
+import com.transport.repository.CargoTypeRepository;
+import com.transport.repository.VehicleTypeRepository;
+import com.transport.service.DistanceService.Route;
 
-@Slf4j
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class FareServiceImpl implements FareService {
 
-    // 기본 요금 정책 상수
-    private static final long BASE_FARE = 5_000L;          // 기본 운임 5,000원
-    private static final double BASE_DISTANCE_KM = 5.0;     // 기본 거리 5km
-    private static final long FARE_PER_KM = 1_000L;         // 1km 초과당 1,000원
+	private final VehicleTypeRepository vehicleTypeRepository;
+	private final CargoTypeRepository cargoTypeRepository;
+	private final DistanceService distanceService;
+	private final FareCalculator fareCalculator;
 
-    private static final double BASE_WEIGHT_KG = 5.0;       // 기본 무게 5kg
-    private static final long FARE_PER_KG = 500L;           // 1kg 초과당 500원
+	@Override
+	public FareCalculateResponseDTO calculateFare(FareCalculateRequestDTO requestDTO) {
+		VehicleType type = vehicleTypeRepository.findById(requestDTO.getVehicleTypeId())
+				.orElseThrow(() -> new EntityNotFoundException("존재하지 않는 차종입니다."));
+		CargoType cargo = cargoTypeRepository.findById(requestDTO.getCargoTypeId())
+				.orElseThrow(() -> new EntityNotFoundException("존재하지 않는 화물 유형입니다."));
 
-    private static final double SURCHARGE_RATE = 0.20;      // 야간/피크 할증률 20%
+		// 거리는 서버가 계산, 할증은 pickupAt으로 서버가 판단 (화면 값은 믿지 않는다)
+		Route route = distanceService.findRoute(requestDTO.getOriginAddress(), requestDTO.getDestAddress());
+		int weightKg = requestDTO.getCargoWeightKg();
 
-    @Override
-    public FareCalculateResponseDTO calculateFare(FareCalculateRequestDTO requestDTO) {
-        // 1. 거리 산정 (요청 DTO에 거리가 없거나 0 이하인 경우 주소 기반 더미 거리를 산정)
-        // DTO 필드: originAddress, destAddress
-        double distanceKm = (requestDTO.getDistanceKm() != null && requestDTO.getDistanceKm() > 0)
-                ? requestDTO.getDistanceKm()
-                : calculateDistanceByAddress(requestDTO.getOriginAddress(), requestDTO.getDestAddress());
+		int totalFare = fareCalculator.calculate(type, cargo, route.distanceKm(), weightKg, requestDTO.getPickupAt());
 
-        // 2. 거리 추가 요금 계산
-        long distanceFare = 0L;
-        if (distanceKm > BASE_DISTANCE_KM) {
-            double extraDistance = distanceKm - BASE_DISTANCE_KM; // 뺄셈 기호 (-) 복구
-            distanceFare = (long) (Math.ceil(extraDistance) * FARE_PER_KM);
-        }
+		int baseFare = type.getBaseFare();
+		int distanceFare = fareCalculator.distanceFare(type, route.distanceKm());
+		int cargoFare = cargo.getExtraFee();
+		int surchargeFare = totalFare - (baseFare + distanceFare + cargoFare);
 
-        // 3. Null-Safe 처리 포함 무게 추가 요금 계산
-        // DTO 필드: cargoWeightKg
-        long weightFare = 0L;
-        double weight = (requestDTO.getCargoWeightKg() != null) ? requestDTO.getCargoWeightKg().doubleValue() : 0.0;
-        
-        if (weight > BASE_WEIGHT_KG) {
-            double extraWeight = weight - BASE_WEIGHT_KG; // 뺄셈 기호 (-) 복구
-            weightFare = (long) (Math.ceil(extraWeight) * FARE_PER_KG);
-        }
+		// 무게 기준 자동 추천: 무게를 실을 수 있는 가장 작은 차종 (없으면 문의 안내)
+		Optional<VehicleType> recommended = vehicleTypeRepository.findAll().stream()
+				.filter(v -> v.getMaxLoadKg() >= weightKg)
+				.min(Comparator.comparingInt(VehicleType::getMaxLoadKg));
 
-        // 4. 할증 요금 및 최종 운임 산정
-        long subTotal = BASE_FARE + distanceFare + weightFare;
-        long surchargeFare = 0L;
+		log.info("Fare calculated: distance={}km, weight={}kg, total={}", route.distanceKm(), weightKg, totalFare);
 
-        if (Boolean.TRUE.equals(requestDTO.getIsSurchargeTime())) {
-            surchargeFare = (long) (subTotal * SURCHARGE_RATE); // 곱셈 기호 (*) 복구
-        }
-
-        long totalFare = subTotal + surchargeFare;
-
-        log.info("Fare calculated: Distance={}km, Weight={}kg, Total={}KRW", distanceKm, weight, totalFare);
-
-        return FareCalculateResponseDTO.builder()
-                .baseFare(BASE_FARE)
-                .distanceFare(distanceFare)
-                .weightFare(weightFare)
-                .surchargeFare(surchargeFare)
-                .totalFare(totalFare)
-                .calculatedDistanceKm(distanceKm)
-                .build();
-    }
-
-    /**
-     * 주소 기반 거리 계산 (지도 API 연동 전 임시 더미 로직)
-     */
-    private double calculateDistanceByAddress(String senderAddr, String receiverAddr) {
-        // TODO: Kakao/Naver Map REST API 연동 예정
-        return 10.0;
-    }
+		return FareCalculateResponseDTO.builder()
+				.baseFare(baseFare)
+				.distanceFare(distanceFare)
+				.cargoFare(cargoFare)
+				.surchargeFare(surchargeFare)
+				.totalFare(totalFare)
+				.distanceKm(route.distanceKm())
+				.durationMin(route.durationMin())
+				.originLat(route.originLat())
+				.originLng(route.originLng())
+				.destLat(route.destLat())
+				.destLng(route.destLng())
+				.recommendedVehicleTypeId(recommended.map(VehicleType::getId).orElse(null))
+				.inquiryRequired(recommended.isEmpty())
+				.build();
+	}
 }
