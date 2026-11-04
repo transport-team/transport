@@ -31,8 +31,12 @@ public class KakaoDistanceService implements DistanceService {
 	private final RestTemplate restTemplate = new RestTemplate();
 	private final String apiKey;
 
-	public KakaoDistanceService(@Value("${kakao.rest-api-key}") String apiKey) {
+	// 키 이름은 팀 설정(application-local.yml.example)의 app.kakao.rest-api-key. 비어 있어도 서버는 뜨게 기본값을 둔다
+	public KakaoDistanceService(@Value("${app.kakao.rest-api-key:}") String apiKey) {
 		this.apiKey = apiKey;
+		if (apiKey.isBlank()) {
+			log.warn("app.kakao.rest-api-key가 비어 있어요 — 주소 검색 · 길찾기 호출이 실패합니다 (application-local.yml 확인)");
+		}
 	}
 
 	@Override
