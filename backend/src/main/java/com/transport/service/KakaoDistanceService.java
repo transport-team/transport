@@ -10,9 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import lombok.extern.log4j.Log4j2;
+import tools.jackson.databind.JsonNode;  // Boot 4의 RestTemplate은 Jackson 3만 읽는다 (Jackson 2 JsonNode는 변환 실패)
 
 /**
  * docs/fare.md "거리 구하기": 카카오 로컬(주소 → 좌표) + 카카오모빌리티 길찾기(도로 거리).
@@ -51,7 +50,7 @@ public class KakaoDistanceService implements DistanceService {
 					.build().encode().toUri();
 			JsonNode route = get(uri).path("routes").path(0);
 			if (route.path("result_code").asInt(-1) != 0) {
-				throw new IllegalStateException("길찾기 결과 없음: " + route.path("result_msg").asText());
+				throw new IllegalStateException("길찾기 결과 없음: " + route.path("result_msg").asString());
 			}
 			JsonNode summary = route.path("summary");
 			double distanceKm = summary.path("distance").asDouble() / 1000.0;
