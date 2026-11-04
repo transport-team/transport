@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.transport.domain.Member;
+import com.transport.domain.enums.DriverStatus;
+import com.transport.domain.enums.MemberRole;
 import com.transport.dto.LoginRequestDTO;
 import com.transport.dto.LoginResponseDTO;
 import com.transport.exception.CustomException;
@@ -25,6 +27,7 @@ public class AuthServiceImpl implements AuthService {
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JWTUtil jwtUtil;
+	private final DriverService driverService;
 
 	@Override
 	public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
@@ -32,8 +35,7 @@ public class AuthServiceImpl implements AuthService {
 		Member member = memberRepository.findByEmail(loginRequestDTO.getEmail())
 				.filter(found -> passwordEncoder.matches(loginRequestDTO.getPassword(), found.getPassword()))
 				.orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
-		checkEnabled(member);
-		// 기사 승인 여부 확인은 J단계 PR 3 (DriverService.getStatus)
+		checkCanLogin(member);
 
 		log.info("로그인: id={}, role={}", member.getId(), member.getRole());
 		return issueTokens(member);
@@ -44,13 +46,23 @@ public class AuthServiceImpl implements AuthService {
 		Long memberId = jwtUtil.parseRefreshToken(refreshToken);
 		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new CustomException(ErrorCode.INVALID_TOKEN));
-		checkEnabled(member);  // 비활성화된 회원은 재발급도 막는다
+		checkCanLogin(member);  // 그사이 비활성화 · 중지된 회원은 재발급도 막는다
 		return issueTokens(member);
 	}
 
-	private void checkEnabled(Member member) {
+	// 비활성 계정은 막고, 기사는 승인(ACTIVE)된 경우만 (승인 대기 → DRIVER_NOT_APPROVED, 중지 → ACCOUNT_DISABLED)
+	private void checkCanLogin(Member member) {
 		if (!member.isEnabled()) {
 			throw new CustomException(ErrorCode.ACCOUNT_DISABLED);
+		}
+		if (member.getRole() == MemberRole.DRIVER) {
+			DriverStatus status = driverService.getStatus(member.getId());
+			if (status == DriverStatus.PENDING) {
+				throw new CustomException(ErrorCode.DRIVER_NOT_APPROVED);
+			}
+			if (status == DriverStatus.INACTIVE) {
+				throw new CustomException(ErrorCode.ACCOUNT_DISABLED);
+			}
 		}
 	}
 

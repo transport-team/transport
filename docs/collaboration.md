@@ -27,6 +27,7 @@
 | 3주차 초 | 1 → 전원 | 로그인 사용자 꺼내는 방법(예: @AuthenticationPrincipal), 역할별 URL 규칙 |
 | 3주차 중 | 3 → 2·4 | Shipment 엔티티 · ShipmentStatus · Repository |
 | 3주차 중 | 2 → 3 | VehicleType 엔티티 · 초기 데이터 |
+| 3주차 중 | 2 → 1 | `DriverService.register(member, licenseType, careerYears)` · `getStatus(memberId)` (팀원 2 부재 중 팀원 1이 작성) |
 | 4주차 | 4 → 전원 | `NotificationService.send(receiver, type, message, shipment)` (처음엔 로그만) |
 | 4주차 | 4 → 2·3 | `StatusHistoryService.record(shipment, from, to, changedBy, memo)` |
 | 5주차 | 2 → 4 | `DispatchService.getActiveDriver(shipmentId)` |

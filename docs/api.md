@@ -46,14 +46,17 @@
 // GET /api/terms → 가입 화면 약관 (required = 필수 동의)
 [{ "id": 1, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.0" }]
 
-// POST /api/auth/signup — 지금은 CUSTOMER만 (기사 가입은 J단계 PR 3에서 licenseType · careerYears 추가)
+// POST /api/auth/signup — 고객
 { "email": "kim@test.com", "password": "password1!", "name": "김고객", "phone": "010-1234-5678",
   "role": "CUSTOMER", "agreedTermIds": [1, 2] }
+// POST /api/auth/signup — 기사: licenseType · careerYears 필수 → 승인 대기(PENDING)로 가입, 관리자 승인 후 로그인
+{ "email": "lee@test.com", "password": "password1!", "name": "이기사", "phone": "010-2222-3333",
+  "role": "DRIVER", "agreedTermIds": [1, 2], "licenseType": "1종 보통", "careerYears": 5 }
 // 201
 { "memberId": 4 }
-// 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없는 약관 · ADMIN 가입)
+// 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없는 약관 · ADMIN 가입 · 기사 정보 빠짐)
 ```
-- 비밀번호 8~64자, 연락처 `010-0000-0000` 형식
+- 비밀번호 8~64자, 연락처 `010-0000-0000` 형식, 면허 종류 20자 이하, 경력 0~60년
 
 ### 로그인 · 재발급 예시
 
@@ -62,7 +65,7 @@
 { "email": "customer@transport.test", "password": "1234" }
 // 200 — role로 역할별 첫 화면 이동
 { "accessToken": "eyJ…", "refreshToken": "eyJ…", "memberId": 2, "email": "customer@transport.test", "name": "테스트고객", "role": "CUSTOMER" }
-// 401 LOGIN_FAILED(없는 이메일 · 틀린 비밀번호 같은 응답) · 403 ACCOUNT_DISABLED(비활성 계정)
+// 401 LOGIN_FAILED(없는 이메일 · 틀린 비밀번호 같은 응답) · 403 ACCOUNT_DISABLED(비활성 계정 · 중지된 기사) · 403 DRIVER_NOT_APPROVED(승인 대기 기사)
 
 // POST /api/auth/refresh — 액세스 토큰이 TOKEN_EXPIRED일 때. 응답은 로그인과 같은 모양 (두 토큰 모두 새로 발급)
 { "refreshToken": "eyJ…" }
