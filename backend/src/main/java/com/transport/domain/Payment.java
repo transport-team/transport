@@ -3,6 +3,7 @@ package com.transport.domain;
 import java.time.LocalDateTime;
 
 import com.transport.domain.enums.PaymentStatus;
+import com.transport.domain.enums.ShipmentStatus;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -44,4 +45,9 @@ public class Payment extends BaseEntity {
 	private LocalDateTime canceledAt;
 
 	private String cancelReason;
+	
+	// Payment.java 내부
+	public void updatePaymentKey(String paymentKey) { this.paymentKey = paymentKey; }
+	public void updateStatus(PaymentStatus status) { this.status = status; }
+	public void updatePaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
 }
