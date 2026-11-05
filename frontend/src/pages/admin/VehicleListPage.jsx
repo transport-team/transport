@@ -9,12 +9,9 @@ const VehicleListPage = () => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
-    // 현재 페이지의 차량 목록 조회
+    // 현재 페이지의 차량 목록 조회 (로딩 표시 · 오류 지우기는 movePage에서)
     useEffect(() => {
         let active = true
-
-        setLoading(true)
-        setError('')
 
         getVehicleList(page, 10)
             .then((data) => {
@@ -36,6 +33,14 @@ const VehicleListPage = () => {
             active = false
         }
     }, [page])
+
+    // 페이지 이동: 로딩 표시를 켜고 이전 오류를 지운 뒤 페이지를 바꾼다
+    // (effect 안에서 바로 setState를 부르지 않는다 — react-hooks/set-state-in-effect)
+    const movePage = (nextPage) => {
+        setLoading(true)
+        setError('')
+        setPage(nextPage)
+    }
 
     return (
         <section className="space-y-6">
@@ -107,7 +112,7 @@ const VehicleListPage = () => {
                 <button
                     type="button"
                     disabled={page <= 1}
-                    onClick={() => setPage(page - 1)}
+                    onClick={() => movePage(page - 1)}
                     className="rounded border px-4 py-2 disabled:opacity-40"
                 >
                     이전
@@ -118,7 +123,7 @@ const VehicleListPage = () => {
                 <button
                     type="button"
                     disabled={page >= totalPage}
-                    onClick={() => setPage(page + 1)}
+                    onClick={() => movePage(page + 1)}
                     className="rounded border px-4 py-2 disabled:opacity-40"
                 >
                     다음
