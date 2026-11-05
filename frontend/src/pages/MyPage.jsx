@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getMyInfo } from '../api/memberApi'
 import PasswordForm from '../components/member/PasswordForm'
 import PhoneForm from '../components/member/PhoneForm'
-import { ROLE_NAME } from '../util/roleUtil'
+import { ROLE_HOME, ROLE_NAME } from '../util/roleUtil'
 
 // 내 정보 (고객 · 기사 · 관리자 공통, /{역할}/me): 이름 · 이메일 · 역할은 보기만, 연락처 · 비밀번호는 변경 (COM-03)
+// 고객 · 기사는 1:1 문의로 가는 링크 (기사는 아래 탭이 꽉 차서 여기서 들어간다)
 const MyPage = () => {
   const [member, setMember] = useState(null)
   const [error, setError] = useState('')
@@ -32,6 +34,18 @@ const MyPage = () => {
           </dl>
           <PhoneForm phone={member.phone} onSaved={setMember} />
           <PasswordForm />
+          {member.role !== 'ADMIN' && (
+            <Link
+              to={`${ROLE_HOME[member.role]}/inquiries`}
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-emerald-600"
+            >
+              <span>
+                <span className="block font-semibold">1:1 문의</span>
+                <span className="text-gray-500">궁금한 점을 남기면 관리자가 답해 드려요.</span>
+              </span>
+              <span aria-hidden="true" className="text-gray-400">›</span>
+            </Link>
+          )}
         </>
       )}
     </section>

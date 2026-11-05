@@ -14,7 +14,7 @@ const MENUS = [
   { label: '약관', to: '/admin/terms' },
   { label: '공지', to: '/admin/notices' },
   { label: 'FAQ', to: '/admin/faqs' },
-  { label: '문의' },
+  { label: '문의', to: '/admin/inquiries' },
 ]
 
 // 관리자 레이아웃: 왼쪽 메뉴 (좁은 화면에서는 위쪽 가로 메뉴)

@@ -36,7 +36,7 @@
 | GET | /api/terms | 가입 화면 약관 목록 (필수 먼저 → 등록 순) | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
-| POST · GET | /api/inquiries, /api/inquiries/my | 문의 등록 · 내 문의 | 로그인 |
+| POST · GET | /api/inquiries, /api/inquiries/my | 1:1 문의 등록 · 내 문의 (관리자는 403) | 고객 · 기사 |
 | GET | /api/admin/dashboard | KPI | ADMIN |
 | GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
@@ -45,7 +45,9 @@
 | GET · POST | /api/admin/terms | 약관 전체 (지난 버전 · 동의 수 포함) · 새 약관 | ADMIN |
 | POST | /api/admin/terms/{id}/revisions | 새 버전으로 개정 (이전 버전은 사용 중지) — 약관 내용 수정(PUT)은 없음 | ADMIN |
 | PATCH · DELETE | /api/admin/terms/{id}/active, /api/admin/terms/{id} | 사용 중지 · 다시 사용, 삭제 (동의한 회원이 없을 때만) | ADMIN |
-| PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
+| GET | /api/admin/inquiries | 문의 목록 (status, page) | ADMIN |
+| PATCH | /api/admin/inquiries/{id}/answer | 답변 등록 · 수정 (첫 답변이면 작성자에게 알림) | ADMIN |
+| DELETE | /api/admin/inquiries/{id} | 문의 삭제 (스팸 정리) | ADMIN |
 
 ### 회원가입 예시
 
@@ -165,6 +167,30 @@
 ```
 - 약관 내용은 고치지 않는다(PUT 없음). 바꾸려면 개정 → 회원이 동의한 버전(term_agreement가 가리키는 행)이 그대로 남는다
 - 개정해도 기존 회원에게 다시 동의를 받지 않는다 (공지로 안내) — docs/decisions.md
+
+### 1:1 문의 예시
+
+```jsonc
+// POST /api/inquiries — 고객 · 기사 (관리자는 403), 작성자는 로그인한 회원
+{ "title": "배차가 늦어요", "content": "어제 신청한 배송이 아직 배차 전이에요." }
+// 201 { "inquiryId": 7 } · 400 INVALID_INPUT(제목 100자 · 내용 5,000자 이하)
+
+// GET /api/inquiries/my?page=1 — 내 문의만, 최신순 (답변 전이면 answer · answeredAt은 null)
+{ "dtoList": [{ "id": 7, "title": "배차가 늦어요", "content": "…", "answer": "오늘 오후에 배차돼요.", "answeredAt": "2026-11-05T15:00:00",
+                "status": "ANSWERED", "createdAt": "2026-11-05T10:00:00",
+                "memberId": 2, "memberName": "테스트고객", "memberEmail": "customer@transport.test", "memberRole": "CUSTOMER" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// GET /api/admin/inquiries?status=WAITING&page=1 — 관리자, status(WAITING · ANSWERED)는 빼도 된다, 최신순, 같은 모양
+
+// PATCH /api/admin/inquiries/{id}/answer — 답변 등록 · 수정
+{ "answer": "오늘 오후에 배차돼요." }
+// 200 바뀐 문의 (status ANSWERED, answeredAt = 저장한 때) · 400 INVALID_INPUT(답변 5,000자 이하) · 404
+
+// DELETE /api/admin/inquiries/{id} — 204 · 404
+```
+- 첫 답변이면 `NotificationService.send(작성자, INQUIRY_ANSWERED, "1:1 문의에 답변이 등록됐어요: {제목}", null)` (팀원 4). 답변을 고칠 때는 알림 없음
+- 작성한 문의는 고치거나 지울 수 없다 (COM-07: 등록 · 내 문의 · 답변 확인). 삭제는 관리자만 (스팸 정리)
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
