@@ -125,7 +125,7 @@ class MemberServiceImplTest {
 
 		assertThatThrownBy(() -> memberService.signup(request(MemberRole.CUSTOMER, List.of(1L, 2L, 99L))))
 				.isInstanceOf(CustomException.class)
-				.hasMessage("동의할 수 없는 약관이 있습니다.")
+				.hasMessage("동의할 수 없는 약관이 있습니다. 약관이 바뀌었을 수 있으니 새로고침 후 다시 동의해 주세요.")
 				.extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
 	}
 
@@ -246,7 +246,7 @@ class MemberServiceImplTest {
 
 	// 필수 1 · 2, 선택 3 (data.sql 시드와 같은 구성)
 	private void givenTerms() {
-		when(termRepository.findAllByActiveTrueOrderByIdAsc())
+		when(termRepository.findAllByActiveTrueOrderByRequiredDescIdAsc())
 				.thenReturn(List.of(term(1L, true), term(2L, true), term(3L, false)));
 	}
 
