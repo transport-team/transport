@@ -19,7 +19,7 @@
 | 구역 | 코드 예시 |
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
-| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
+| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS, DUPLICATE_VEHICLE_PLATE, DRIVER_ALREADY_ASSIGNED |
 | 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
 
@@ -41,6 +41,7 @@
 | GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
 | POST · PUT · DELETE | /api/admin/notices · /faqs · /terms (/{id}) | 공지 · FAQ · 약관 관리 | ADMIN |
+| GET | /api/admin/faqs | FAQ 전체 (숨긴 것 포함) | ADMIN |
 | PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
 
 ### 회원가입 예시
@@ -111,13 +112,43 @@
 - 비활성화된 회원은 로그인 · 토큰 재발급이 403 `ACCOUNT_DISABLED` (이미 받은 액세스 토큰은 최대 30분 남는다)
 - 기사 승인 · 중지는 `/api/admin/drivers`(Driver.status), 이건 계정 자체 사용 중지
 
+### 공지 예시
+
+```jsonc
+// GET /api/notices?keyword=오픈&page=1 — 로그인 없이, 제목 검색 · 최신순 (keyword는 빼도 된다)
+{ "dtoList": [{ "id": 1, "title": "서비스 오픈 안내", "content": "운송서비스 운용 사이트가 열렸습니다.", "writerName": "관리자",
+                "viewCount": 3, "createdAt": "2026-11-02T10:00:00", "updatedAt": "2026-11-02T10:00:00" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// GET /api/notices/{id} — 로그인 없이, 볼 때마다 viewCount + 1 · 404 NOT_FOUND
+
+// POST /api/admin/notices (PUT /api/admin/notices/{id}도 같은 본문) — 작성자는 로그인한 관리자
+{ "title": "추석 연휴 배송 안내", "content": "9/28 ~ 10/1은 배차가 늦어질 수 있어요." }
+// POST 201 { "noticeId": 2 } · PUT 200 바뀐 공지 · DELETE 204 · 400 INVALID_INPUT(제목 100자 · 내용 5,000자 이하) · 404 · 403(관리자 아님)
+```
+- 관리자 화면 목록 · 수정도 공개 목록 API를 같이 쓴다 (상세를 열면 조회수가 오르니까 목록에 내용까지 담는다)
+
+### FAQ 예시
+
+```jsonc
+// GET /api/faqs?category=결제 — 로그인 없이, 노출 중인 것만 sortOrder → id 순 (category는 빼도 된다, 페이지 없음)
+[{ "id": 1, "category": "결제", "question": "결제하지 않으면 어떻게 되나요?", "answer": "신청 후 30분 안에 …", "sortOrder": 1, "active": true }]
+
+// GET /api/admin/faqs — 관리자, 숨긴 것(active: false)까지 같은 모양
+
+// POST /api/admin/faqs (PUT /api/admin/faqs/{id}도 같은 본문) — 숨기기는 active: false
+{ "category": "회원", "question": "비밀번호를 바꾸려면?", "answer": "내 정보 화면에서 바꿀 수 있어요.", "sortOrder": 3, "active": true }
+// POST 201 { "faqId": 3 } · PUT 200 바뀐 FAQ · DELETE 204 · 400 INVALID_INPUT(분류는 배송 · 결제 · 회원, 질문 255자 · 답변 5,000자, 순서 0 이상) · 404 · 403(관리자 아님)
+```
+
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
 | GET | /api/vehicle-types | 차종 목록 | 전체 |
 | GET · POST · PUT | /api/admin/vehicle-types(/{id}) | 차종 · 요금 관리 | ADMIN |
-| GET · POST · PUT · DELETE | /api/admin/vehicles(/{id}) | 차량 관리 (DELETE = 비활성화) | ADMIN |
+| GET · POST | /api/admin/vehicles | 차량 목록 조회 · 차량 등록 | ADMIN |
+| PUT · DELETE | /api/admin/vehicles/{id} | 차량 수정 · 비활성화 | ADMIN |
 | GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
 | GET · POST · DELETE | /api/driver/schedules(/{id}) | 내 근무 일정 (month) | DRIVER |
 | GET | /api/admin/dispatches/candidates | 배차 후보 (shipmentId) | ADMIN |
@@ -128,6 +159,40 @@
 | POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
 | PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
 | GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
+
+### 관리자 차량 관리 API 예시
+
+**차량 등록 요청 — POST /api/admin/vehicles**
+
+```json
+{
+  "plateNo": "12가3456",
+  "vehicleTypeId": 2,
+  "status": "AVAILABLE",
+  "driverId": null
+}
+```
+
+**차량 등록 성공 응답**
+
+- HTTP 상태: `200 OK`
+- 응답 본문: 등록된 차량 ID (`Long`)
+
+예시:
+
+```json
+5
+```
+
+
+**주요 오류 응답**
+
+| HTTP 상태 | 에러 코드 | 설명 |
+|---|---|---|
+| 400 | INVALID_INPUT | 입력값 검증 실패 |
+| 404 | NOT_FOUND | 차종 또는 기사 정보 없음 |
+| 409 | DUPLICATE_VEHICLE_PLATE | 차량번호 중복 |
+| 409 | DRIVER_ALREADY_ASSIGNED | 다른 차량에 이미 배정된 기사 |
 
 ### 기사 관리 예시 (관리자)
 
