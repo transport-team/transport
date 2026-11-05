@@ -74,8 +74,10 @@ const VehicleEditPage = () => {
                 status: form.status,
                 driverId: form.driverId ? Number(form.driverId) : null,
             })
-
-            navigate('/admin/vehicles')
+            // 수정 성공 후 목록으로 이동하며 토스트 메시지 전달
+            navigate('/admin/vehicles', {
+                state: { toast: '차량 수정이 완료되었습니다.' }
+            })
         } catch (err) {
             setError(err.response?.data?.message ?? '차량 수정에 실패했습니다.')
         } finally {
@@ -105,6 +107,7 @@ const VehicleEditPage = () => {
 
             <form
                 onSubmit={handleSubmit}
+                noValidate
                 className="grid gap-5 rounded-lg border border-gray-200 bg-white p-6"
             >
                 <label className="grid gap-2 text-sm">

@@ -19,7 +19,7 @@
 | 구역 | 코드 예시 |
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
-| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
+| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS, DUPLICATE_VEHICLE_PLATE, DRIVER_ALREADY_ASSIGNED |
 | 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
 
@@ -147,7 +147,8 @@
 |---|---|---|---|
 | GET | /api/vehicle-types | 차종 목록 | 전체 |
 | GET · POST · PUT | /api/admin/vehicle-types(/{id}) | 차종 · 요금 관리 | ADMIN |
-| GET · POST · PUT · DELETE | /api/admin/vehicles(/{id}) | 차량 관리 (DELETE = 비활성화) | ADMIN |
+| GET · POST | /api/admin/vehicles | 차량 목록 조회 · 차량 등록 | ADMIN |
+| PUT · DELETE | /api/admin/vehicles/{id} | 차량 수정 · 비활성화 | ADMIN |
 | GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
 | GET · POST · DELETE | /api/driver/schedules(/{id}) | 내 근무 일정 (month) | DRIVER |
 | GET | /api/admin/dispatches/candidates | 배차 후보 (shipmentId) | ADMIN |
@@ -158,6 +159,40 @@
 | POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
 | PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
 | GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
+
+### 관리자 차량 관리 API 예시
+
+**차량 등록 요청 — POST /api/admin/vehicles**
+
+```json
+{
+  "plateNo": "12가3456",
+  "vehicleTypeId": 2,
+  "status": "AVAILABLE",
+  "driverId": null
+}
+```
+
+**차량 등록 성공 응답**
+
+- HTTP 상태: `200 OK`
+- 응답 본문: 등록된 차량 ID (`Long`)
+
+예시:
+
+```json
+5
+```
+
+
+**주요 오류 응답**
+
+| HTTP 상태 | 에러 코드 | 설명 |
+|---|---|---|
+| 400 | INVALID_INPUT | 입력값 검증 실패 |
+| 404 | NOT_FOUND | 차종 또는 기사 정보 없음 |
+| 409 | DUPLICATE_VEHICLE_PLATE | 차량번호 중복 |
+| 409 | DRIVER_ALREADY_ASSIGNED | 다른 차량에 이미 배정된 기사 |
 
 ### 기사 관리 예시 (관리자)
 
