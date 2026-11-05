@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -12,20 +14,50 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.transport.security.filter.JWTCheckFilter;
+import com.transport.security.handler.CustomAccessDeniedHandler;
+import com.transport.security.handler.CustomAuthenticationEntryPoint;
+import com.transport.security.handler.ErrorResponseWriter;
+import com.transport.util.JWTUtil;
+
+import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.json.JsonMapper;
+
+// 보안 · CORS 설정 (공통 파일 — 관리: 팀원 1)
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // 컨트롤러 메서드에 @PreAuthorize("hasRole('ADMIN')") 같은 권한 검사
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${app.cors.allowed-origins}")
-    private List<String> allowedOrigins; // application.yml / properties에 등록된 프론트엔드 주소
+    // 로그인 없이 쓰는 API (api.md 권한 "전체")
+    private static final String[] PUBLIC_URLS = {
+        "/api/auth/**",                                           // 가입 · 로그인 · 재발급
+        "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",  // Swagger
+        "/error"                                                  // 에러 응답이 401로 바뀌지 않게
+    };
+
+    private static final String[] PUBLIC_GET_URLS = {
+        "/api/health", "/api/terms", "/api/notices", "/api/notices/*", "/api/faqs",
+        "/api/vehicle-types", "/api/cargo-types",
+        "/api/files/*"                                            // 사진: <img>는 토큰을 붙일 수 없다 (UUID 파일명)
+    };
+
+    private final JWTUtil jwtUtil;
+    private final JsonMapper jsonMapper;
+
+    // yml에 설정이 없을 경우 기본값으로 localhost:5173, localhost:3000 지정
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        
+
         // CORS 및 백엔드 세션/폼 비활성화
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -34,30 +66,20 @@ public class SecurityConfig {
             .httpBasic(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // =========================================================================
-        // 1. [현재 적용 중 - 개발용 설정]
-        // REST API + React 연동 개발을 위해 모든 API 접근을 허용합니다.
-        // =========================================================================
-        http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-
-
-        // =========================================================================
-        // 2. [추후 실제 보안/JWT 적용 시 전환 예시]
-        // 개발이 완료되고 JWT 필터를 적용할 때는 위의 permitAll() 대신 아래 구조로 전환합니다.
-        // =========================================================================
-        /*
+        // URL 권한: 공개 API 외에는 로그인, /api/admin/** 는 ADMIN, /api/driver/** 는 DRIVER
         http.authorizeHttpRequests(auth -> auth
-            // 헬스체크, 로그인/회원가입, Swagger 등 공개 API는 허용
-            .requestMatchers("/api/health", "/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-            // 관리자 전용 API
+            .requestMatchers(PUBLIC_URLS).permitAll()
+            .requestMatchers(HttpMethod.GET, PUBLIC_GET_URLS).permitAll()
             .requestMatchers("/api/admin/**").hasRole("ADMIN")
-            // 기사 전용 API
             .requestMatchers("/api/driver/**").hasRole("DRIVER")
-            // 그 외 모든 요청은 인증 필수
-            .anyRequest().authenticated()
-        );
-        // .addFilterBefore(jwtCheckFilter, UsernamePasswordAuthenticationFilter.class);
-        */
+            .anyRequest().authenticated());
+
+        // 토큰 확인: 토큰이 있으면 로그인 사용자로 등록, 없으면 통과. 401 · 403도 {code, message} 형식
+        ErrorResponseWriter errorResponseWriter = new ErrorResponseWriter(jsonMapper);
+        http.addFilterBefore(new JWTCheckFilter(jwtUtil, errorResponseWriter), UsernamePasswordAuthenticationFilter.class);
+        http.exceptionHandling(exception -> exception
+                .authenticationEntryPoint(new CustomAuthenticationEntryPoint(errorResponseWriter))
+                .accessDeniedHandler(new CustomAccessDeniedHandler(errorResponseWriter)));
 
         return http.build();
     }

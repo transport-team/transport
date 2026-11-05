@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 // 쿼리 파라미터 바인딩 · 기본값 · 범위 검사 (보안 필터는 끄고 확인)
-@WebMvcTest
+@WebMvcTest(PageRequestDTOTest.TestController.class)  // 지정하지 않으면 모든 컨트롤러를 불러와 서비스 빈이 없다고 실패한다
 @AutoConfigureMockMvc(addFilters = false)
 @Import(PageRequestDTOTest.TestController.class)
 class PageRequestDTOTest {

@@ -5,6 +5,8 @@ spring:
     name: transport-api
   profiles:
     active: local
+  autoconfigure:
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration  # JWT만 쓰므로 기본 계정(generated password)을 만들지 않는다
   jpa:
     open-in-view: false          # 컨트롤러에서 지연 로딩 금지 → DTO 변환은 서비스(@Transactional) 안에서
     properties:
@@ -19,5 +21,17 @@ spring:
   jackson:
     time-zone: Asia/Seoul
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
+
 server:
   port: 8080
+
+app:
+  jwt:
+    access-minutes: 30       # 액세스 토큰 유효 시간 (분). 비밀키(secret)는 application-local.yml
+    refresh-minutes: 1440    # 리프레시 토큰 유효 시간 (1일)

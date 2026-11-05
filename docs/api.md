@@ -5,6 +5,10 @@
 ## 공통 규칙
 - 기본 경로 `/api` · 관리자 `/api/admin/**` · 기사 `/api/driver/**`
 - 인증 `Authorization: Bearer {accessToken}` — 401 = 로그인 필요(없음·만료), 403 = 권한 없음
+  - 401 `UNAUTHORIZED` 토큰 없음 · `TOKEN_EXPIRED` 만료 → `/api/auth/refresh`로 재발급 후 다시 요청 · `INVALID_TOKEN` 다시 로그인
+  - 2026-11-09 권한 전환부터: 공개 API 외에는 모두 로그인이 필요하다. `/api/admin/**`는 ADMIN, `/api/driver/**`는 DRIVER만 (SecurityConfig URL 규칙)
+  - 공개 API(아래 표의 권한 "전체"): `/api/auth/**` · GET `/api/health` · `/api/terms` · `/api/notices`(`/{id}`) · `/api/faqs` · `/api/vehicle-types` · `/api/cargo-types` · `/api/files/{fileName}` · Swagger. 새로 공개할 API는 팀원 1에게 요청
+  - 그 밖의 역할(예: 배송 신청은 CUSTOMER)은 각 컨트롤러의 `@PreAuthorize`로 검사한다. 공개 API에도 잘못되거나 만료된 토큰을 보내면 401
 - 목록: 수업의 `PageRequestDTO`(page는 1부터 · size 기본 10 · 최대 100) / `PageResponseDTO`(dtoList, pageNumList, prev · next, prevPage · nextPage, totalCount, totalPage, current). 검색 파라미터 이름 `status, from, to, keyword`
 - 에러 응답: `{ "code": "INVALID_STATUS_CHANGE", "message": "배차완료 상태에서만 상차 처리할 수 있습니다." }`
 
@@ -14,8 +18,8 @@
 
 | 구역 | 코드 예시 |
 |---|---|
-| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, DRIVER_NOT_APPROVED |
-| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
+| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
+| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS, DUPLICATE_VEHICLE_PLATE, DRIVER_ALREADY_ASSIGNED |
 | 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
 
@@ -27,7 +31,8 @@
 | POST | /api/auth/signup | 회원가입 (필수 약관 동의, 기사는 PENDING) | 전체 |
 | POST | /api/auth/login | 로그인 → 토큰 · 역할 | 전체 |
 | POST | /api/auth/refresh | 토큰 재발급 | 전체 |
-| GET · PUT | /api/members/me | 내 정보 조회 · 수정 | 로그인 |
+| GET · PUT | /api/members/me | 내 정보 조회 · 수정(연락처) | 로그인 |
+| PATCH | /api/members/me/password | 비밀번호 변경 (현재 비밀번호 확인) | 로그인 |
 | GET | /api/terms | 가입 화면 약관 목록 | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
@@ -36,7 +41,105 @@
 | GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
 | POST · PUT · DELETE | /api/admin/notices · /faqs · /terms (/{id}) | 공지 · FAQ · 약관 관리 | ADMIN |
+| GET | /api/admin/faqs | FAQ 전체 (숨긴 것 포함) | ADMIN |
 | PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
+
+### 회원가입 예시
+
+```jsonc
+// GET /api/terms → 가입 화면 약관 (required = 필수 동의)
+[{ "id": 1, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.0" }]
+
+// POST /api/auth/signup — 고객
+{ "email": "kim@test.com", "password": "password1!", "name": "김고객", "phone": "010-1234-5678",
+  "role": "CUSTOMER", "agreedTermIds": [1, 2] }
+// POST /api/auth/signup — 기사: licenseType · careerYears 필수 → 승인 대기(PENDING)로 가입, 관리자 승인 후 로그인
+{ "email": "lee@test.com", "password": "password1!", "name": "이기사", "phone": "010-2222-3333",
+  "role": "DRIVER", "agreedTermIds": [1, 2], "licenseType": "1종 보통", "careerYears": 5 }
+// 201
+{ "memberId": 4 }
+// 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없는 약관 · ADMIN 가입 · 기사 정보 빠짐)
+```
+- 비밀번호 8~64자, 연락처 `010-0000-0000` 형식, 면허 종류 20자 이하, 경력 0~60년
+
+### 로그인 · 재발급 예시
+
+```jsonc
+// POST /api/auth/login (시드 계정: admin · customer · driver @transport.test / 1234)
+{ "email": "customer@transport.test", "password": "1234" }
+// 200 — role로 역할별 첫 화면 이동
+{ "accessToken": "eyJ…", "refreshToken": "eyJ…", "memberId": 2, "email": "customer@transport.test", "name": "테스트고객", "role": "CUSTOMER" }
+// 401 LOGIN_FAILED(없는 이메일 · 틀린 비밀번호 같은 응답) · 403 ACCOUNT_DISABLED(비활성 계정 · 중지된 기사) · 403 DRIVER_NOT_APPROVED(승인 대기 기사)
+
+// POST /api/auth/refresh — 액세스 토큰이 TOKEN_EXPIRED일 때. 응답은 로그인과 같은 모양 (두 토큰 모두 새로 발급)
+{ "refreshToken": "eyJ…" }
+// 401 TOKEN_EXPIRED · INVALID_TOKEN → 로그인 화면으로
+
+// GET /api/members/me (Authorization: Bearer {accessToken})
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-0000-0002", "role": "CUSTOMER",
+  "enabled": true, "createdAt": "2026-11-02T10:00:00" }
+```
+- 토큰 유효 시간: 액세스 30분 · 리프레시 1일 (`application.yml`의 `app.jwt.*`)
+
+### 내 정보 수정 예시
+
+```jsonc
+// PUT /api/members/me — 연락처만 바꿀 수 있다 (이름 · 이메일 · 역할은 그대로)
+{ "phone": "010-9999-8888" }
+// 200 바뀐 내 정보
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-9999-8888", "role": "CUSTOMER",
+  "enabled": true, "createdAt": "2026-11-02T10:00:00" }
+// 400 INVALID_INPUT(연락처 형식)
+
+// PATCH /api/members/me/password
+{ "currentPassword": "1234", "newPassword": "newPassword1!" }
+// 204 (본문 없음) · 400 WRONG_PASSWORD(현재 비밀번호 틀림) · 400 INVALID_INPUT(새 비밀번호 8~64자 · 지금과 같은 비밀번호)
+```
+- 비밀번호를 바꿔도 이미 받은 토큰은 만료될 때까지 쓸 수 있다 (로그아웃시키지 않음)
+
+### 회원 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/members?role=CUSTOMER&enabled=false&keyword=김&page=1 — role · enabled · keyword는 빼도 된다, 최신 가입 순
+{ "dtoList": [{ "id": 4, "email": "kim@test.com", "name": "김고객", "phone": "010-1234-5678", "role": "CUSTOMER",
+                "enabled": false, "createdAt": "2026-11-03T16:58:01" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// PATCH /api/admin/members/{id}/enabled — 비활성화 false · 다시 활성화 true
+{ "enabled": false }
+// 200 바뀐 회원 정보 · 400 INVALID_INPUT(enabled 빠짐 · 관리자 계정) · 404 NOT_FOUND · 403 FORBIDDEN(관리자 아님)
+```
+- 비활성화된 회원은 로그인 · 토큰 재발급이 403 `ACCOUNT_DISABLED` (이미 받은 액세스 토큰은 최대 30분 남는다)
+- 기사 승인 · 중지는 `/api/admin/drivers`(Driver.status), 이건 계정 자체 사용 중지
+
+### 공지 예시
+
+```jsonc
+// GET /api/notices?keyword=오픈&page=1 — 로그인 없이, 제목 검색 · 최신순 (keyword는 빼도 된다)
+{ "dtoList": [{ "id": 1, "title": "서비스 오픈 안내", "content": "운송서비스 운용 사이트가 열렸습니다.", "writerName": "관리자",
+                "viewCount": 3, "createdAt": "2026-11-02T10:00:00", "updatedAt": "2026-11-02T10:00:00" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// GET /api/notices/{id} — 로그인 없이, 볼 때마다 viewCount + 1 · 404 NOT_FOUND
+
+// POST /api/admin/notices (PUT /api/admin/notices/{id}도 같은 본문) — 작성자는 로그인한 관리자
+{ "title": "추석 연휴 배송 안내", "content": "9/28 ~ 10/1은 배차가 늦어질 수 있어요." }
+// POST 201 { "noticeId": 2 } · PUT 200 바뀐 공지 · DELETE 204 · 400 INVALID_INPUT(제목 100자 · 내용 5,000자 이하) · 404 · 403(관리자 아님)
+```
+- 관리자 화면 목록 · 수정도 공개 목록 API를 같이 쓴다 (상세를 열면 조회수가 오르니까 목록에 내용까지 담는다)
+
+### FAQ 예시
+
+```jsonc
+// GET /api/faqs?category=결제 — 로그인 없이, 노출 중인 것만 sortOrder → id 순 (category는 빼도 된다, 페이지 없음)
+[{ "id": 1, "category": "결제", "question": "결제하지 않으면 어떻게 되나요?", "answer": "신청 후 30분 안에 …", "sortOrder": 1, "active": true }]
+
+// GET /api/admin/faqs — 관리자, 숨긴 것(active: false)까지 같은 모양
+
+// POST /api/admin/faqs (PUT /api/admin/faqs/{id}도 같은 본문) — 숨기기는 active: false
+{ "category": "회원", "question": "비밀번호를 바꾸려면?", "answer": "내 정보 화면에서 바꿀 수 있어요.", "sortOrder": 3, "active": true }
+// POST 201 { "faqId": 3 } · PUT 200 바뀐 FAQ · DELETE 204 · 400 INVALID_INPUT(분류는 배송 · 결제 · 회원, 질문 255자 · 답변 5,000자, 순서 0 이상) · 404 · 403(관리자 아님)
+```
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
@@ -44,7 +147,8 @@
 |---|---|---|---|
 | GET | /api/vehicle-types | 차종 목록 | 전체 |
 | GET · POST · PUT | /api/admin/vehicle-types(/{id}) | 차종 · 요금 관리 | ADMIN |
-| GET · POST · PUT · DELETE | /api/admin/vehicles(/{id}) | 차량 관리 (DELETE = 비활성화) | ADMIN |
+| GET · POST | /api/admin/vehicles | 차량 목록 조회 · 차량 등록 | ADMIN |
+| PUT · DELETE | /api/admin/vehicles/{id} | 차량 수정 · 비활성화 | ADMIN |
 | GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
 | GET · POST · DELETE | /api/driver/schedules(/{id}) | 내 근무 일정 (month) | DRIVER |
 | GET | /api/admin/dispatches/candidates | 배차 후보 (shipmentId) | ADMIN |
@@ -55,6 +159,53 @@
 | POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
 | PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
 | GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
+
+### 관리자 차량 관리 API 예시
+
+**차량 등록 요청 — POST /api/admin/vehicles**
+
+```json
+{
+  "plateNo": "12가3456",
+  "vehicleTypeId": 2,
+  "status": "AVAILABLE",
+  "driverId": null
+}
+```
+
+**차량 등록 성공 응답**
+
+- HTTP 상태: `200 OK`
+- 응답 본문: 등록된 차량 ID (`Long`)
+
+예시:
+
+```json
+5
+```
+
+
+**주요 오류 응답**
+
+| HTTP 상태 | 에러 코드 | 설명 |
+|---|---|---|
+| 400 | INVALID_INPUT | 입력값 검증 실패 |
+| 404 | NOT_FOUND | 차종 또는 기사 정보 없음 |
+| 409 | DUPLICATE_VEHICLE_PLATE | 차량번호 중복 |
+| 409 | DRIVER_ALREADY_ASSIGNED | 다른 차량에 이미 배정된 기사 |
+
+### 기사 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/drivers?status=PENDING&keyword=김&page=1 — status · keyword(이름 · 이메일 일부)는 빼도 된다, 최신 가입 순
+{ "dtoList": [{ "id": 2, "memberId": 5, "name": "김기사", "email": "kim@test.com", "phone": "010-2222-3333",
+                "licenseType": "1종 보통", "careerYears": 5, "status": "PENDING", "approvedAt": null, "createdAt": "2026-11-03T16:58:01" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// PATCH /api/admin/drivers/{id}/status — 승인 ACTIVE · 중지 INACTIVE (PENDING으로는 되돌릴 수 없음)
+{ "status": "ACTIVE" }
+// 200 바뀐 기사 정보 (처음 승인할 때 approvedAt 기록) · 400 INVALID_INPUT · 404 NOT_FOUND · 403 FORBIDDEN(관리자 아님)
+```
 
 ## 팀원 3 — 배송 접수 · 운임 · 결제
 

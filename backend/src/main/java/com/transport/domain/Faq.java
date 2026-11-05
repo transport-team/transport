@@ -29,4 +29,13 @@ public class Faq extends BaseEntity {
 	private int sortOrder;
 
 	private boolean active;  // 노출 여부
+
+	// FAQ 수정: 분류 · 질문 · 답변 · 순서 · 노출 (숨기기는 active = false)
+	public void change(String category, String question, String answer, int sortOrder, boolean active) {
+		this.category = category;
+		this.question = question;
+		this.answer = answer;
+		this.sortOrder = sortOrder;
+		this.active = active;
+	}
 }
