@@ -18,10 +18,9 @@ const VehicleRequestListPage = () => {
     const [error, setError] = useState('')
 
     // 승인 대기 신청 목록 조회
-    const loadRequests = async () => {
-        const data = await getPendingVehicleRequests()
-        setRequests(Array.isArray(data) ? data : [])
-    }
+    // 상태는 then 안에서 바꾼다 (effect에서 불러도 react-hooks/set-state-in-effect에 걸리지 않게, 오류는 그대로 위로 전달)
+    const loadRequests = () =>
+        getPendingVehicleRequests().then((data) => setRequests(Array.isArray(data) ? data : []))
 
     useEffect(() => {
         loadRequests()

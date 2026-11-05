@@ -25,14 +25,13 @@ const AdminLayout = () => {
   const [pendingCount, setPendingCount] = useState(0)
 
   // 승인 대기 중인 차량 등록 신청 건수 조회
-  const loadPendingCount = useCallback(async () => {
-    try {
-      const requests = await getPendingVehicleRequests()
-      setPendingCount(requests.length)
-    } catch (err) {
-      console.error('차량 등록 신청 건수 조회 실패', err)
-    }
-  }, [])
+  // 상태는 then 안에서 바꾼다 (effect에서 불러도 react-hooks/set-state-in-effect에 걸리지 않게, promise는 그대로 돌려준다)
+  const loadPendingCount = useCallback(
+    () => getPendingVehicleRequests()
+      .then((requests) => setPendingCount(requests.length))
+      .catch((err) => console.error('차량 등록 신청 건수 조회 실패', err)),
+    [],
+  )
 
   useEffect(() => {
     loadPendingCount()
