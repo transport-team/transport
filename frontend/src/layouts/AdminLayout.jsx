@@ -11,6 +11,7 @@ const MENUS = [
   { label: '차량 · 차종', to: '/admin/vehicles' },
   { label: '정산' },
   { label: '회원 관리', to: '/admin/members' },
+  { label: '약관', to: '/admin/terms' },
   { label: '공지', to: '/admin/notices' },
   { label: 'FAQ', to: '/admin/faqs' },
   { label: '문의' },

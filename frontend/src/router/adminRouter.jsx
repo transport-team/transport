@@ -5,6 +5,7 @@ const Loading = <div className="p-8 text-gray-500">불러오는 중...</div>
 const AdminHome = lazy(() => import('../pages/admin/AdminHomePage'))
 const MyPage = lazy(() => import('../pages/MyPage'))
 const MemberList = lazy(() => import('../pages/admin/MemberListPage'))
+const TermManage = lazy(() => import('../pages/admin/TermManagePage'))
 const NoticeManage = lazy(() => import('../pages/admin/NoticeManagePage'))
 const FaqManage = lazy(() => import('../pages/admin/FaqManagePage'))
 const VehicleEditPage = lazy(() => import('../pages/admin/VehicleEditPage'))
@@ -22,6 +23,7 @@ const adminRouter = () => [
   { path: 'vehicles/new', element: <Suspense fallback={Loading}><VehicleRegisterPage /></Suspense> },
   { path: 'vehicles/:id/edit', element: <Suspense fallback={Loading}><VehicleEditPage /></Suspense> },
   { path: 'members', element: <Suspense fallback={Loading}><MemberList /></Suspense> },
+  { path: 'terms', element: <Suspense fallback={Loading}><TermManage /></Suspense> },
   { path: 'notices', element: <Suspense fallback={Loading}><NoticeManage /></Suspense> },
   { path: 'faqs', element: <Suspense fallback={Loading}><FaqManage /></Suspense> },
 ]
