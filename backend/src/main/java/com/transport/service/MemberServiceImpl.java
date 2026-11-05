@@ -148,13 +148,14 @@ public class MemberServiceImpl implements MemberService {
 	// 동의한 약관이 모두 지금 쓰는 약관인지, 필수 약관을 빠짐없이 동의했는지 확인 → 동의한 약관 목록
 	private List<Term> checkTerms(List<Long> agreedTermIds) {
 		Set<Long> agreedIds = new HashSet<>(agreedTermIds);
-		List<Term> activeTerms = termRepository.findAllByActiveTrueOrderByIdAsc();
+		List<Term> activeTerms = termRepository.findAllByActiveTrueOrderByRequiredDescIdAsc();
 
 		List<Term> agreedTerms = activeTerms.stream()
 				.filter(term -> agreedIds.contains(term.getId()))
 				.toList();
 		if (agreedTerms.size() != agreedIds.size()) {
-			throw new CustomException(ErrorCode.INVALID_INPUT, "동의할 수 없는 약관이 있습니다.");
+			// 가입 화면을 연 뒤 관리자가 약관을 개정하면 옛 버전 id가 온다
+			throw new CustomException(ErrorCode.INVALID_INPUT, "동의할 수 없는 약관이 있습니다. 약관이 바뀌었을 수 있으니 새로고침 후 다시 동의해 주세요.");
 		}
 
 		boolean allRequiredAgreed = activeTerms.stream()

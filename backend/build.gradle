@@ -24,6 +24,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0'  // Swagger UI (3.2.0은 Boot 4.1.2 기준 빌드)
 	implementation 'io.jsonwebtoken:jjwt-api:0.13.0'  // JWT (수업은 0.11.5, Boot 4 · Java 21에 맞춰 최신 버전)
+	implementation 'net.coobird:thumbnailator:0.4.20'  // 이미지 썸네일 (CustomFileUtil, 수업과 같은 라이브러리)
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'

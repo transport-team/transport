@@ -7,13 +7,15 @@ import java.util.Set;
 
 import javax.imageio.ImageIO;
 
+import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import net.coobird.thumbnailator.Thumbnails;
 
 import lombok.extern.log4j.Log4j2;
 
-// 파일 유틸리티 (확장자 검증, 썸네일 생성 등)
+// 파일 유틸리티 (확장자 검증, 썸네일 생성 등) — LocalFileStorage가 주입받으므로 빈으로 등록
+@Component
 @Log4j2
 public class CustomFileUtil {
 

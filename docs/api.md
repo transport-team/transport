@@ -33,15 +33,18 @@
 | POST | /api/auth/refresh | 토큰 재발급 | 전체 |
 | GET · PUT | /api/members/me | 내 정보 조회 · 수정(연락처) | 로그인 |
 | PATCH | /api/members/me/password | 비밀번호 변경 (현재 비밀번호 확인) | 로그인 |
-| GET | /api/terms | 가입 화면 약관 목록 | 전체 |
+| GET | /api/terms | 가입 화면 약관 목록 (필수 먼저 → 등록 순) | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
 | POST · GET | /api/inquiries, /api/inquiries/my | 문의 등록 · 내 문의 | 로그인 |
 | GET | /api/admin/dashboard | KPI | ADMIN |
 | GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
-| POST · PUT · DELETE | /api/admin/notices · /faqs · /terms (/{id}) | 공지 · FAQ · 약관 관리 | ADMIN |
+| POST · PUT · DELETE | /api/admin/notices · /faqs (/{id}) | 공지 · FAQ 관리 | ADMIN |
 | GET | /api/admin/faqs | FAQ 전체 (숨긴 것 포함) | ADMIN |
+| GET · POST | /api/admin/terms | 약관 전체 (지난 버전 · 동의 수 포함) · 새 약관 | ADMIN |
+| POST | /api/admin/terms/{id}/revisions | 새 버전으로 개정 (이전 버전은 사용 중지) — 약관 내용 수정(PUT)은 없음 | ADMIN |
+| PATCH · DELETE | /api/admin/terms/{id}/active, /api/admin/terms/{id} | 사용 중지 · 다시 사용, 삭제 (동의한 회원이 없을 때만) | ADMIN |
 | PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
 
 ### 회원가입 예시
@@ -58,7 +61,7 @@
   "role": "DRIVER", "agreedTermIds": [1, 2], "licenseType": "1종 보통", "careerYears": 5 }
 // 201
 { "memberId": 4 }
-// 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없는 약관 · ADMIN 가입 · 기사 정보 빠짐)
+// 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없거나 사용 중지된 약관(가입 화면을 연 뒤 개정됨) · ADMIN 가입 · 기사 정보 빠짐)
 ```
 - 비밀번호 8~64자, 연락처 `010-0000-0000` 형식, 면허 종류 20자 이하, 경력 0~60년
 
@@ -140,6 +143,28 @@
 { "category": "회원", "question": "비밀번호를 바꾸려면?", "answer": "내 정보 화면에서 바꿀 수 있어요.", "sortOrder": 3, "active": true }
 // POST 201 { "faqId": 3 } · PUT 200 바뀐 FAQ · DELETE 204 · 400 INVALID_INPUT(분류는 배송 · 결제 · 회원, 질문 255자 · 답변 5,000자, 순서 0 이상) · 404 · 403(관리자 아님)
 ```
+
+### 약관 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/terms — 사용 중(가입 화면 순서) → 지난 버전 · 사용 중지 순, agreementCount = 그 버전에 동의한 회원 수
+[{ "id": 4, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.1", "active": true, "agreementCount": 0, "createdAt": "2026-11-05T10:00:00" },
+ { "id": 1, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.0", "active": false, "agreementCount": 12, "createdAt": "2026-11-02T10:00:00" }]
+
+// POST /api/admin/terms (새 약관) — POST /api/admin/terms/{id}/revisions (개정)도 같은 본문
+{ "title": "서비스 이용약관", "content": "제1조 …", "required": true, "version": "v1.1" }
+// 201 { "termId": 4 } — 개정이면 새 버전이 사용 중, 이전 버전은 사용 중지 (이전 버전 내용 · 동의 이력은 그대로)
+// 400 INVALID_INPUT: 이름 100자 · 내용 15,000자 · 버전 20자 이하, 같은 이름의 약관이 이미 사용 중,
+//                    개정은 사용 중인 약관만 · 새 버전은 지금 버전과 달라야 함 · 404 · 403(관리자 아님)
+
+// PATCH /api/admin/terms/{id}/active — 사용 중지 false · 다시 사용 true
+{ "active": false }
+// 200 바뀐 약관 (목록과 같은 모양) · 400(다시 사용하려는데 같은 이름의 약관이 이미 사용 중)
+
+// DELETE /api/admin/terms/{id} — 204 · 400(동의한 회원이 있으면 삭제 대신 사용 중지) · 404
+```
+- 약관 내용은 고치지 않는다(PUT 없음). 바꾸려면 개정 → 회원이 동의한 버전(term_agreement가 가리키는 행)이 그대로 남는다
+- 개정해도 기존 회원에게 다시 동의를 받지 않는다 (공지로 안내) — docs/decisions.md
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
