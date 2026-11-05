@@ -6,11 +6,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.transport.domain.CargoType;
+import com.transport.domain.Member; // 추가
 import com.transport.domain.Payment;
 import com.transport.domain.Shipment;
 import com.transport.domain.VehicleType;
 import com.transport.domain.enums.PaymentStatus;
-import com.transport.domain.enums.ShipmentStatus; // 본인 프로젝트의 실제 Enum 사용
+import com.transport.domain.enums.ShipmentStatus; 
 import com.transport.dto.FareCalculateRequestDTO;
 import com.transport.dto.FareCalculateResponseDTO;
 import com.transport.dto.ShipmentRequestDTO;
@@ -21,6 +22,7 @@ import com.transport.repository.CargoTypeRepository;
 import com.transport.repository.PaymentRepository;
 import com.transport.repository.ShipmentRepository;
 import com.transport.repository.VehicleTypeRepository;
+import com.transport.repository.MemberRepository; // 추가
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,30 +36,37 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final PaymentRepository paymentRepository;
     private final VehicleTypeRepository vehicleTypeRepository;
     private final CargoTypeRepository cargoTypeRepository;
+    private final MemberRepository memberRepository; // 회원 조회를 위해 추가
 
     @Override
     @Transactional
-    public ShipmentResponseDTO createShipment(ShipmentRequestDTO requestDTO) {
+    public ShipmentResponseDTO createShipment(Long memberId, ShipmentRequestDTO requestDTO) {
         
-        // 1. 운임 계산
-        // 기존 FareService를 재사용하기 위해 ShipmentRequestDTO -> FareCalculateRequestDTO 매핑
+        // 1. 운임 계산 (누락되었던 cargoTypeId, pickupAt 추가)
         FareCalculateRequestDTO fareRequest = FareCalculateRequestDTO.builder()
                 .originAddress(requestDTO.getOriginAddress())
                 .destAddress(requestDTO.getDestAddress())
                 .vehicleTypeId(requestDTO.getVehicleTypeId())
+                .cargoTypeId(requestDTO.getCargoTypeId()) // 필수 추가
                 .cargoWeightKg(requestDTO.getCargoWeightKg())
+                .pickupAt(requestDTO.getPickupAt())       // 필수 추가
                 .build();
 
         FareCalculateResponseDTO fareResponse = fareService.calculateFare(fareRequest);
 
-        // 연관 엔티티 조회 (차종, 화물유형)
+        // 연관 엔티티 조회 (회원, 차종, 화물유형)
+        Member customer = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND)); // 회원 조회 추가
+
         VehicleType vehicleType = vehicleTypeRepository.findById(requestDTO.getVehicleTypeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+        
         CargoType cargoType = cargoTypeRepository.findById(requestDTO.getCargoTypeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         // 2. 배송 엔티티 생성
         Shipment shipment = Shipment.builder()
+                .customer(customer) // DB NOT NULL 에러 방지를 위해 고객 매핑 추가
                 .vehicleType(vehicleType)
                 .cargoType(cargoType)
                 .originAddress(requestDTO.getOriginAddress())
@@ -70,10 +79,9 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .receiverName(requestDTO.getReceiverName())
                 .receiverPhone(requestDTO.getReceiverPhone())
                 .memo(requestDTO.getMemo())
-                // 계산된 결과값 매핑
-                .distanceKm(fareResponse.getDistanceKm()) // 엔티티 필드명(distance)에 맞게 수정 필요
-                .fare(fareResponse.getTotalFare())      // 엔티티 필드명(fare)에 맞게 수정 필요
-                .status(ShipmentStatus.PENDING_PAYMENT)         // 배송 상태 Enum (결제대기 또는 접수완료)
+                .distanceKm(fareResponse.getDistanceKm()) 
+                .fare(fareResponse.getTotalFare())      
+                .status(ShipmentStatus.PENDING_PAYMENT)         
                 .build();
 
         shipmentRepository.save(shipment);

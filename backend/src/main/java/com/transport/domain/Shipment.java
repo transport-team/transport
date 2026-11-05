@@ -83,4 +83,9 @@ public class Shipment extends BaseEntity {
 
 	@Version
 	private Long version;  // 낙관적 락
+
+	public void updateStatus(ShipmentStatus status) {
+		this.status = status;
+	}
+	
 }
