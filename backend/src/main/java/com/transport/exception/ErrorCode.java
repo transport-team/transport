@@ -30,7 +30,7 @@ public enum ErrorCode {
 
 	// 배차 · 정산 (팀원 2)
 	DUPLICATE_VEHICLE_PLATE(HttpStatus.CONFLICT, "이미 등록된 차량번호입니다."),
-	DRIVER_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "이미 차량에 배정된 기사입니다."),
+	DUPLICATE_DRIVER_VEHICLE_TYPE(HttpStatus.CONFLICT, "차종당 1대만 등록 가능합니다."),
 
 	// 배송 · 결제 (팀원 3)
 	DISTANCE_CALCULATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "거리 계산 중 오류가 발생했습니다."),

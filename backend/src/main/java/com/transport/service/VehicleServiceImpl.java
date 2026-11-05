@@ -70,9 +70,9 @@ public class VehicleServiceImpl implements VehicleService {
 			driver = driverService.findById(vehicleRequestDTO.getDriverId())
 					.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-			// 이미 다른 차량에 배정된 기사인지 확인
-			if (vehicleRepository.existsByDriver(driver)) {
-				throw new CustomException(ErrorCode.DRIVER_ALREADY_ASSIGNED);
+			// 동일 기사가 동일 차종의 차량을 이미 등록했는지 확인
+			if (vehicleRepository.existsByDriverAndVehicleType(driver, vehicleType)) {
+			    throw new CustomException(ErrorCode.DUPLICATE_DRIVER_VEHICLE_TYPE);
 			}
 		}
 
@@ -109,10 +109,9 @@ public class VehicleServiceImpl implements VehicleService {
 			driver = driverService.findById(vehicleRequestDTO.getDriverId())
 					.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-			// 다른 차량에 이미 배정된 기사인지 확인
-			if (vehicleRepository.existsByDriverAndIdNot(driver, id)) {
-
-				throw new CustomException(ErrorCode.DRIVER_ALREADY_ASSIGNED);
+			// 수정 중인 차량을 제외하고 동일 기사 + 동일 차종 중복 확인
+			if (vehicleRepository.existsByDriverAndVehicleTypeAndIdNot(driver, vehicleType, id)) {
+			    throw new CustomException(ErrorCode.DUPLICATE_DRIVER_VEHICLE_TYPE);
 			}
 		}
 
