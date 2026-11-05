@@ -11,7 +11,15 @@ const MenuLink = ({ menu, className = '' }) => {
       end
       className={({ isActive }) => `${className} ${isActive ? 'font-semibold text-emerald-800' : 'text-gray-700 hover:text-emerald-800'}`}
     >
-      {menu.label}
+      <span className="inline-flex items-center gap-2">
+        {menu.label}
+
+        {menu.badge > 0 && (
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+            {menu.badge > 99 ? '99+' : menu.badge}
+          </span>
+        )}
+      </span>
     </NavLink>
   )
 }
