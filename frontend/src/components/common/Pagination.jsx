@@ -3,18 +3,22 @@
 const Pagination = ({ pageData, onMove }) => (
   <nav aria-label="페이지" className="flex flex-wrap items-center gap-1 text-sm">
     {pageData.prev && (
-      <button type="button" onClick={() => onMove(pageData.prevPage)} className="rounded px-3 py-1 hover:bg-gray-100">이전</button>
+      <button type="button" onClick={() => onMove(pageData.prevPage)} className="rounded px-3 py-1 border border-border bg-surface text-text hover:bg-gray-light transition-colors">이전</button>
     )}
     {pageData.pageNumList.map((num) => (
       <button
         key={num} type="button" onClick={() => onMove(num)} aria-current={num === pageData.current ? 'page' : undefined}
-        className={`rounded px-3 py-1 ${num === pageData.current ? 'bg-emerald-700 text-white' : 'hover:bg-gray-100'}`}
+        className={`rounded px-3 py-1 border transition-colors
+          ${num === pageData.current
+            ? 'bg-primary border-primary text-white hover:bg-primary-hover'
+            : 'bg-surface border-border text-text hover:bg-gray-light'
+          }`}
       >
         {num}
       </button>
     ))}
     {pageData.next && (
-      <button type="button" onClick={() => onMove(pageData.nextPage)} className="rounded px-3 py-1 hover:bg-gray-100">다음</button>
+      <button type="button" onClick={() => onMove(pageData.nextPage)} className="rounded px-3 py-1 border border-border bg-surface text-text hover:bg-gray-light transition-colors">다음</button>
     )}
   </nav>
 )

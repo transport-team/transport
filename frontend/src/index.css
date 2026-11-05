@@ -1,2 +1,47 @@
 /* Tailwind 설정 (공통 파일 — 관리: 팀원 4). 색 · 글꼴 같은 테마는 여기에 @theme으로 추가한다 */
 @import "tailwindcss";
+
+@theme {
+  /* Primary (주색) — Emerald */
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-light: #d1fae5;
+  --color-primary-text: #065f46;
+
+  /* Danger (위험/취소/에러) — Red */
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-light: #fee2e2;
+  --color-danger-text: #991b1b;
+
+  /* Success (성공/완료) — Green */
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-success-light: #dcfce7;
+  --color-success-text: #166534;
+
+  /* Warning (대기/주의) — Amber */
+  --color-warning: #d97706;
+  --color-warning-hover: #b45309;
+  --color-warning-light: #fef3c7;
+  --color-warning-text: #92400e;
+
+  /* Info (정보/배차/운송중) — Blue */
+  --color-info: #2563eb;
+  --color-info-hover: #1d4ed8;
+  --color-info-light: #dbeafe;
+  --color-info-text: #1e40af;
+
+  /* Gray (중립/비활성) */
+  --color-gray-neutral: #6b7280;
+  --color-gray-light: #f3f4f6;
+  --color-gray-text: #374151;
+
+  /* Base */
+  --color-bg: #f9fafb;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+}
