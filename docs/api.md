@@ -37,8 +37,8 @@
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
 | POST · GET | /api/inquiries, /api/inquiries/my | 1:1 문의 등록 · 내 문의 (관리자는 403) | 고객 · 기사 |
-| GET | /api/admin/dashboard | KPI | ADMIN |
-| GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
+| GET | /api/admin/dashboard | 대시보드 1단계: 오늘 접수 · 배차 대기 · 진행 중 · 이번 달 매출 · 처리할 일 · 이번 달 차종별 | ADMIN |
+| GET | /api/admin/stats/daily | 일별 결제 완료 건수 · 매출 (from, to — 기본 오늘까지 14일, 최대 92일) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
 | POST · PUT · DELETE | /api/admin/notices · /faqs (/{id}) | 공지 · FAQ 관리 | ADMIN |
 | GET | /api/admin/faqs | FAQ 전체 (숨긴 것 포함) | ADMIN |
@@ -191,6 +191,31 @@
 ```
 - 첫 답변이면 `NotificationService.send(작성자, INQUIRY_ANSWERED, "1:1 문의에 답변이 등록됐어요: {제목}", null)` (팀원 4). 답변을 고칠 때는 알림 없음
 - 작성한 문의는 고치거나 지울 수 없다 (COM-07: 등록 · 내 문의 · 답변 확인). 삭제는 관리자만 (스팸 정리)
+
+### 대시보드 예시 (관리자)
+
+```jsonc
+// GET /api/admin/dashboard — 기준일은 서버 날짜, 접수 · 매출은 결제 완료(PAID) 기준
+{ "baseDate": "2026-11-06",
+  "todayReceivedCount": 3, "todayRevenue": 150000,       // 오늘 결제가 끝난 건수 · 금액
+  "waitingDispatchCount": 2,                              // 지금 REQUESTED
+  "inProgressCount": 5,                                   // 지금 ASSIGNED · PICKED_UP · IN_TRANSIT · ARRIVED
+  "monthPaidCount": 42, "monthRevenue": 4200000,         // 이번 달 1일 0시 ~ 지금
+  "vehicleTypeStats": [{ "vehicleTypeId": 1, "vehicleTypeName": "소형 (다마스 · 라보)", "count": 0, "revenue": 0 },
+                       { "vehicleTypeId": 2, "vehicleTypeName": "1톤", "count": 40, "revenue": 4000000 }],
+  "pendingDriverCount": 1, "pendingVehicleRequestCount": 0, "waitingInquiryCount": 2 }
+
+// GET /api/admin/stats/daily?from=2026-11-01&to=2026-11-03 — from · to 포함, 결제가 없는 날은 0
+[{ "date": "2026-11-01", "count": 0, "revenue": 0 },
+ { "date": "2026-11-02", "count": 2, "revenue": 30000 },
+ { "date": "2026-11-03", "count": 0, "revenue": 0 }]
+// to가 없으면 오늘, from이 없으면 to까지 14일
+// 400 INVALID_INPUT: 날짜 형식(YYYY-MM-DD) · 시작일이 종료일보다 늦음 · 92일 초과 · 403(관리자 아님)
+```
+- 환불돼 CANCELED가 된 결제는 매출 · 건수에서 빠진다. 월 정산(U)은 완료(COMPLETED) 기준이라 대시보드 매출과 다를 수 있다
+- 차종별: 사용 중인 차종은 결제가 없어도 0으로, 사용 중지된 차종은 결제가 있을 때만 (차종 id 순)
+- 처리할 일: 기사 승인 대기(`DriverService.getDrivers`), 차량 등록 신청 대기(`VehicleRegistrationService.getPendingRequests`), 답변 대기 문의
+- 오늘 완료 · 평균 평점 · 기사 순위는 2단계 (완료 처리 · 리뷰 · 배차 기능이 생긴 뒤 — docs/collaboration.md 약속 표)
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 

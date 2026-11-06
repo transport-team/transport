@@ -26,6 +26,9 @@ public interface InquiryService {
 	// 관리자: 삭제 (스팸 정리)
 	void remove(Long id);
 
+	// 관리자 대시보드: 답변 대기 문의 수
+	long countWaiting();
+
 	default InquiryDTO entityToDTO(Inquiry inquiry) {
 		Member member = inquiry.getMember();
 		return InquiryDTO.builder()

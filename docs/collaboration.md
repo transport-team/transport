@@ -33,6 +33,9 @@
 | 5주차 | 2 → 4 | `DispatchService.getActiveDriver(shipmentId)` |
 | 5주차 | 3 → 전원 | 개발용 결제 건너뛰기 API (local 프로필만) |
 | 8주차 | 4 → 2 | `ReviewService.getAverageRating(driverId)` |
+| 7주차 (T) | 3 → 1 | 대시보드 집계(읽기 전용): `ShipmentService.countByStatus()` · `PaymentService.getPaidStat(from, to)` · `getDailyPaidStats(fromDate, toDate)` · `getPaidStatsByVehicleType(from, to)` (팀원 1이 작성, 팀원 3 리뷰) |
+| 2단계 예정 | 4 → 1 | 대시보드 오늘 완료 건수(상태 이력의 COMPLETED 기준) · 전체 평균 평점 — 이름은 그때 정한다 |
+| 2단계 예정 | 2 → 1 | 대시보드 기사 순위용 기사별 완료 건수 — 이름은 그때 정한다 |
 
 다른 도메인은 위 Service 메서드로만 호출한다. 다른 사람의 Repository를 직접 쓰지 않는다. 약속이 늦어지면 데일리 스크럼에서 바로 공유한다.
 
