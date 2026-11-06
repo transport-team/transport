@@ -6,6 +6,7 @@ const DriverHome = lazy(() => import('../pages/driver/DriverHomePage'))
 const MyPage = lazy(() => import('../pages/MyPage'))
 const Inquiry = lazy(() => import('../pages/InquiryPage'))
 const VehicleRegistration = lazy(() => import('../pages/driver/VehicleRegistrationPage'))
+const DriverShipmentList = lazy(() => import('../pages/driver/DriverShipmentListPage'))
 
 // 기사 화면 경로 (/driver/...) — 공통 파일: 화면을 추가할 때 PR로 경로를 더한다
 const driverRouter = () => [
@@ -13,6 +14,7 @@ const driverRouter = () => [
   { path: 'me', element: <Suspense fallback={Loading}><MyPage /></Suspense> },
   { path: 'inquiries', element: <Suspense fallback={Loading}><Inquiry /></Suspense> },
   { path: 'vehicles/register', element: <Suspense fallback={Loading}><VehicleRegistration /></Suspense> },
+  { path: 'shipments', element: <Suspense fallback={Loading}><DriverShipmentList /></Suspense> },
 ]
 
 export default driverRouter
