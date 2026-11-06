@@ -1,0 +1,13 @@
+package com.transport.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.transport.domain.Dispatch;
+import com.transport.domain.Shipment;
+
+public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
+
+    // 해당 배송에 현재 유효한 배차가 있는지 확인
+    boolean existsByShipmentAndActiveTrue(Shipment shipment);
+
+}
