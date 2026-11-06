@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { FAQ_CATEGORIES, getFaqs } from '../api/faqApi'
+import useCustomLogin from '../hooks/useCustomLogin'
 import BasicLayout from '../layouts/BasicLayout'
+import { ROLE_HOME } from '../util/roleUtil'
 
 const TABS = ['', ...FAQ_CATEGORIES]  // '' = 전체
 
 // 자주 묻는 질문 (COM-06, 로그인 없이): 분류 탭 · 질문을 누르면 답변이 펼쳐진다
 // 분류는 주소(?category=결제)에 둬서 다른 화면에서 그 분류로 바로 열 수 있다
+// 맨 아래: 원하는 답이 없으면 1:1 문의로 (로그인 전이면 로그인 화면, 관리자에게는 안 보임)
 const FaqPage = () => {
+  const { loginState, isLogin } = useCustomLogin()
   const [searchParams, setSearchParams] = useSearchParams()
   const category = searchParams.get('category') ?? ''
   const [faqs, setFaqs] = useState(null)
@@ -74,6 +78,18 @@ const FaqPage = () => {
               </li>
             ))}
           </ul>
+        )}
+
+        {loginState.role !== 'ADMIN' && (
+          <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+            원하는 답이 없나요?{' '}
+            <Link
+              to={isLogin ? `${ROLE_HOME[loginState.role]}/inquiries` : '/login'}
+              className="font-medium text-emerald-700 hover:underline"
+            >
+              {isLogin ? '1:1 문의하기' : '로그인하고 1:1 문의하기'}
+            </Link>
+          </p>
         )}
       </div>
     </BasicLayout>

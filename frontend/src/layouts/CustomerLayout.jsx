@@ -7,7 +7,7 @@ const MENUS = [
   { label: '배송 신청' },
   { label: '내 배송' },
   { label: '알림' },
-  { label: '문의' },
+  { label: '문의', to: '/customer/inquiries' },
 ]
 
 // 고객 레이아웃: 위쪽 메뉴

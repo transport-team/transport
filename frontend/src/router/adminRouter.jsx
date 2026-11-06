@@ -8,6 +8,7 @@ const MemberList = lazy(() => import('../pages/admin/MemberListPage'))
 const TermManage = lazy(() => import('../pages/admin/TermManagePage'))
 const NoticeManage = lazy(() => import('../pages/admin/NoticeManagePage'))
 const FaqManage = lazy(() => import('../pages/admin/FaqManagePage'))
+const InquiryManage = lazy(() => import('../pages/admin/InquiryManagePage'))
 const VehicleEditPage = lazy(() => import('../pages/admin/VehicleEditPage'))
 
 // 차량 관리 페이지
@@ -28,6 +29,7 @@ const adminRouter = () => [
   { path: 'terms', element: <Suspense fallback={Loading}><TermManage /></Suspense> },
   { path: 'notices', element: <Suspense fallback={Loading}><NoticeManage /></Suspense> },
   { path: 'faqs', element: <Suspense fallback={Loading}><FaqManage /></Suspense> },
+  { path: 'inquiries', element: <Suspense fallback={Loading}><InquiryManage /></Suspense> },
   { path: 'vehicle-requests', element: <Suspense fallback={Loading}><VehicleRequestListPage /></Suspense> },
 ]
 
