@@ -244,6 +244,17 @@ class MemberServiceImplTest {
 				.extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
 	}
 
+	// 다른 도메인용 회원 조회: 있으면 그 엔티티, 없으면 빈 값 (예외는 부르는 쪽이 정한다)
+	@Test
+	void findById() {
+		Member customer = Member.builder().id(2L).email("customer@test.com").role(MemberRole.CUSTOMER).build();
+		when(memberRepository.findById(2L)).thenReturn(Optional.of(customer));
+		when(memberRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThat(memberService.findById(2L)).containsSame(customer);
+		assertThat(memberService.findById(99L)).isEmpty();
+	}
+
 	// 필수 1 · 2, 선택 3 (data.sql 시드와 같은 구성)
 	private void givenTerms() {
 		when(termRepository.findAllByActiveTrueOrderByRequiredDescIdAsc())
