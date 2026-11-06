@@ -21,7 +21,7 @@ const VehicleRegistrationPage = () => {
             ? data.filter((type) => type.active !== false)
             : []
         )
-      } catch (err) {
+      } catch {
         setError('차종 목록을 불러오지 못했습니다.')
       }
     }
