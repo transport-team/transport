@@ -39,6 +39,12 @@ public enum ErrorCode {
 	SHIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 배송 건을 찾을 수 없습니다."),
 
 	// 진행 · 실시간 · 리뷰 (팀원 4)
+	INVALID_STATUS_CHANGE(HttpStatus.BAD_REQUEST, "허용되지 않는 상태 변경입니다."),
+	NOT_ASSIGNED_DRIVER(HttpStatus.FORBIDDEN, "배정된 기사가 아닙니다."),
+	PHOTO_REQUIRED(HttpStatus.BAD_REQUEST, "필수 사진이 없습니다."),
+	NOT_IN_TRANSIT(HttpStatus.BAD_REQUEST, "운송중 상태가 아닙니다."),
+	REVIEW_EXISTS(HttpStatus.CONFLICT, "이미 리뷰를 작성했습니다."),
+	REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "배송완료 건만 리뷰 가능합니다."),
 
 	;
 
