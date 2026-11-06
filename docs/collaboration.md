@@ -34,6 +34,7 @@
 | 5주차 | 3 → 전원 | 개발용 결제 건너뛰기 API (local 프로필만) |
 | 8주차 | 4 → 2 | `ReviewService.getAverageRating(driverId)` |
 | 7주차 (T) | 3 → 1 | 대시보드 집계(읽기 전용): `ShipmentService.countByStatus()` · `PaymentService.getPaidStat(from, to)` · `getDailyPaidStats(fromDate, toDate)` · `getPaidStatsByVehicleType(from, to)` (팀원 1이 작성, 팀원 3 리뷰) |
+| 보안 점검 후속 | 1 → 전원 | `MemberService.findById(memberId)` → `Optional<Member>` (회원 엔티티가 필요할 때 `MemberRepository` 대신, 예: 배송 신청 고객 연결) |
 | 2단계 예정 | 4 → 1 | 대시보드 오늘 완료 건수(상태 이력의 COMPLETED 기준) · 전체 평균 평점 — 이름은 그때 정한다 |
 | 2단계 예정 | 2 → 1 | 대시보드 기사 순위용 기사별 완료 건수 — 이름은 그때 정한다 |
 
