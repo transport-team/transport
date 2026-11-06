@@ -3,6 +3,7 @@ package com.transport.service;
 import java.util.List;
 
 import com.transport.dto.DispatchApplicantResponseDTO;
+import com.transport.dto.DriverShipmentListResponseDTO;
 
 public interface DispatchApplicationService {
 
@@ -15,4 +16,6 @@ public interface DispatchApplicationService {
     // 고객이 지원 기사 한 명을 선택하여 배차 확정
     Long selectApplicant(Long memberId, Long shipmentId, Long applicationId);
 
+    // 기사: 배차 대기 중인 운송 요청 목록 조회
+    List<DriverShipmentListResponseDTO> getAvailableShipments(Long memberId);
 }

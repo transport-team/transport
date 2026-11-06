@@ -16,6 +16,7 @@ import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.domain.enums.VehicleStatus;
 import com.transport.dto.DispatchApplicantResponseDTO;
+import com.transport.dto.DriverShipmentListResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchApplicationRepository;
@@ -202,6 +203,29 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
         return dispatch.getId();
     }
+
+	// 기사: 배차 대기 중인 운송 요청 목록 조회
+	@Override
+	public List<DriverShipmentListResponseDTO> getAvailableShipments(Long memberId) {
+
+		// 1. REQUESTED 상태의 배송을 상차 예정일 빠른 순으로 조회
+		List<Shipment> shipments = shipmentRepository
+				.findByStatusOrderByPickupAtAsc(ShipmentStatus.REQUESTED);
+
+		// 2. Shipment 엔티티를 기사 목록용 DTO로 변환
+		return shipments.stream()
+				.map(shipment -> DriverShipmentListResponseDTO.builder()
+						.shipmentId(shipment.getId())
+						.originAddress(shipment.getOriginAddress())
+						.destAddress(shipment.getDestAddress())
+						.cargoName(shipment.getCargoName())
+						.cargoWeightKg(shipment.getCargoWeightKg())
+						.vehicleTypeId(shipment.getVehicleType().getId())
+						.fare(shipment.getFare())
+						.pickupAt(shipment.getPickupAt())
+						.build())
+				.toList();
+	}
 
 
 }
