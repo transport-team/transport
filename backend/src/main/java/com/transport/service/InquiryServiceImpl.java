@@ -81,6 +81,11 @@ public class InquiryServiceImpl implements InquiryService {
 		inquiryRepository.delete(findInquiry(id));
 	}
 
+	@Override
+	public long countWaiting() {
+		return inquiryRepository.countByStatus(InquiryStatus.WAITING);
+	}
+
 	private Inquiry findInquiry(Long id) {
 		return inquiryRepository.findById(id)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "문의를 찾을 수 없습니다."));
