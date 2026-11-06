@@ -163,6 +163,14 @@ class InquiryServiceImplTest {
 		verify(notificationService, never()).send(any(), any(), any(), any());
 	}
 
+	// 관리자 대시보드: 답변 대기만 센다
+	@Test
+	void countWaiting() {
+		when(inquiryRepository.countByStatus(InquiryStatus.WAITING)).thenReturn(3L);
+
+		assertThat(inquiryService.countWaiting()).isEqualTo(3);
+	}
+
 	private Inquiry inquiry(Long id, InquiryStatus status) {
 		return Inquiry.builder().id(id).member(customer).title("문의 " + id).content("내용 " + id).status(status).build();
 	}
