@@ -39,4 +39,11 @@ public class Inquiry extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
 	private InquiryStatus status;
+
+	// 관리자 답변 등록 · 수정: 답변 완료로 바꾸고 답변일을 남긴다 (답변을 고치면 답변일도 그때로)
+	public void answer(String answer, LocalDateTime answeredAt) {
+		this.answer = answer;
+		this.answeredAt = answeredAt;
+		this.status = InquiryStatus.ANSWERED;
+	}
 }

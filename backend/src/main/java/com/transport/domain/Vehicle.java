@@ -7,7 +7,13 @@ import lombok.*;
 
 // 차량
 @Entity
-@Table(name = "vehicle")
+@Table(
+    name = "vehicle",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_vehicle_driver_type",
+        columnNames = {"driver_id", "vehicle_type_id"}
+    )
+)
 @Getter
 @ToString(exclude = { "vehicleType", "driver" })
 @Builder
@@ -30,9 +36,9 @@ public class Vehicle extends BaseEntity {
 	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
 	private VehicleStatus status;
 
-	@OneToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "driver_id", unique = true)
-	private Driver driver; // 담당 기사 (없으면 NULL)
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "driver_id")
+	private Driver driver; // 차량 소유 기사 (없으면 NULL)
 
 	// 차량번호, 차종, 상태, 담당 기사 정보 변경
 	public void changeInfo(String plateNo, VehicleType vehicleType, VehicleStatus status, Driver driver) {

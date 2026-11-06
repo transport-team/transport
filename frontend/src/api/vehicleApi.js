@@ -49,3 +49,33 @@ export const getActiveDrivers = async () => {
 
     return res.data.dtoList ?? []
 }
+
+// 기사 차량 등록 신청
+export const applyVehicleRegistration = async (vehicleData) => {
+    const res = await jwtAxios.post('/api/driver/vehicles/requests', vehicleData)
+
+    return res.data
+}
+
+// 관리자: 승인 대기 중인 차량 등록 신청 목록 조회
+export const getPendingVehicleRequests = async () => {
+    const res = await jwtAxios.get('/api/admin/vehicle-requests')
+
+    return res.data
+}
+
+// 관리자: 차량 등록 신청 승인
+export const approveVehicleRequest = async (requestId) => {
+    const res = await jwtAxios.patch(`/api/admin/vehicle-requests/${requestId}/approve`)
+
+    return res.data
+}
+
+// 관리자: 차량 등록 신청 거절
+export const rejectVehicleRequest = async (requestId, rejectionReason) => {
+    const res = await jwtAxios.patch(`/api/admin/vehicle-requests/${requestId}/reject`, {
+        rejectionReason
+    })
+
+    return res.data
+}

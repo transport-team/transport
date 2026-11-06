@@ -1,6 +1,8 @@
 import { Outlet } from 'react-router-dom'
 import AppHeader from './AppHeader'
 import MenuLink from './MenuLink'
+import { useCallback, useEffect, useState } from 'react'
+import { getPendingVehicleRequests } from '../api/vehicleApi'
 
 // 관리자 메뉴 — 화면을 만들면 to에 경로를 넣는다 (to가 없으면 준비 중)
 const MENUS = [
@@ -9,29 +11,55 @@ const MENUS = [
   { label: '배차' },
   { label: '기사 관리' },
   { label: '차량 · 차종', to: '/admin/vehicles' },
+  { label: '차량 등록 신청함', to: '/admin/vehicle-requests' },
   { label: '정산' },
   { label: '회원 관리', to: '/admin/members' },
   { label: '약관', to: '/admin/terms' },
   { label: '공지', to: '/admin/notices' },
   { label: 'FAQ', to: '/admin/faqs' },
-  { label: '문의' },
+  { label: '문의', to: '/admin/inquiries' },
 ]
 
 // 관리자 레이아웃: 왼쪽 메뉴 (좁은 화면에서는 위쪽 가로 메뉴)
-const AdminLayout = () => (
-  <div className="min-h-screen bg-gray-50">
-    <AppHeader />
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:flex-row">
-      <nav className="flex gap-1 overflow-x-auto md:w-48 md:shrink-0 md:flex-col">
-        {MENUS.map((menu) => (
-          <MenuLink key={menu.label} menu={menu} className="whitespace-nowrap rounded px-3 py-2 text-sm" />
-        ))}
-      </nav>
-      <main className="min-w-0 flex-1">
-        <Outlet />
-      </main>
+const AdminLayout = () => {
+  const [pendingCount, setPendingCount] = useState(0)
+
+  // 승인 대기 중인 차량 등록 신청 건수 조회
+  // 상태는 then 안에서 바꾼다 (effect에서 불러도 react-hooks/set-state-in-effect에 걸리지 않게, promise는 그대로 돌려준다)
+  const loadPendingCount = useCallback(
+    () => getPendingVehicleRequests()
+      .then((requests) => setPendingCount(requests.length))
+      .catch((err) => console.error('차량 등록 신청 건수 조회 실패', err)),
+    [],
+  )
+
+  useEffect(() => {
+    loadPendingCount()
+  }, [loadPendingCount])
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AppHeader />
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:flex-row">
+        <nav className="flex gap-1 overflow-x-auto md:w-48 md:shrink-0 md:flex-col">
+          {MENUS.map((menu) => (
+            <MenuLink
+              key={menu.label}
+              menu={
+                menu.to === '/admin/vehicle-requests'
+                  ? { ...menu, badge: pendingCount }
+                  : menu
+              }
+              className="whitespace-nowrap rounded px-3 py-2 text-sm"
+            />
+          ))}
+        </nav>
+        <main className="min-w-0 flex-1">
+          <Outlet context={{ refreshPendingCount: loadPendingCount }} />
+        </main>
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 export default AdminLayout
