@@ -1,5 +1,7 @@
 package com.transport.service;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -105,5 +107,17 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .orderId(payment.getOrderId())
                 .amount(payment.getAmount())
                 .build();
+    }
+
+    // 관리자 대시보드: 지금 상태별 배송 건수 (팀원 1 대시보드가 쓰는 읽기 전용 메서드)
+    @Override
+    public Map<ShipmentStatus, Long> countByStatus() {
+        Map<ShipmentStatus, Long> counts = new EnumMap<>(ShipmentStatus.class);
+        for (ShipmentStatus status : ShipmentStatus.values()) {
+            counts.put(status, 0L);  // 배송이 없는 상태도 0으로
+        }
+        shipmentRepository.countGroupByStatus()
+                .forEach(row -> counts.put(row.getStatus(), row.getShipmentCount()));
+        return counts;
     }
 }

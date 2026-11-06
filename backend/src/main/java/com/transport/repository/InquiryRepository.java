@@ -21,4 +21,7 @@ public interface InquiryRepository extends JpaRepository<Inquiry, Long> {
 	@Query(value = "select i from Inquiry i join fetch i.member m where (:status is null or i.status = :status)",
 			countQuery = "select count(i) from Inquiry i where (:status is null or i.status = :status)")
 	Page<Inquiry> search(@Param("status") InquiryStatus status, Pageable pageable);
+
+	// 상태별 건수 (관리자 대시보드: 답변 대기)
+	long countByStatus(InquiryStatus status);
 }
