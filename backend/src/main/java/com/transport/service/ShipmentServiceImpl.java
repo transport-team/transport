@@ -104,6 +104,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         // 5. 프론트엔드 결제 연동용 DTO 반환
         return ShipmentResponseDTO.builder()
                 .shipmentId(shipment.getId())
+                .status(shipment.getStatus().name())
                 .orderId(payment.getOrderId())
                 .amount(payment.getAmount())
                 .build();

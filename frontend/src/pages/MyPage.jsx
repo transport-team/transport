@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getMyInfo } from '../api/memberApi'
 import PasswordForm from '../components/member/PasswordForm'
 import PhoneForm from '../components/member/PhoneForm'
+import DefaultAddressForm from '../components/member/DefaultAddressForm'
 import { ROLE_HOME, ROLE_NAME } from '../util/roleUtil'
 
 // 내 정보 (고객 · 기사 · 관리자 공통, /{역할}/me): 이름 · 이메일 · 역할은 보기만, 연락처 · 비밀번호는 변경 (COM-03)
@@ -33,6 +34,7 @@ const MyPage = () => {
             <dd>{ROLE_NAME[member.role]}</dd>
           </dl>
           <PhoneForm phone={member.phone} onSaved={setMember} />
+          {member.role === 'CUSTOMER' && <DefaultAddressForm />}
           <PasswordForm />
           {member.role !== 'ADMIN' && (
             <Link
