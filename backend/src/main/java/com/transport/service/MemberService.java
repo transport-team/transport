@@ -1,5 +1,7 @@
 package com.transport.service;
 
+import java.util.Optional;
+
 import com.transport.domain.Member;
 import com.transport.dto.MemberDTO;
 import com.transport.dto.MemberModifyDTO;
@@ -16,6 +18,9 @@ public interface MemberService {
 
 	// 회원 정보 (내 정보 화면)
 	MemberDTO getMember(Long memberId);
+
+	// 다른 도메인용 회원 엔티티 (예: 배송 신청 고객 연결) — 없으면 빈 값. 다른 도메인은 MemberRepository 대신 이 메서드를 쓴다
+	Optional<Member> findById(Long memberId);
 
 	// 내 정보 수정 (연락처) → 바뀐 내 정보
 	MemberDTO modify(Long memberId, MemberModifyDTO memberModifyDTO);

@@ -15,6 +15,15 @@ const DriverHomePage = () => (
     >
       + 차량 등록 신청
     </Link>
+    
+    {/* 운송 요청 목록 페이지 이동 */}
+    <Link
+      to="/driver/shipments"
+      className="block rounded-xl border border-blue-200 bg-white p-4 text-center font-semibold text-blue-600 hover:bg-blue-50"
+    >
+      🚛 운송 요청 목록 보기
+    </Link>
+
   </section>
 )
 

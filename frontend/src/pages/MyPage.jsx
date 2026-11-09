@@ -29,8 +29,6 @@ const MyPage = () => {
             <dd>{member.name}</dd>
             <dt className="text-gray-500">이메일</dt>
             <dd className="break-all">{member.email}</dd>
-            <dt className="text-gray-500">연락처</dt>
-            <dd>{member.phone}</dd>
             <dt className="text-gray-500">역할</dt>
             <dd>{ROLE_NAME[member.role]}</dd>
           </dl>
