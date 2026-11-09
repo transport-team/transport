@@ -11,6 +11,31 @@ const refreshJWT = async (refreshToken) => {
   return res.data
 }
 
+// 지금 진행 중인 재발급 (없으면 null)
+// 동시에 만료된 요청들이 재발급을 하나씩 부르지 않고, 이 하나의 결과(새 액세스 토큰)를 함께 기다린다
+let refreshing = null
+
+const refreshOnce = () => {
+  if (!refreshing) {
+    const member = getCookie('member')
+    refreshing = refreshJWT(member?.refreshToken)
+      .then((result) => {
+        setCookie('member', { ...member, ...result }, 1)
+        return result.accessToken
+      })
+      .catch((refreshErr) => {
+        // 리프레시 토큰도 만료 · 잘못됨 → 로그아웃하고 로그인 화면으로 (기다리던 요청이 여러 개여도 한 번만)
+        removeCookie('member')
+        window.location.href = '/login?expired=true'
+        throw refreshErr
+      })
+      .finally(() => {
+        refreshing = null
+      })
+  }
+  return refreshing
+}
+
 const beforeReq = (config) => {
   const member = getCookie('member')
   if (member?.accessToken) {
@@ -26,18 +51,13 @@ const responseFail = async (err) => {
   }
   original._retry = true
 
-  const member = getCookie('member')
-  try {
-    const result = await refreshJWT(member?.refreshToken)
-    setCookie('member', { ...member, ...result }, 1)
-    original.headers.Authorization = `Bearer ${result.accessToken}`
-    return jwtAxios(original)
-  } catch (refreshErr) {
-    // 리프레시 토큰도 만료 · 잘못됨 → 로그아웃하고 로그인 화면으로
-    removeCookie('member')
-    window.location.href = '/login?expired=true'
-    return Promise.reject(refreshErr)
-  }
+  // 다른 요청이 이미 새 토큰을 받아 두었으면 재발급 없이 그 토큰으로 다시 보낸다
+  const sentToken = original.headers.Authorization?.replace('Bearer ', '')
+  const currentToken = getCookie('member')?.accessToken
+  const accessToken = currentToken && currentToken !== sentToken ? currentToken : await refreshOnce()
+
+  original.headers.Authorization = `Bearer ${accessToken}`
+  return jwtAxios(original)
 }
 
 jwtAxios.interceptors.request.use(beforeReq)
