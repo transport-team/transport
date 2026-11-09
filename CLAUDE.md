@@ -18,6 +18,7 @@
 - docs/collaboration.md 역할 분담 · 도메인 간 약속 · Git 규칙
 - docs/roadmap.md       주차별 일정 · A~Z 단계 체크리스트
 - docs/decisions.md     팀 결정 기록
+- docs/deploy.md        배포 따라 하기 (EC2 · Nginx · HTTPS, 팀원 1)
 
 ## 구조 규칙
 - 백엔드 패키지: config, security, domain(+enums), repository, service, controller(+advice), dto, client, scheduler, util, exception
