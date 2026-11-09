@@ -1,0 +1,42 @@
+# 운영(prod) 설정 예시 — 서버에서 복사해서 쓴다 (실제 파일은 Git에 올라가지 않음)
+#   sudo cp application-prod.yml.example /opt/transport/config/application-prod.yml
+#   sudo chown transport:transport /opt/transport/config/application-prod.yml && sudo chmod 600 /opt/transport/config/application-prod.yml
+# 실행할 때 SPRING_PROFILES_ACTIVE=prod (deploy/transport-api.service). 자세한 순서는 docs/deploy.md
+# 비밀값(DB 비밀번호 · JWT · 카카오 · 토스)은 이 파일에만 둔다. 코드 · 채팅 · 문서에 쓰지 않는다
+
+server:
+  address: 127.0.0.1               # Nginx만 8080으로 들어온다 (밖에서 8080 직접 접속 막기)
+
+spring:
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://DB_HOST:3306/transportdb   # RDS 엔드포인트 (EC2 보안 그룹에서만 접속)
+    username: transport
+    password:                       # DB 비밀번호
+  jpa:
+    hibernate:
+      ddl-auto: validate            # 테이블을 바꾸지 않고 엔티티와 맞는지만 확인. 첫 기동만 update (docs/deploy.md)
+    show-sql: false
+  sql:
+    init:
+      mode: never                   # data.sql(테스트 계정 · 비밀번호 1234 포함)을 실행하지 않는다 → 기본 데이터는 deploy/seed-prod.sql
+
+springdoc:                          # 운영에서는 API 문서(Swagger)를 닫는다
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+app:
+  file:
+    upload-dir: /var/lib/transport/upload   # 사진 저장 폴더 (EC2 디스크)
+  cors:
+    allowed-origins: https://YOUR_DOMAIN     # 배포 주소. 프론트와 API가 같은 주소라 보통 쓰이지 않지만 맞춰 둔다
+  jwt:
+    secret:                         # 무작위 48바이트 이상: openssl rand -base64 48 (로컬과 다른 값)
+    access-minutes: 30
+    refresh-minutes: 1440
+  kakao:
+    rest-api-key:                   # 카카오 팀 앱 REST API 키 (서버 전용)
+  toss:
+    secret-key:                     # 토스 시크릿 키 (서버 전용)

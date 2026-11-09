@@ -17,7 +17,8 @@ spring:
       mode: always                # 엔티티가 모두 생겨 data.sql 시드를 실행한다 (INSERT IGNORE라 중복 없음)
 
 app:
-  upload-path: upload
+  file:
+    upload-dir: upload            # 사진 저장 폴더 (LocalFileStorage가 읽는 키, 없으면 ./upload)
   cors:
     allowed-origins: http://localhost:5173
   jwt:

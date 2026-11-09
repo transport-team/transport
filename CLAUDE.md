@@ -4,7 +4,7 @@
 역할: 고객(CUSTOMER), 기사(DRIVER), 관리자(ADMIN).
 
 ## 기술 스택
-- Backend (backend/): Spring Boot 4.1.x (수업 mallapi는 구조만 참고), Java 17, Gradle, Spring Data JPA, Spring Security + JWT, MariaDB
+- Backend (backend/): Spring Boot 4.1.x (수업 mallapi는 구조만 참고), Java 21, Gradle, Spring Data JPA, Spring Security + JWT, MariaDB
 - Frontend (frontend/): React + Vite, React Router, Redux Toolkit, axios, Tailwind CSS
 - 외부: 카카오맵 JS SDK, 카카오 로컬 · 카카오모빌리티 길찾기 API, 토스페이먼츠(테스트 키), SSE(SseEmitter), Geolocation API
 - 로컬 DB: 루트의 docker-compose.yml (MariaDB, transportdb)
@@ -18,6 +18,7 @@
 - docs/collaboration.md 역할 분담 · 도메인 간 약속 · Git 규칙
 - docs/roadmap.md       주차별 일정 · A~Z 단계 체크리스트
 - docs/decisions.md     팀 결정 기록
+- docs/deploy.md        배포 따라 하기 (EC2 · Nginx · HTTPS, 팀원 1)
 
 ## 구조 규칙
 - 백엔드 패키지: config, security, domain(+enums), repository, service, controller(+advice), dto, client, scheduler, util, exception
