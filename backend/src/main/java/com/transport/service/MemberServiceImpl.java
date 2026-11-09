@@ -3,6 +3,7 @@ package com.transport.service;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.data.domain.Page;
@@ -78,6 +79,12 @@ public class MemberServiceImpl implements MemberService {
 	@Transactional(readOnly = true)
 	public MemberDTO getMember(Long memberId) {
 		return entityToDTO(findMember(memberId));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Optional<Member> findById(Long memberId) {
+		return memberRepository.findById(memberId);
 	}
 
 	@Override
