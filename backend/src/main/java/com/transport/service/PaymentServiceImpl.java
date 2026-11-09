@@ -10,10 +10,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.transport.domain.Payment;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.PaymentStatus;
+import com.transport.domain.enums.MemberRole;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.client.TossPaymentClient;
 import com.transport.dto.DailyStatDTO;
 import com.transport.dto.PaidStatDTO;
 import com.transport.dto.PaymentApproveRequestDTO;
+import com.transport.dto.PaymentConfirmResponseDTO;
 import com.transport.dto.VehicleTypeStatDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -27,28 +30,42 @@ import lombok.RequiredArgsConstructor;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final TossPaymentClient tossPaymentClient;
+    private final StatusHistoryService statusHistoryService;
 
     @Override
     @Transactional
-    public void verifyAndApprovePayment(PaymentApproveRequestDTO requestDTO) {
-        // 1. 주문번호로 결제 내역 조회 (PaymentRepository에 findByOrderId 메서드 필요)
-        Payment payment = paymentRepository.findByOrderId(requestDTO.getOrderId())
+    public PaymentConfirmResponseDTO verifyAndApprovePayment(PaymentApproveRequestDTO requestDTO, Long memberId) {
+        Payment payment = paymentRepository.findByOrderIdForUpdate(requestDTO.getOrderId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+        Shipment shipment = payment.getShipment();
 
-        // 2. 금액 검증 (서버 산출 금액 vs 프론트엔드 요청 금액 일치 여부)
-        if (payment.getAmount() != requestDTO.getAmount()) {
+        if (!shipment.getCustomer().getId().equals(memberId)
+                || shipment.getCustomer().getRole() != MemberRole.CUSTOMER) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new CustomException(ErrorCode.PAYMENT_ALREADY_COMPLETED);
+        }
+        if (payment.getStatus() != PaymentStatus.READY
+                || shipment.getStatus() != ShipmentStatus.PENDING_PAYMENT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_ALLOWED);
+        }
+
+        if (payment.getAmount() != requestDTO.getAmount()
+                || shipment.getFare() != requestDTO.getAmount()) {
             throw new CustomException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
-        // 3. 결제 상태 업데이트 
-        // (실제 토스 API를 서버에서 한 번 더 호출해 승인받는 로직이 들어갈 수 있습니다)
-        payment.updatePaymentKey(requestDTO.getPaymentKey());
-        payment.updateStatus(PaymentStatus.PAID); // PaymentStatus.java에 PAID(결제완료) 있는지 확인
-        payment.updatePaidAt(LocalDateTime.now());
+        tossPaymentClient.confirm(requestDTO.getPaymentKey(), requestDTO.getOrderId(), requestDTO.getAmount());
 
-        // 4. 연관된 배송 상태 업데이트 (결제대기 -> 접수완료/배차대기)
-        Shipment shipment = payment.getShipment();
+        ShipmentStatus fromStatus = shipment.getStatus();
+        payment.updatePaymentKey(requestDTO.getPaymentKey());
+        payment.updateStatus(PaymentStatus.PAID);
+        payment.updatePaidAt(LocalDateTime.now());
         shipment.updateStatus(ShipmentStatus.REQUESTED); 
+        statusHistoryService.record(shipment, fromStatus, ShipmentStatus.REQUESTED, null, "토스 결제 승인");
+        return PaymentConfirmResponseDTO.from(payment);
     }
 
     // ===== 관리자 대시보드 집계 (팀원 1 대시보드가 쓰는 읽기 전용 메서드) =====

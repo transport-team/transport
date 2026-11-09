@@ -5,6 +5,7 @@ import { getDefaultAddress } from '../../api/addressApi'
 import { estimateFare } from '../../api/fareApi'
 import { getMyInfo } from '../../api/memberApi'
 import { createShipment } from '../../api/shipmentApi'
+import { requestTossPayment } from '../../util/tossPayments'
 import { getVehicleTypes } from '../../api/vehicleApi'
 import { Button, Input } from '../../components/common'
 import { CARGO_CATEGORIES } from '../../util/cargoCatalog'
@@ -227,6 +228,11 @@ const ShipmentCreatePage = () => {
     try {
       const result = await createShipment(getShipmentRequest())
       setShipment(result)
+      await requestTossPayment({
+        orderId: result.orderId,
+        amount: result.amount,
+        cargoName: getShipmentRequest().cargoName,
+      })
     } catch (requestError) {
       setError(requestError.response?.data?.message || '배송 신청 중 오류가 발생했습니다.')
     } finally {
