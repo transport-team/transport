@@ -24,12 +24,13 @@ public class StatusHistoryServiceImpl implements StatusHistoryService {
 	@Override
 	public ShipmentStatusHistory record(Shipment shipment, ShipmentStatus from, ShipmentStatus to, Member changedBy, String memo) {
 		ShipmentStatusHistory history = ShipmentStatusHistory.builder()
-				.shipment(shipment)
-				.fromStatus(from)
-				.toStatus(to)
-				.changedBy(changedBy)
-				.memo(memo)
-				.build();
+					.shipment(shipment)
+					.fromStatus(from)
+					.toStatus(to)
+					.changedBy(changedBy)
+					.memo(memo)
+					.changedAt(java.time.LocalDateTime.now())
+					.build();
 
 		ShipmentStatusHistory saved = historyRepository.save(history);
 
