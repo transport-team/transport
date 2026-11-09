@@ -1,12 +1,16 @@
 package com.transport.service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.transport.domain.Member;
 import com.transport.domain.Shipment;
+import com.transport.domain.ShipmentStatusHistory;
+import com.transport.domain.enums.MemberRole;
 import com.transport.domain.enums.NotificationType;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.ShipmentStatusHistoryResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.ShipmentRepository;
@@ -65,6 +69,28 @@ public class StatusServiceImpl implements StatusService {
 		notificationService.send(shipment.getCustomer(), type, message, shipment);
 
 		log.info("배송 상태 변경: shipmentId={}, {} -> {}, driverId={}", shipmentId, fromStatus, nextStatus, driverId);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ShipmentStatusHistoryResponseDTO> getHistory(Long shipmentId, Long memberId, MemberRole role) {
+		Shipment shipment = shipmentRepository.findById(shipmentId)
+				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+
+		// 권한: 관리자 · 본인 고객 · 배정 기사만 (requirements.md — 배송 상세 접근 제한)
+		boolean isAdmin = role == MemberRole.ADMIN;
+		boolean isOwner = shipment.getCustomer() != null
+				&& shipment.getCustomer().getId().equals(memberId);
+		Long assignedDriverId = dispatchService.getActiveDriver(shipmentId);
+		boolean isAssignedDriver = assignedDriverId != null && assignedDriverId.equals(memberId);
+
+		if (!isAdmin && !isOwner && !isAssignedDriver) {
+			throw new CustomException(ErrorCode.FORBIDDEN, "본인 배송만 조회할 수 있습니다.");
+		}
+
+		return statusHistoryService.getHistory(shipmentId).stream()
+				.map(ShipmentStatusHistoryResponseDTO::from)
+				.toList();
 	}
 
 	/** 임시 전이 검증 — 팀원3의 canChangeTo() 머지 시 제거 */

@@ -1,5 +1,6 @@
 package com.transport.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -11,7 +12,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.transport.domain.Member;
 import com.transport.domain.Shipment;
+import com.transport.domain.ShipmentStatusHistory;
+import com.transport.domain.enums.MemberRole;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.ShipmentStatusHistoryResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.ShipmentRepository;
@@ -25,6 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.assertj.core.api.Assertions.assertThat;
 
 // StatusServiceImpl 단위 테스트 (팀원 4 — 4-3)
 @ExtendWith(MockitoExtension.class)
@@ -123,5 +128,54 @@ class StatusServiceTest {
 				CustomException.class);
 
 		org.assertj.core.api.Assertions.assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SHIPMENT_NOT_FOUND);
+	}
+
+	// ===== 4-4 이력 조회 (getHistory) =====
+
+	@Test
+	@DisplayName("이력 조회 정상: 본인 고객")
+	void getHistory_ownerSuccess() {
+		givenShipment(ShipmentStatus.ASSIGNED, 10L); // customer = 100
+		ShipmentStatusHistory history = ShipmentStatusHistory.builder()
+				.shipment(shipment)
+				.fromStatus(ShipmentStatus.REQUESTED)
+				.toStatus(ShipmentStatus.ASSIGNED)
+				.changedBy(null)
+				.memo("배차 완료")
+				.changedAt(java.time.LocalDateTime.now())
+				.build();
+		when(statusHistoryService.getHistory(1L)).thenReturn(List.of(history));
+
+		List<ShipmentStatusHistoryResponseDTO> result =
+				statusService.getHistory(1L, 100L, MemberRole.CUSTOMER);
+
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).getToStatus()).isEqualTo(ShipmentStatus.ASSIGNED);
+		assertThat(result.get(0).getChangedByName()).isNull(); // 시스템 변경자
+	}
+
+	@Test
+	@DisplayName("이력 조회 정상: 관리자")
+	void getHistory_adminSuccess() {
+		givenShipment(ShipmentStatus.ASSIGNED, 10L);
+		when(statusHistoryService.getHistory(1L)).thenReturn(List.of());
+
+		List<ShipmentStatusHistoryResponseDTO> result =
+				statusService.getHistory(1L, 999L, MemberRole.ADMIN);
+
+		assertThat(result).isEmpty();
+	}
+
+	@Test
+	@DisplayName("이력 조회 예외: 관련 없는 제3자 (FORBIDDEN)")
+	void getHistory_forbidden() {
+		givenShipment(ShipmentStatus.ASSIGNED, 10L); // customer=100, 배정기사=10, 요청자=999
+
+		CustomException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
+				() -> statusService.getHistory(1L, 999L, MemberRole.CUSTOMER),
+				CustomException.class);
+
+		assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+		verify(statusHistoryService, never()).getHistory(anyLong());
 	}
 }

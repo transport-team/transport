@@ -1,5 +1,8 @@
 package com.transport.controller;
 
+import java.util.List;
+
+import com.transport.dto.ShipmentStatusHistoryResponseDTO;
 import com.transport.dto.StatusChangeRequestDTO;
 import com.transport.security.LoginMember;
 import com.transport.service.StatusService;
@@ -32,5 +35,18 @@ public class ShipmentStatusController {
 	) {
 		statusService.changeStatus(id, request.getNextStatus(), request.getMemo(), loginMember.getId());
 		return ResponseEntity.noContent().build();
+	}
+
+	/**
+	 * 배송 상태 이력 조회 (본인 고객 · 배정 기사 · 관리자만 — 검사는 서비스에서)
+	 * @param id 배송 ID
+	 * @return 이력 목록 (오래된 순)
+	 */
+	@GetMapping("/{id}/history")
+	public ResponseEntity<List<ShipmentStatusHistoryResponseDTO>> getHistory(
+			@PathVariable Long id,
+			@AuthenticationPrincipal LoginMember loginMember
+	) {
+		return ResponseEntity.ok(statusService.getHistory(id, loginMember.getId(), loginMember.getRole()));
 	}
 }

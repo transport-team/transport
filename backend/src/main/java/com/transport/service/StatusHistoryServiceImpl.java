@@ -1,5 +1,7 @@
 package com.transport.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,5 +38,11 @@ public class StatusHistoryServiceImpl implements StatusHistoryService {
 
 		log.info("배송 상태 이력 저장: shipmentId={}, {} -> {}, changedBy={}", shipment.getId(), from, to, changedBy != null ? changedBy.getId() : "system");
 		return saved;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ShipmentStatusHistory> getHistory(Long shipmentId) {
+		return historyRepository.findByShipment_IdOrderByChangedAtAsc(shipmentId);
 	}
 }
