@@ -1,6 +1,7 @@
 # 배포 (Y) — 따라 하기
 
-- 담당: 팀원 1 (팀장). AWS 계정 · 결제 정보 · 도메인은 팀장이 직접 만든다
+- 담당: 팀원 1 (팀장). AWS 계정 · 도메인은 팀장이 직접 만든다
+- 비용: **AWS 무료 플랜**으로 무료 (부트캠프 프로젝트 · 상용 아님). 유료 플랜으로 바꾸지 않는다
 - 결정 기록: docs/decisions.md (배포 구조 2026-11-09)
 - 파일: `deploy/` (Nginx · systemd · 운영 시드 · 배포 스크립트), `backend/src/main/resources/application-prod.yml.example`, `frontend/.env.production.example`
 
@@ -18,26 +19,28 @@
 - 실시간 알림(SSE)은 Nginx에서 버퍼링을 끄고 연결을 1시간까지 유지한다 (서버 heartbeat 30초)
 - 브라우저 위치 API(기사 위치 공유)는 HTTPS에서만 동작해서 HTTPS가 필수다
 
-## 0. 먼저 정할 것
+## 0. 정한 것 (2026-11-09, docs/decisions.md)
 
-| 항목 | 추천 | 다른 길 |
+| 항목 | 정한 것 | 이유 |
 |---|---|---|
-| AWS 계정 | 팀장 명의, 서울 리전, 무료 플랜 + Budgets 알림 | — |
-| DB | RDS MariaDB 가장 작은 크기 (외부 접속 끔) | EC2 안 Docker MariaDB (싸고 간단, 백업은 직접) |
-| 도메인 | 무료 DuckDNS (`이름.duckdns.org`) | 구매 (연 1~2만 원) |
-| 배포 방식 | `deploy/deploy.sh`로 직접 | GitHub Actions 자동 배포 (나중에) |
+| 비용 | **AWS 무료 플랜** (6개월 · 크레딧) | 부트캠프 프로젝트라 무료로. 무료 플랜은 크레딧이 끝나거나 6개월이 지나면 요금 대신 계정이 닫힌다 |
+| DB | **RDS MariaDB** 가장 작은 크기 (외부 접속 끔) | 로드맵대로 관리형 DB · 자동 백업 |
+| 도메인 | 무료 DuckDNS (`이름.duckdns.org`) | 무료로 HTTPS (Let's Encrypt) |
+| 배포 방식 | `deploy/deploy.sh`로 직접 | GitHub Actions 자동 배포는 나중에 |
 
-정한 내용은 docs/decisions.md에 적는다. 아래는 추천대로 했을 때의 순서다.
+**크레딧 계산 (대략):** EC2 가장 작은 크기 + 공인 IPv4 + RDS 가장 작은 크기면 한 달에 30달러 안팎이 크레딧에서 빠진다. 가입 크레딧 100달러면 약 3개월, 추가 크레딧(1장 3)까지 받으면 약 6개월이다. 실제 사용량은 Billing에서 확인한다.
 
-## 1. AWS 계정 · 비용 알림
+## 1. AWS 계정 · 크레딧 · 비용 알림
 
-1. AWS 계정을 만들고 콘솔 오른쪽 위 리전을 **아시아 태평양(서울) ap-northeast-2**로 바꾼다
-2. Billing → **Budgets** → 비용 예산(예: 월 5달러)을 만들고 80% · 100%에서 메일 알림을 켠다
-3. 루트 계정에 MFA를 켠다
+1. AWS 가입 때 플랜 선택에서 **무료 플랜(Free plan)**을 고른다. 결제 수단 등록은 필요하지만, 무료 플랜에서는 크레딧을 넘어도 청구하지 않고 계정이 닫힌다. **유료 플랜(Paid plan)으로 업그레이드하지 않는다**
+2. 콘솔 오른쪽 위 리전을 **아시아 태평양(서울) ap-northeast-2**로 바꾼다
+3. 콘솔 홈의 추가 크레딧 활동(예산 설정 · EC2 · RDS 등)을 하면 크레딧이 늘어난다 (최대 200달러). 이 문서 순서대로 하면 대부분 하게 된다
+4. Billing → **Budgets** → 비용 예산(예: 월 40달러)을 만들고 80% · 100%에서 메일 알림을 켠다. Billing → 크레딧에서 남은 크레딧을 가끔 본다
+5. 루트 계정에 MFA를 켠다
 
 ## 2. EC2 만들기
 
-1. EC2 → 인스턴스 시작: **Ubuntu Server 24.04 LTS**, 프리 티어 대상 크기(t3.micro 등), 스토리지 20GB
+1. EC2 → 인스턴스 시작: **Ubuntu Server 24.04 LTS**, 가장 작은 크기(t3.micro 등, 크레딧 아끼기), 스토리지 20GB
 2. 키 페어를 새로 만들고 `.pem`을 내 PC에 보관한다 (Git · 채팅에 올리지 않기)
 3. 보안 그룹 `transport-web`
    - SSH 22: **내 IP만**
@@ -47,10 +50,11 @@
 ## 3. RDS(MariaDB) 만들기
 
 1. 파라미터 그룹(mariadb11.4)을 만들고 `time_zone`=Asia/Seoul, `character_set_server`=utf8mb4, `collation_server`=utf8mb4_unicode_ci
-2. RDS → 데이터베이스 생성: MariaDB **11.4**(로컬 Docker와 같은 버전), 프리 티어 · 가장 작은 크기, 스토리지 20GB, 위 파라미터 그룹
+2. RDS → 데이터베이스 생성: MariaDB **11.4**(로컬 Docker와 같은 버전), 가장 작은 크기(db.t4g.micro 등), 스토리지 20GB, 위 파라미터 그룹
 3. 초기 데이터베이스 이름 `transportdb`, 마스터 사용자 `admin` (비밀번호는 팀장만 보관)
 4. **퍼블릭 액세스: 아니요**. 보안 그룹 `transport-db`: MariaDB 3306을 **`transport-web` 보안 그룹에서만** 허용
-5. 만들어지면 엔드포인트(`....rds.amazonaws.com`)를 적어 둔다
+5. 크레딧 아끼기: **단일 AZ**(다중 AZ 끔), 자동 백업 보존 1일, Performance Insights · 확장 모니터링 끔, 스토리지 자동 확장 끔
+6. 만들어지면 엔드포인트(`....rds.amazonaws.com`)를 적어 둔다
 
 ## 4. 도메인 연결 (DuckDNS 예)
 
@@ -193,5 +197,9 @@ DEPLOY_HOST=ubuntu@YOUR_DOMAIN DEPLOY_KEY=~/.ssh/transport.pem ./deploy/deploy.s
 
 ## 11. 비용 · 정리
 
-- Budgets 알림 메일을 받으면 바로 확인한다
-- 발표 · 제출이 끝나면 RDS 스냅샷을 남기고 EC2 · RDS · 탄력적 IP를 삭제한다 (연결되지 않은 탄력적 IP도 요금이 나온다)
+- Budgets 알림 메일을 받으면 바로 확인한다. 공인 IPv4(탄력적 IP)는 인스턴스에 연결돼 있어도 크레딧이 빠진다
+- 무료 플랜이 끝나기 전(6개월 · 크레딧 소진)에 계정이 닫혀도 남도록 DB 덤프를 받아 둔다:
+  ```bash
+  mariadb-dump -h RDS_엔드포인트 -u transport -p --single-transaction transportdb > transportdb-$(date +%F).sql
+  ```
+- 발표 · 제출이 끝나면 덤프를 받고 EC2 · RDS · 탄력적 IP를 삭제한다 (연결되지 않은 탄력적 IP도 크레딧이 빠진다)
