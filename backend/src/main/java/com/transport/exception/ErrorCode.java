@@ -36,6 +36,9 @@ public enum ErrorCode {
 	DISTANCE_CALCULATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "거리 계산 중 오류가 발생했습니다."),
 	UNSUPPORTED_CARGO_WEIGHT(HttpStatus.BAD_REQUEST, "지원하지 않는 화물 무게이거나 별도 문의가 필요합니다."),
 	PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "결제 요청 금액이 서버 산출 금액과 일치하지 않습니다."),
+	PAYMENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "현재 상태에서는 결제를 승인할 수 없습니다."),
+	PAYMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 승인된 결제입니다."),
+	PAYMENT_FAILED(HttpStatus.BAD_GATEWAY, "결제 승인에 실패했습니다."),
 	SHIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 배송 건을 찾을 수 없습니다."),
 
 	// 진행 · 실시간 · 리뷰 (팀원 4)

@@ -4,13 +4,14 @@ import com.transport.dto.DailyStatDTO;
 import com.transport.dto.PaidStatDTO;
 import com.transport.dto.PaymentApproveRequestDTO;
 import com.transport.dto.VehicleTypeStatDTO;
+import com.transport.dto.PaymentConfirmResponseDTO;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PaymentService {
-    void verifyAndApprovePayment(PaymentApproveRequestDTO requestDTO);
+    PaymentConfirmResponseDTO verifyAndApprovePayment(PaymentApproveRequestDTO requestDTO, Long memberId);
 
     // ===== 관리자 대시보드 집계: 결제 완료(PAID)만, paidAt 기준 (환불돼 CANCELED가 된 결제는 빠진다) =====
 

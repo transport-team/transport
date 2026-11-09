@@ -306,6 +306,29 @@
 
 ## 팀원 3 — 배송 접수 · 운임 · 결제
 
+### 결제 승인
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| POST | /api/payments/confirm | 토스 결제 승인 및 배송 접수 확정 | CUSTOMER |
+
+```jsonc
+// POST /api/payments/confirm
+{ "paymentKey": "tgen_...", "orderId": "transport-...", "amount": 35000 }
+
+// 200
+{
+  "shipmentId": 10, "orderId": "transport-...", "paymentKey": "tgen_...",
+  "amount": 35000, "paymentStatus": "PAID", "shipmentStatus": "REQUESTED"
+}
+```
+
+- 서버는 로그인 고객 본인의 결제인지, 결제 상태가 `READY`이고 배송 상태가 `PENDING_PAYMENT`인지 먼저 확인한다.
+- 요청 금액은 Payment와 Shipment의 서버 운임 모두와 일치해야 하며, 이후 Toss 승인 API를 호출한다.
+- Toss 승인 성공 후 Payment를 `PAID`, 배송을 `REQUESTED`로 변경하고 `shipment_status_history`에 이력을 기록한다.
+- 이미 승인된 결제는 `409 PAYMENT_ALREADY_COMPLETED`, 상태·금액 오류는 `400`, Toss 승인 거절은 `502 PAYMENT_FAILED`로 응답한다.
+- 백엔드는 `TOSS_SECRET_KEY` 환경변수를 우선 사용하고, 없으면 `app.toss.secret-key` 설정을 사용한다. 프론트에는 공개 키인 `VITE_TOSS_CLIENT_KEY`만 설정한다.
+
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
 | GET | /api/cargo-types | 화물 종류 목록 | 전체 |

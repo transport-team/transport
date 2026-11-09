@@ -7,7 +7,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.transport.dto.PaymentApproveRequestDTO;
+import com.transport.dto.PaymentConfirmResponseDTO;
 import com.transport.service.PaymentService;
+import com.transport.security.LoginMember;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,16 +22,16 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('CUSTOMER')")
 public class PaymentController {
 
     private final PaymentService paymentService;
 
     @Operation(summary = "결제 승인 및 검증", description = "결제 요청 금액을 검증하고 배송 상태를 접수 완료로 변경합니다.")
     @PostMapping("/confirm")
-    public ResponseEntity<String> confirmPayment(@Valid @RequestBody PaymentApproveRequestDTO requestDTO) {
-        
-        paymentService.verifyAndApprovePayment(requestDTO);
-        
-        return ResponseEntity.ok("결제가 성공적으로 승인되었습니다.");
+    public ResponseEntity<PaymentConfirmResponseDTO> confirmPayment(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @Valid @RequestBody PaymentApproveRequestDTO requestDTO) {
+        return ResponseEntity.ok(paymentService.verifyAndApprovePayment(requestDTO, loginMember.getId()));
     }
 }
