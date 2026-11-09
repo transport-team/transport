@@ -33,6 +33,7 @@
 | POST | /api/auth/refresh | 토큰 재발급 | 전체 |
 | GET · PUT | /api/members/me | 내 정보 조회 · 수정(연락처) | 로그인 |
 | PATCH | /api/members/me/password | 비밀번호 변경 (현재 비밀번호 확인) | 로그인 |
+| GET · PUT · DELETE | /api/members/me/default-address | 기본 배송지 조회 · 저장/수정 · 삭제 | CUSTOMER |
 | GET | /api/terms | 가입 화면 약관 목록 (필수 먼저 → 등록 순) | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
@@ -101,6 +102,26 @@
 // 204 (본문 없음) · 400 WRONG_PASSWORD(현재 비밀번호 틀림) · 400 INVALID_INPUT(새 비밀번호 8~64자 · 지금과 같은 비밀번호)
 ```
 - 비밀번호를 바꿔도 이미 받은 토큰은 만료될 때까지 쓸 수 있다 (로그아웃시키지 않음)
+
+### 기본 배송지
+
+```jsonc
+// GET /api/members/me/default-address — 저장된 배송지가 없으면 204
+{
+  "id": 1, "label": "우리 집",
+  "originAddress": "서울시 마포구 ...", "originDetail": "101동 1001호",
+  "destAddress": "경기도 고양시 ...", "destDetail": "상세주소"
+}
+
+// PUT /api/members/me/default-address
+{
+  "label": "우리 집",
+  "originAddress": "서울시 마포구 ...", "originDetail": "101동 1001호",
+  "destAddress": "경기도 고양시 ...", "destDetail": "상세주소"
+}
+// 200 저장된 기본 배송지 · 400 INVALID_INPUT(이름·주소 누락)
+// DELETE /api/members/me/default-address → 204
+```
 
 ### 회원 관리 예시 (관리자)
 
@@ -300,6 +321,17 @@
 | GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
 | GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
 
+### 화물 종류 목록 예시
+
+`GET /api/cargo-types`는 현재 사용 중인 화물 종류만 반환합니다.
+
+```json
+[
+  { "id": 1, "name": "일반", "extraFee": 0, "handlingNote": null, "active": true },
+  { "id": 2, "name": "파손주의", "extraFee": 5000, "handlingNote": "완충재 포장 확인, 적재 시 위에 다른 짐 금지", "active": true }
+]
+```
+
 ## 팀원 4 — 배송 진행 · 실시간 · 리뷰
 
 | 메서드 | URL | 설명 | 권한 |
@@ -333,7 +365,7 @@
   "receiverName": "김수령", "receiverPhone": "010-0000-0000", "memo": "엘리베이터 없음"
 }
 // 201 — 1톤 · 38.4km · 평일 오전 · 파손주의 → 98,500원 (fare.md 예시 ③)
-{ "id": 1024, "status": "PENDING_PAYMENT", "orderId": "SHP-1024-7f3a", "orderName": "1톤 운송 · 유리 진열장", "amount": 98500 }
+{ "shipmentId": 1024, "status": "PENDING_PAYMENT", "orderId": "SHP-1024-7f3a", "amount": 98500 }
 
 // POST /api/payments/confirm
 { "paymentKey": "{토스가 넘겨준 값}", "orderId": "SHP-1024-7f3a", "amount": 98500 }

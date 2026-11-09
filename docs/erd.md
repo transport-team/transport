@@ -1,4 +1,4 @@
-# ERD — 테이블 20개
+# ERD — 테이블 21개
 
 - 관리자: 팀원 2 (테이블 변경은 팀원 2에게 요청 → 주간 회의에서 확정 → 이 문서 수정)
 - 공통: 모든 테이블은 `id BIGINT PK AUTO_INCREMENT`, `created_at`, `updated_at`(BaseEntity)
@@ -11,6 +11,7 @@
 | member 1 : 0..1 driver | 기사 회원만 driver 정보를 가짐 |
 | member 1 : N shipment | 고객이 신청한 배송 |
 | member 1 : N term_agreement N : 1 term | 약관 동의 이력 |
+| member 1 : 0..1 customer_address | 고객 기본 배송지 |
 | member 1 : N inquiry / notice / notification | 문의 작성자 / 공지 작성 관리자 / 알림 수신자 |
 | driver 1 : 0..1 vehicle | 담당 차량 |
 | driver 1 : N driver_schedule / dispatch / settlement / review | 근무 일정 / 배차 / 정산 / 받은 리뷰 |
@@ -87,6 +88,14 @@
 | member_id (FK) | BIGINT | 회원 |
 | term_id (FK) | BIGINT | 약관 |
 | agreed_at | DATETIME | 동의 시각 |
+
+### customer_address (고객 기본 배송지)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| member_id (FK, UQ) | BIGINT | 고객 회원 |
+| label | VARCHAR(50) | 배송지 이름 |
+| origin_address / origin_detail | VARCHAR / VARCHAR | 출발지 주소 / 상세 |
+| dest_address / dest_detail | VARCHAR / VARCHAR | 도착지 주소 / 상세 |
 
 ### notice
 | 컬럼 | 타입 | 설명 |
