@@ -38,7 +38,8 @@
 - 담당: 팀원1 공통·인증·운영 / 팀원2 기사·차량·배차·정산 / 팀원3 배송·운임·결제 / 팀원4 진행·실시간·리뷰
 - 내 도메인 파일만 수정한다. 공통 파일(SecurityConfig, JWTCheckFilter, application*.yml, build.gradle,
   ErrorCode, GlobalExceptionHandler, data.sql, router/root.jsx, package.json, layouts/, components/common/)은
-  수정하지 말고 변경안을 제안만 한다
+  수정하지 말고 변경안을 제안만 한다. 단, ErrorCode에 자기 도메인 구역의 코드를 추가하는 것은 직접 해도 된다
+  (docs/collaboration.md 공통 파일 표)
 - 다른 도메인은 docs/collaboration.md의 약속된 Service 메서드로만 호출한다 (다른 도메인 Repository 직접 사용 금지)
 - 작업은 develop에서 feature/{도메인}-{기능} 브랜치를 만들어 진행한다
 

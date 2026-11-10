@@ -30,9 +30,9 @@
 | 3주차 중 | 2 → 1 | `DriverService.register(member, licenseType, careerYears)` · `getStatus(memberId)` (팀원 2 부재 중 팀원 1이 작성) |
 | 4주차 | 4 → 전원 | `NotificationService.send(receiver, type, message, shipment)` (처음엔 로그만) |
 | 4주차 | 4 → 2·3 | `StatusHistoryService.record(shipment, from, to, changedBy, memo)` |
-| 5주차 | 2 → 4 | `DispatchService.getActiveDriver(shipmentId)` |
+| 5주차 | 2 → 4 | `DispatchService.getActiveDriver(shipmentId)` → 배정 기사의 **회원 ID**(`member.id`, `driver.id` 아님), 배정이 없으면 `null` (상태 변경 · 이력 조회가 로그인 회원 ID와 비교한다). 실구현 PR에서 `DispatchServiceMock`을 지운다 (#60) |
 | 5주차 | 3 → 전원 | 개발용 결제 건너뛰기 API (local 프로필만) |
-| 8주차 | 4 → 2 | `ReviewService.getAverageRating(driverId)` |
+| 8주차 | 4 → 2 | `ReviewService.getAverageRating(driverId)` — `driverId`는 `driver.id` (Review가 Driver를 가리킨다. 위 `getActiveDriver`의 회원 ID와 다름) |
 | 7주차 (T) | 3 → 1 | 대시보드 집계(읽기 전용): `ShipmentService.countByStatus()` · `PaymentService.getPaidStat(from, to)` · `getDailyPaidStats(fromDate, toDate)` · `getPaidStatsByVehicleType(from, to)` (팀원 1이 작성, 팀원 3 리뷰) |
 | 보안 점검 후속 | 1 → 전원 | `MemberService.findById(memberId)` → `Optional<Member>` (회원 엔티티가 필요할 때 `MemberRepository` 대신, 예: 배송 신청 고객 연결) |
 | 2단계 예정 | 4 → 1 | 대시보드 오늘 완료 건수(상태 이력의 COMPLETED 기준) · 전체 평균 평점 — 이름은 그때 정한다 |
