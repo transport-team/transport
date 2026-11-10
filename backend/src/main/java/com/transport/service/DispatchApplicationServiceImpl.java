@@ -1,6 +1,7 @@
 package com.transport.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchApplicationRepository;
 import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
+import com.transport.repository.DriverScheduleRepository;
 import com.transport.repository.ShipmentRepository;
 import com.transport.repository.VehicleRepository;
 
@@ -37,6 +39,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
     private final ShipmentRepository shipmentRepository;
     private final VehicleRepository vehicleRepository;
     private final DispatchRepository dispatchRepository;
+    private final DriverScheduleRepository driverScheduleRepository;
 
     // 기사: 운송 요청에 지원
     @Override
@@ -94,6 +97,49 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
                 shipment, driver, DispatchApplicationStatus.PENDING)) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT, "이미 지원한 운송 요청입니다.");
+        }
+
+        // 기사 휴무일에는 배차 신청 불가
+        driverScheduleRepository.findByDriver_IdAndWorkDate(
+                driver.getId(), shipment.getPickupAt().toLocalDate()
+        ).ifPresent(schedule -> {
+
+            if ("OFF".equals(schedule.getStatus().name())) {
+                throw new CustomException(
+                        ErrorCode.INVALID_INPUT, "상차 예정일이 기사 휴무일입니다.");
+            }
+        });
+
+        // 예상 운송 시간이 없으면 배차 신청 불가
+        if (shipment.getDurationMin() <= 0) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "예상 운송 시간이 올바르지 않습니다.");
+        }
+
+        // 새 운송 요청의 예상 시작 및 종료 시간
+        LocalDateTime requestedStart = shipment.getPickupAt();
+        LocalDateTime requestedEnd =
+                requestedStart.plusMinutes(shipment.getDurationMin());
+
+        // 이미 확정된 배차와 운송 시간이 겹치는지 확인
+        boolean hasOverlappingDispatch =
+                dispatchRepository.findByDriver_IdAndActiveTrue(driver.getId())
+                        .stream()
+                        .anyMatch(dispatch -> {
+
+                            Shipment assignedShipment = dispatch.getShipment();
+
+                            LocalDateTime assignedStart = assignedShipment.getPickupAt();
+                            LocalDateTime assignedEnd =
+                                    assignedStart.plusMinutes(assignedShipment.getDurationMin());
+
+                            return requestedStart.isBefore(assignedEnd)
+                                    && assignedStart.isBefore(requestedEnd);
+                        });
+
+        if (hasOverlappingDispatch) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "이미 확정된 배차와 운송 시간이 겹칩니다.");
         }
 
         // 10. 지원 내역 생성
@@ -171,6 +217,79 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
 
+        // 배차 확정 전 예상 운송 시간 검증
+        if (shipment.getDurationMin() <= 0) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "예상 운송 시간이 올바르지 않습니다.");
+        }
+
+        // 선택한 기사의 기존 확정 배차와 시간 중복 확인
+        LocalDateTime requestedStart = shipment.getPickupAt();
+        LocalDateTime requestedEnd =
+                requestedStart.plusMinutes(shipment.getDurationMin());
+
+        boolean hasOverlappingDispatch =
+                dispatchRepository.findByDriver_IdAndActiveTrue(
+                        selectedApplication.getDriver().getId())
+                        .stream()
+                        .anyMatch(dispatch -> {
+
+                            Shipment assignedShipment = dispatch.getShipment();
+
+                            LocalDateTime assignedStart = assignedShipment.getPickupAt();
+                            LocalDateTime assignedEnd =
+                                    assignedStart.plusMinutes(assignedShipment.getDurationMin());
+
+                            return requestedStart.isBefore(assignedEnd)
+                                    && assignedStart.isBefore(requestedEnd);
+                        });
+
+        if (hasOverlappingDispatch) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT,
+                    "선택한 기사에게 시간이 겹치는 확정 배차가 있습니다.");
+        }
+
+        // 배차 확정 시 기사 상태 재검증
+        Driver selectedDriver = selectedApplication.getDriver();
+
+        if (selectedDriver.getStatus() != DriverStatus.ACTIVE) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "현재 운송할 수 없는 기사입니다.");
+        }
+
+        // 배차 확정 시 차량 상태 및 소유 관계 재검증
+        Vehicle selectedVehicle = selectedApplication.getVehicle();
+
+        if (selectedVehicle.getDriver() == null
+                || !selectedVehicle.getDriver().getId().equals(selectedDriver.getId())) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "기사 소유 차량이 아닙니다.");
+        }
+
+        if (selectedVehicle.getStatus() != VehicleStatus.AVAILABLE) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "현재 운행할 수 없는 차량입니다.");
+        }
+
+        // 고객이 요청한 차종과 여전히 일치하는지 확인
+        if (!selectedVehicle.getVehicleType().getId()
+                .equals(shipment.getVehicleType().getId())) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "요청한 차종과 일치하지 않습니다.");
+        }
+
+        // 배차 확정 시 기사 휴무일 재검증
+        driverScheduleRepository.findByDriver_IdAndWorkDate(
+                selectedDriver.getId(), shipment.getPickupAt().toLocalDate()
+        ).ifPresent(schedule -> {
+
+            if ("OFF".equals(schedule.getStatus().name())) {
+                throw new CustomException(
+                        ErrorCode.INVALID_INPUT, "선택한 기사의 상차 예정일이 휴무일입니다.");
+            }
+        });
+
         // 7. 해당 배송의 대기 중인 지원 신청 전체 조회
         List<DispatchApplication> pendingApplications =
                 applicationRepository.findByShipmentAndStatusOrderByCreatedAtAsc(
@@ -208,24 +327,174 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 	@Override
 	public List<DriverShipmentListResponseDTO> getAvailableShipments(Long memberId) {
 
-		// 1. REQUESTED 상태의 배송을 상차 예정일 빠른 순으로 조회
+		// 1. 로그인한 기사 조회
+		Driver driver = driverRepository.findByMemberId(memberId)
+				.orElseThrow(() -> new CustomException(
+						ErrorCode.NOT_FOUND, "기사 정보를 찾을 수 없습니다."));
+
+		// 2. 기사 소유 차량 목록 조회
+		List<Vehicle> vehicles = vehicleRepository.findByDriver_Id(driver.getId());
+
+		// 기사가 이미 확정받은 배차 목록 조회
+		List<Dispatch> activeDispatches =
+				dispatchRepository.findByDriver_IdAndActiveTrue(driver.getId());
+
+		// 기사가 아직 확정받지 않은 배차 신청 목록 조회
+		List<DispatchApplication> pendingApplications =
+				applicationRepository.findByDriver_IdAndStatus(
+						driver.getId(), DispatchApplicationStatus.PENDING);
+
+		// 3. REQUESTED 상태의 배송 조회
 		List<Shipment> shipments = shipmentRepository
 				.findByStatusOrderByPickupAtAsc(ShipmentStatus.REQUESTED);
 
-		// 2. Shipment 엔티티를 기사 목록용 DTO로 변환
+		// 4. 배송별 신청 가능 조건 검사
 		return shipments.stream()
-				.map(shipment -> DriverShipmentListResponseDTO.builder()
-						.shipmentId(shipment.getId())
-						.originAddress(shipment.getOriginAddress())
-						.destAddress(shipment.getDestAddress())
-						.cargoName(shipment.getCargoName())
-						.cargoWeightKg(shipment.getCargoWeightKg())
-						.vehicleTypeId(shipment.getVehicleType().getId())
-						.fare(shipment.getFare())
-						.pickupAt(shipment.getPickupAt())
-						.build())
+				.map(shipment -> {
+
+					List<String> blockReasons = new ArrayList<>();
+					List<String> warningMessages = new ArrayList<>();
+
+					// 예상 운송 시간이 올바르지 않으면 배차 신청 불가
+					if (shipment.getDurationMin() <= 0) {
+						blockReasons.add("예상 운송 시간이 올바르지 않아 배차 신청할 수 없습니다.");
+					}
+
+					// 동일 운송 요청에 이미 배차 신청했는지 확인
+					boolean alreadyApplied = pendingApplications.stream()
+							.anyMatch(application -> application.getShipment().getId()
+									.equals(shipment.getId()));
+
+					if (alreadyApplied) {
+						blockReasons.add("이미 배차 신청한 운송 요청입니다.");
+					}
+
+					// 승인된 기사인지 확인
+					if (driver.getStatus() != DriverStatus.ACTIVE) {
+						blockReasons.add("승인된 기사만 배차 신청할 수 있습니다.");
+					}
+
+					// 요청 차종의 차량을 보유하고 있는지 확인
+					boolean hasMatchingVehicle = vehicles.stream()
+							.anyMatch(vehicle -> vehicle.getVehicleType().getId()
+									.equals(shipment.getVehicleType().getId()));
+
+					// 요청 차종의 운행 가능한 차량이 있는지 확인
+					boolean hasAvailableVehicle = vehicles.stream()
+							.anyMatch(vehicle ->
+									vehicle.getVehicleType().getId()
+											.equals(shipment.getVehicleType().getId())
+									&& vehicle.getStatus() == VehicleStatus.AVAILABLE);
+
+					if (!hasMatchingVehicle) {
+						blockReasons.add("요청한 차종의 차량을 보유하고 있지 않습니다.");
+					} else if (!hasAvailableVehicle) {
+						blockReasons.add("요청한 차종의 차량이 운행 가능한 상태가 아닙니다.");
+					}
+
+
+					// 기사 근무 일정 확인 (상차 예정일 기준)
+					driverScheduleRepository.findByDriver_IdAndWorkDate(
+							driver.getId(), shipment.getPickupAt().toLocalDate()
+					).ifPresentOrElse(schedule -> {
+
+						// 휴무일이면 배차 신청 불가
+						if ("OFF".equals(schedule.getStatus().name())) {
+							blockReasons.add("상차 예정일이 기사 휴무일입니다.");
+
+						} else if (schedule.getStartTime() != null
+								&& schedule.getEndTime() != null) {
+
+							// 기사 근무 종료 일시
+							LocalDateTime workEnd = LocalDateTime.of(
+									schedule.getWorkDate(), schedule.getEndTime());
+
+							// 자정을 넘기는 근무시간 처리
+							if (schedule.getEndTime().isBefore(schedule.getStartTime())) {
+								workEnd = workEnd.plusDays(1);
+							}
+
+							// 운송 요청의 예상 종료 일시
+							LocalDateTime deliveryEnd = shipment.getPickupAt()
+									.plusMinutes(shipment.getDurationMin());
+
+							// 근무 종료 시간을 초과하면 경고만 표시
+							if (deliveryEnd.isAfter(workEnd)) {
+								warningMessages.add("예상 운송 종료 시간이 근무 종료 시간을 초과합니다.");
+							}
+
+						} else {
+							warningMessages.add("등록된 근무시간 정보가 부족합니다.");
+						}
+
+					}, () -> {
+						// 해당 날짜에 근무 일정이 없는 경우
+						warningMessages.add("상차 예정일의 근무 일정이 등록되지 않았습니다.");
+					});
+
+					// 새 운송 요청의 예상 시작 및 종료 시간
+					LocalDateTime requestedStart = shipment.getPickupAt();
+					LocalDateTime requestedEnd =
+							requestedStart.plusMinutes(shipment.getDurationMin());
+
+					// 기존 확정 배차와 운송 시간이 겹치는지 확인
+					boolean hasOverlappingDispatch = activeDispatches.stream()
+							.anyMatch(dispatch -> {
+
+								Shipment assignedShipment = dispatch.getShipment();
+
+								LocalDateTime assignedStart = assignedShipment.getPickupAt();
+								LocalDateTime assignedEnd =
+										assignedStart.plusMinutes(assignedShipment.getDurationMin());
+
+								// 두 운송 시간 구간이 겹치는지 검사
+								return requestedStart.isBefore(assignedEnd)
+										&& assignedStart.isBefore(requestedEnd);
+							});
+
+					if (hasOverlappingDispatch) {
+						blockReasons.add("이미 확정된 배차와 운송 시간이 겹칩니다.");
+					}
+
+					// 다른 운송 요청의 대기 중인 배차 신청과 시간이 겹치는지 확인
+					boolean hasOverlappingApplication = pendingApplications.stream()
+							.filter(application -> !application.getShipment().getId()
+									.equals(shipment.getId()))
+							.anyMatch(application -> {
+
+								Shipment appliedShipment = application.getShipment();
+
+								LocalDateTime appliedStart = appliedShipment.getPickupAt();
+								LocalDateTime appliedEnd =
+										appliedStart.plusMinutes(appliedShipment.getDurationMin());
+
+								return requestedStart.isBefore(appliedEnd)
+										&& appliedStart.isBefore(requestedEnd);
+							});
+
+					if (hasOverlappingApplication) {
+						warningMessages.add("다른 배차 신청과 운송 시간이 겹칩니다.");
+					}
+
+					// 5. 목록 DTO 생성
+					return DriverShipmentListResponseDTO.builder()
+							.shipmentId(shipment.getId())
+							.originAddress(shipment.getOriginAddress())
+							.destAddress(shipment.getDestAddress())
+							.cargoName(shipment.getCargoName())
+							.cargoWeightKg(shipment.getCargoWeightKg())
+							.vehicleTypeId(shipment.getVehicleType().getId())
+							.fare(shipment.getFare())
+							.pickupAt(shipment.getPickupAt())
+							.durationMin(shipment.getDurationMin())
+							.canApply(blockReasons.isEmpty())
+							.blockReasons(blockReasons)
+							.warningMessages(warningMessages)
+							.build();
+				})
 				.toList();
 	}
+
 
 
 }
