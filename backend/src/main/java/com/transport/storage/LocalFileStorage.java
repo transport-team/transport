@@ -14,6 +14,8 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.transport.exception.CustomException;
+import com.transport.exception.ErrorCode;
 import com.transport.util.CustomFileUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -91,7 +93,8 @@ public class LocalFileStorage implements FileStorage {
 			}
 		}
 
-		throw new RuntimeException("파일을 찾을 수 없음: " + fileName);
+		// 없는 파일은 404 (이슈 #52: RuntimeException이 500으로 나가던 것 수정)
+		throw new CustomException(ErrorCode.NOT_FOUND, "파일을 찾을 수 없습니다.");
 	}
 
 	@Override

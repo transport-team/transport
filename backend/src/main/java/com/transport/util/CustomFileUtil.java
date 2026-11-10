@@ -10,6 +10,9 @@ import javax.imageio.ImageIO;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.transport.exception.CustomException;
+import com.transport.exception.ErrorCode;
+
 import net.coobird.thumbnailator.Thumbnails;
 
 import lombok.extern.log4j.Log4j2;
@@ -29,34 +32,34 @@ public class CustomFileUtil {
 	/**
 	 * 이미지 파일 검증 (확장자 + MIME 타입)
 	 * @param file 업로드 파일
-	 * @throws IllegalArgumentException 검증 실패 시
+	 * @throws CustomException 검증 실패 시 (400 INVALID_INPUT — 이슈 #52)
 	 */
 	public void validateImage(MultipartFile file) {
 		if (file == null || file.isEmpty()) {
-			throw new IllegalArgumentException("파일이 비어있습니다.");
+			throw new CustomException(ErrorCode.INVALID_INPUT, "파일이 비어있습니다.");
 		}
 
 		// 1. 확장자 검증
 		String extension = extractExtension(file.getOriginalFilename());
 		if (extension == null || !ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
-			throw new IllegalArgumentException("허용되지 않는 파일 형식입니다. (jpg, jpeg, png, webp, gif만 가능)");
+			throw new CustomException(ErrorCode.INVALID_INPUT, "허용되지 않는 파일 형식입니다. (jpg, jpeg, png, webp, gif만 가능)");
 		}
 
 		// 2. MIME 타입 검증
 		String contentType = file.getContentType();
 		if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
-			throw new IllegalArgumentException("허용되지 않는 파일 형식입니다.");
+			throw new CustomException(ErrorCode.INVALID_INPUT, "허용되지 않는 파일 형식입니다.");
 		}
 
 		// 3. 매직 바이트 검증 (실제 파일 내용 확인)
 		try {
 			BufferedImage image = ImageIO.read(file.getInputStream());
 			if (image == null) {
-				throw new IllegalArgumentException("유효하지 않은 이미지 파일입니다.");
+				throw new CustomException(ErrorCode.INVALID_INPUT, "유효하지 않은 이미지 파일입니다.");
 			}
 		} catch (IOException e) {
 			log.error("이미지 검증 중 오류", e);
-			throw new IllegalArgumentException("이미지 파일 검증 실패");
+			throw new CustomException(ErrorCode.INVALID_INPUT, "이미지 파일 검증 실패");
 		}
 	}
 
