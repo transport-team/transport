@@ -63,7 +63,7 @@ public class NotificationServiceImpl implements NotificationService {
 		try {
 			emitter.send(SseEmitter.event()
 				.name("connected")
-				.data("{\\\"connected\\\":true}"));
+				.data("{\"connected\":true}"));
 		} catch (IOException e) {
 			emitters.remove(memberId, emitter);
 			log.warn("SSE 초기 이벤트 전송 실패: memberId={}", memberId);
