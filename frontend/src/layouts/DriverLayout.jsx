@@ -15,7 +15,7 @@ const MENUS = [
 const DriverLayout = () => (
   <div className="min-h-screen bg-gray-50 pb-20">
     <AppHeader />
-    <main className="mx-auto max-w-md px-4 py-4">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6">
       <Outlet />
     </main>
     <nav className="fixed inset-x-0 bottom-0 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">

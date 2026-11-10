@@ -12,10 +12,12 @@ import com.transport.domain.VehicleType;
 import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.VehicleRegistrationStatus;
 import com.transport.domain.enums.VehicleStatus;
+import com.transport.dto.DriverVehicleResponseDTO;
 import com.transport.dto.VehicleRegistrationRequestDTO;
 import com.transport.dto.VehicleRegistrationResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
+import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.VehicleRegistrationRequestRepository;
 import com.transport.repository.VehicleRepository;
@@ -31,6 +33,7 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
     private final VehicleTypeService vehicleTypeService;
+    private final DispatchRepository dispatchRepository;
 
     @Override
     @Transactional
@@ -179,5 +182,96 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
 
         // 4. 신청 상태를 거절로 변경
         request.reject(rejectionReason.trim());
+    }
+
+    // 기사: 본인 차량 목록 조회
+    @Override
+    public List<DriverVehicleResponseDTO> getMyVehicles(Long memberId) {
+
+        // 1. 로그인한 회원의 기사 정보 조회
+        Driver driver = driverRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new CustomException(
+                        ErrorCode.NOT_FOUND, "기사 정보를 찾을 수 없습니다."));
+
+        // 2. 기사 소유 차량 목록 조회 후 DTO로 변환
+        return vehicleRepository.findByDriver_Id(driver.getId())
+                .stream()
+                .map(vehicle -> DriverVehicleResponseDTO.builder()
+                        .vehicleId(vehicle.getId())
+                        .plateNo(vehicle.getPlateNo())
+                        .vehicleTypeId(vehicle.getVehicleType().getId())
+                        .status(vehicle.getStatus())
+                        .build())
+                .toList();
+    }
+
+    // 기사: 본인 차량 운행 상태 변경
+    @Override
+    @Transactional
+    public DriverVehicleResponseDTO changeMyVehicleStatus(
+            Long memberId, Long vehicleId, VehicleStatus status) {
+
+        // 1. 로그인한 회원의 기사 정보 조회
+        Driver driver = driverRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new CustomException(
+                        ErrorCode.NOT_FOUND, "기사 정보를 찾을 수 없습니다."));
+
+        // 2. 승인된 기사인지 확인
+        if (driver.getStatus() != DriverStatus.ACTIVE) {
+            throw new CustomException(
+                    ErrorCode.FORBIDDEN, "승인된 기사만 차량 상태를 변경할 수 있습니다.");
+        }
+
+        // 3. 변경할 차량 조회
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new CustomException(
+                        ErrorCode.NOT_FOUND, "차량을 찾을 수 없습니다."));
+
+        // 4. 본인 차량인지 확인
+        if (vehicle.getDriver() == null
+                || !vehicle.getDriver().getId().equals(driver.getId())) {
+            throw new CustomException(
+                    ErrorCode.FORBIDDEN, "본인 차량만 상태를 변경할 수 있습니다.");
+        }
+
+        // 5. 운행 가능 / 정비 중 상태만 허용
+        if (status != VehicleStatus.AVAILABLE
+                && status != VehicleStatus.MAINTENANCE) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT,
+                    "운행 가능 또는 정비 중 상태로만 변경할 수 있습니다.");
+        }
+
+        // 6. 비활성화된 차량은 기사 본인이 변경할 수 없음
+        if (vehicle.getStatus() == VehicleStatus.INACTIVE) {
+            throw new CustomException(
+                    ErrorCode.FORBIDDEN,
+                    "비활성화된 차량은 상태를 변경할 수 없습니다.");
+        }
+
+        // 7. 이미 같은 상태인지 확인
+        if (vehicle.getStatus() == status) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "이미 해당 상태인 차량입니다.");
+        }
+
+        // 8. 유효한 배차가 있는 차량은 정비 중 변경 불가
+        if (status == VehicleStatus.MAINTENANCE
+                && dispatchRepository.existsByVehicle_IdAndActiveTrue(vehicleId)) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT,
+                    "현재 유효한 배차가 있어 정비 중으로 변경할 수 없습니다.");
+        }
+
+        // 9. 차량 상태 변경
+        vehicle.changeStatus(status);
+
+        // 10. 변경된 차량 정보 반환
+        return DriverVehicleResponseDTO.builder()
+                .vehicleId(vehicle.getId())
+                .plateNo(vehicle.getPlateNo())
+                .vehicleTypeId(vehicle.getVehicleType().getId())
+                .status(vehicle.getStatus())
+                .build();
     }
 }
