@@ -57,7 +57,6 @@ public class ShipmentRequestDTO {
 	@NotBlank(message = "보내는 사람 이름은 필수입니다.")
 	private String senderName;
 
-	@Schema(description = "보내는 사람 연락처", example = "010-1234-5678")
 	@NotBlank(message = "보내는 사람 연락처는 필수입니다.")
 	@Pattern(regexp = "^01(?:0|1|[6-9])-(?:\\d{3}|\\d{4})-\\d{4}$", message = "연락처는 010-0000-0000 형식으로 입력해 주세요.")
 	private String senderPhone;
