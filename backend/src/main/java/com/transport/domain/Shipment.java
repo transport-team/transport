@@ -64,6 +64,12 @@ public class Shipment extends BaseEntity {
 	@Column(nullable = false)
 	private LocalDateTime pickupAt;  // 희망 상차 일시 (할증 기준)
 
+	@Column(nullable = true)
+	private String senderName;
+
+	@Column(nullable = true)
+	private String senderPhone;
+
 	@Column(nullable = false)
 	private String receiverName;
 

@@ -390,6 +390,7 @@
   "destAddress": "경기도 수원시 영통구 OO로 34", "destDetail": "B동 창고",
   "cargoTypeId": 2, "cargoName": "유리 진열장", "cargoWeightKg": 600, "vehicleTypeId": 2,
   "pickupAt": "2026-12-03T09:00:00",
+  "senderName": "김보내", "senderPhone": "010-1111-2222",
   "receiverName": "김수령", "receiverPhone": "010-0000-0000", "memo": "엘리베이터 없음"
 }
 // 201 — 1톤 · 38.4km · 평일 오전 · 파손주의 → 98,500원 (fare.md 예시 ③)

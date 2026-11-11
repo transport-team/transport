@@ -78,6 +78,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .cargoName(requestDTO.getCargoName())
                 .cargoWeightKg(requestDTO.getCargoWeightKg())
                 .pickupAt(requestDTO.getPickupAt())
+                .senderName(requestDTO.getSenderName())
+                .senderPhone(requestDTO.getSenderPhone())
                 .receiverName(requestDTO.getReceiverName())
                 .receiverPhone(requestDTO.getReceiverPhone())
                 .memo(requestDTO.getMemo())

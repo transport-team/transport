@@ -151,6 +151,7 @@ class ShipmentPaymentStatsTest {
 		return persist(Shipment.builder().customer(customer).vehicleType(vehicleType).cargoType(cargoType)
 				.originAddress("서울특별시 중구 세종대로 110").destAddress("경기도 수원시 팔달구 효원로 1")
 				.cargoName("[통계 확인] 상자").pickupAt(DAY1.atTime(10, 0))
+				.senderName("보내는 사람").senderPhone("010-1111-2222")
 				.receiverName("확인용").receiverPhone("010-0000-0000").fare(10_000).durationMin(60).status(status).build());
 	}
 
