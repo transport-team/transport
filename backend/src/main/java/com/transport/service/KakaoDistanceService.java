@@ -78,7 +78,14 @@ public class KakaoDistanceService implements DistanceService {
 			// 기존 방식대로 직선거리를 도로거리로 보정
 			double distanceKm = haversineKm(origin[1], origin[0], dest[1], dest[0]) * DETOUR_FACTOR;
 
+<<<<<<< HEAD
 			return new Route(distanceKm, null, origin[1], origin[0], dest[1], dest[0]);
+=======
+			// 평균 속도 40km/h를 가정하여 예상 운송 시간 계산 (최소 1분 보장)
+			int durationMin = Math.max(1, (int) Math.ceil(distanceKm / FALLBACK_SPEED_KMH * 60));
+
+			return new Route(distanceKm, durationMin, origin[1], origin[0], dest[1], dest[0]);
+>>>>>>> develop
 		}
 	}
 
