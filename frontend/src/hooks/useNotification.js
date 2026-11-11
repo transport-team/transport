@@ -8,7 +8,7 @@ import { getMyNotifications, markNotificationRead } from '../api/notificationApi
 
 const useNotification = () => {
     const member = getCookie('member')
-    const memberId = member?.id
+    const memberId = member?.memberId // 로그인 쿠키의 키는 memberId (slices/loginSlice와 같다)
     const accessToken = member?.accessToken
 
     const [unreadCount, setUnreadCount] = useState(0)
