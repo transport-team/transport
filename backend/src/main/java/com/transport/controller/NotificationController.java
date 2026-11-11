@@ -6,7 +6,15 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import java.util.Map;
+import com.transport.dto.NotificationResponseDTO;
+import com.transport.dto.PageRequestDTO;
+import com.transport.dto.PageResponseDTO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.transport.security.LoginMember;
@@ -15,7 +23,7 @@ import com.transport.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-// 알림 API (팀원 4)
+// ???뵝 API (????4)
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
@@ -25,18 +33,46 @@ public class NotificationController {
 	private final NotificationService notificationService;
 
 	/**
-	 * SSE 구독 — 알림 실시간 수신
-	 * 프론트에서 EventSource로 이 엔드포인트 호출
-	 * Authorization 헤더에 액세스 토큰 필요 (JWTCheckFilter가 검증 후 LoginMember 주입)
+	 * SSE ?닌됰즴 ?????뵝 ??쇰뻻揶???뤿뻿
+	 * ?袁⑥쨴?紐꾨퓠??EventSource嚥????遺얜굡??????紐꾪뀱
+	 * Authorization ??삳쐭????り쉭???醫뤾쿃 ?袁⑹뒄 (JWTCheckFilter揶쎛 野꺜筌???LoginMember 雅뚯눘??
 	 */
 	@GetMapping(value = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public SseEmitter subscribe(@AuthenticationPrincipal LoginMember loginMember) {
 		Long memberId = loginMember.getId();
-		SseEmitter emitter = new SseEmitter(Long.MAX_VALUE); // 타임아웃 없음 (heartbeat로 관리)
+		SseEmitter emitter = new SseEmitter(Long.MAX_VALUE); // ???袁⑸툡????곸벉 (heartbeat嚥??온??
 
 		notificationService.subscribe(memberId, emitter);
 
-		log.info("SSE 구독 요청: memberId={}", memberId);
+		log.info("SSE ?닌됰즴 ?遺욧퍕: memberId={}", memberId);
 		return emitter;
 	}
-}
+
+	// ===== 6-2 ?뚮┝ 紐⑸줉 쨌 ?쎌쓬 =====
+
+	/** ???뚮┝ 紐⑸줉 (?섏씠吏? + ???쎌? 媛쒖닔 ??蹂몄씤 寃껊쭔 */
+	@GetMapping
+	public Map<String, Object> getMyNotifications(
+			@AuthenticationPrincipal LoginMember loginMember,
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "10") int size) {
+
+		PageRequestDTO pageRequestDTO = PageRequestDTO.builder().page(page).size(size).build();
+		PageResponseDTO<NotificationResponseDTO> dto =
+				notificationService.getMyNotifications(loginMember.getId(), pageRequestDTO);
+		long unreadCount = notificationService.getUnreadCount(loginMember.getId());
+
+		return Map.of(
+				"page", dto,
+				"unreadCount", unreadCount);
+	}
+
+	/** ?뚮┝ ?쎌쓬 泥섎━ ??蹂몄씤 ?뚮┝留?(?꾨땲硫?403 FORBIDDEN) */
+	@PatchMapping("/{id}/read")
+	public ResponseEntity<Void> markAsRead(
+			@AuthenticationPrincipal LoginMember loginMember,
+			@PathVariable Long id) {
+
+		notificationService.markAsRead(id, loginMember.getId());
+		return ResponseEntity.noContent().build();
+	}}
