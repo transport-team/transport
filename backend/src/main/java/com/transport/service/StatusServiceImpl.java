@@ -1,8 +1,6 @@
 package com.transport.service;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import com.transport.domain.Member;
 import com.transport.domain.Shipment;
@@ -34,17 +32,6 @@ public class StatusServiceImpl implements StatusService {
 	private final StatusHistoryService statusHistoryService;
 	private final NotificationService notificationService;
 
-	// 임시 전이 규칙 (docs/status.md) — TODO: 팀원3이 ShipmentStatus.canChangeTo() + Shipment.changeStatus()를
-	// 머지하면 이 상수와 validateTransition()을 제거하고 shipment.changeStatus(nextStatus) 한 줄로 교체한다
-	private static final Map<ShipmentStatus, Set<ShipmentStatus>> NEXT = Map.of(
-			ShipmentStatus.PENDING_PAYMENT, Set.of(ShipmentStatus.REQUESTED, ShipmentStatus.CANCELED),
-			ShipmentStatus.REQUESTED, Set.of(ShipmentStatus.ASSIGNED, ShipmentStatus.CANCELED),
-			ShipmentStatus.ASSIGNED, Set.of(ShipmentStatus.PICKED_UP, ShipmentStatus.REQUESTED, ShipmentStatus.CANCELED),
-			ShipmentStatus.PICKED_UP, Set.of(ShipmentStatus.IN_TRANSIT),
-			ShipmentStatus.IN_TRANSIT, Set.of(ShipmentStatus.ARRIVED),
-			ShipmentStatus.ARRIVED, Set.of(ShipmentStatus.COMPLETED)
-	);
-
 	@Override
 	public void changeStatus(Long shipmentId, ShipmentStatus nextStatus, String memo, Long driverId) {
 		Shipment shipment = shipmentRepository.findById(shipmentId)
@@ -56,17 +43,16 @@ public class StatusServiceImpl implements StatusService {
 			throw new CustomException(ErrorCode.NOT_ASSIGNED_DRIVER);
 		}
 
-		// 2. 상태 변경 (임시 검증 → 팀원3 canChangeTo() 머지 시 교체)
-		ShipmentStatus fromStatus = shipment.getStatus();
-		validateTransition(fromStatus, nextStatus);
+        // 2. 변경 전 배송 상태 저장
+        ShipmentStatus fromStatus = shipment.getStatus();
 
-		// 3. 사진 필수 검사 (docs/status.md: 상차는 PICKUP, 완료는 인수증 RECEIPT 필수 — 5-2)
-		validatePhotoRequired(shipmentId, fromStatus, nextStatus);
+        // 3. 사진 필수 검사 (상차 사진 / 인수증 사진)
+        validatePhotoRequired(shipmentId, fromStatus, nextStatus);
 
-		// 4. 상태 적용 + 이력 저장
-		shipment.updateStatus(nextStatus);
-		Member driver = Member.builder().id(driverId).build(); // 최소 필드만 (변경자 기록용)
-		statusHistoryService.record(shipment, fromStatus, nextStatus, driver, memo);
+        // 4. 공통 상태 전이 규칙 검사 후 상태 변경 및 이력 저장
+        shipment.changeStatus(nextStatus);
+        Member driver = Member.builder().id(driverId).build(); // 최소 필드만 (변경자 기록용)
+        statusHistoryService.record(shipment, fromStatus, nextStatus, driver, memo);
 
 		// 5. 알림 전송 (고객에게)
 		NotificationType type = mapNotificationType(nextStatus);
@@ -98,25 +84,17 @@ public class StatusServiceImpl implements StatusService {
 				.toList();
 	}
 
-	/** 사진 필수 검사 — ASSIGNED→PICKED_UP은 PICKUP 사진, ARRIVED→COMPLETED는 RECEIPT 사진 (5-2) */
-	private void validatePhotoRequired(Long shipmentId, ShipmentStatus from, ShipmentStatus to) {
-		if (from == ShipmentStatus.ASSIGNED && to == ShipmentStatus.PICKED_UP
-				&& !shipmentImageRepository.existsPickupImage(shipmentId)) {
-			throw new CustomException(ErrorCode.PHOTO_REQUIRED, "상차 사진을 먼저 업로드해 주세요.");
-		}
-		if (from == ShipmentStatus.ARRIVED && to == ShipmentStatus.COMPLETED
-				&& !shipmentImageRepository.existsReceiptImage(shipmentId)) {
-			throw new CustomException(ErrorCode.PHOTO_REQUIRED, "인수증 사진을 먼저 업로드해 주세요.");
-		}
-	}
-
-	/** 임시 전이 검증 — 팀원3의 canChangeTo() 머지 시 제거 */
-	private void validateTransition(ShipmentStatus from, ShipmentStatus to) {
-		Set<ShipmentStatus> allowed = NEXT.get(from);
-		if (allowed == null || !allowed.contains(to)) {
-			throw new CustomException(ErrorCode.INVALID_STATUS_CHANGE);
-		}
-	}
+    /** 사진 필수 검사 — ASSIGNED→PICKED_UP은 PICKUP 사진, ARRIVED→COMPLETED는 RECEIPT 사진 (5-2) */
+    private void validatePhotoRequired(Long shipmentId, ShipmentStatus from, ShipmentStatus to) {
+            if (from == ShipmentStatus.ASSIGNED && to == ShipmentStatus.PICKED_UP
+                            && !shipmentImageRepository.existsPickupImage(shipmentId)) {
+                    throw new CustomException(ErrorCode.PHOTO_REQUIRED, "상차 사진을 먼저 업로드해 주세요.");
+            }
+            if (from == ShipmentStatus.ARRIVED && to == ShipmentStatus.COMPLETED
+                            && !shipmentImageRepository.existsReceiptImage(shipmentId)) {
+                    throw new CustomException(ErrorCode.PHOTO_REQUIRED, "인수증 사진을 먼저 업로드해 주세요.");
+            }
+    }
 
 	private NotificationType mapNotificationType(ShipmentStatus status) {
 		return switch (status) {

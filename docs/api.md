@@ -19,7 +19,7 @@
 | 구역 | 코드 예시 |
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
-| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS, DUPLICATE_VEHICLE_PLATE, DRIVER_ALREADY_ASSIGNED |
+| 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING |
 | 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
 
@@ -256,6 +256,11 @@
 | POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
 | PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
 | GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
+| GET | /api/driver/shipments | 기사가 지원할 수 있는 배송 목록 조회 | DRIVER |
+| POST | /api/driver/shipments/{shipmentId}/applications | 기사의 배송 배차 신청 | DRIVER |
+| GET | /api/customer/shipments/{shipmentId}/applications | 고객의 배송별 기사 지원 목록 조회 | CUSTOMER |
+| POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/select | 고객이 지원 기사 선택 및 배차 확정 | CUSTOMER |
+| POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/reject | 고객이 개별 기사 지원 거절 | CUSTOMER |
 
 ### 관리자 차량 관리 API 예시
 
@@ -344,15 +349,8 @@
 | GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
 | GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 `/api/shipments/calculate-fare`는 사용하지 않으며, 운임 미리보기와 배송 신청 내부 재계산 모두 `FareService`를 통해 처리합니다. 카카오 주소 검색 실패는 `400 ADDRESS_NOT_FOUND`로 반환하고, 주소 좌표를 확보한 뒤 길찾기만 실패하면 하버사인 직선거리 × 1.3으로 대체 계산합니다. 대체 경로의 `durationMin`은 `null`입니다.
-=======
-`/api/shipments/calculate-fare`는 사용하지 않으며, 운임 미리보기와 배송 신청 내부 재계산 모두 `FareService`를 통해 처리합니다. 카카오 주소 검색 실패는 `400 ADDRESS_NOT_FOUND`로 반환하고, 주소 좌표를 확보한 뒤 길찾기만 실패하면 하버사인 직선거리 × 1.3으로 대체 계산합니다.
->>>>>>> develop
 
-=======
->>>>>>> faa4429a348903e5beb4b1c28ea0b9beb15cfbcc
 ### 화물 종류 목록 예시
 
 `GET /api/cargo-types`는 현재 사용 중인 화물 종류만 반환합니다.

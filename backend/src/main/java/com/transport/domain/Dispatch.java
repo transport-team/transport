@@ -33,7 +33,7 @@ public class Dispatch extends BaseEntity {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "assigned_by", nullable = false)
-	private Member assignedBy;  // 배차한 관리자
+	private Member assignedBy;  // 배차를 확정한 회원 (고객 선택 시 고객)
 
 	private boolean active;  // 현재 유효 배차
 

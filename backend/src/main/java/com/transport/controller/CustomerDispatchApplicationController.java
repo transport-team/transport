@@ -50,4 +50,17 @@ public class CustomerDispatchApplicationController {
         return ResponseEntity.ok(dispatchId);
     }
 
+    // 고객이 지원한 기사를 개별적으로 거절
+    @PostMapping("/{shipmentId}/applications/{applicationId}/reject")
+    public ResponseEntity<Void> rejectApplicant(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @PathVariable("shipmentId") Long shipmentId,
+            @PathVariable("applicationId") Long applicationId) {
+
+        dispatchApplicationService.rejectApplicant(
+                loginMember.getId(), shipmentId, applicationId);
+
+        return ResponseEntity.noContent().build();
+    }
+
 }

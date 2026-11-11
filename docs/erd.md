@@ -13,8 +13,10 @@
 | member 1 : N term_agreement N : 1 term | 약관 동의 이력 |
 | member 1 : 0..1 customer_address | 고객 기본 배송지 |
 | member 1 : N inquiry / notice / notification | 문의 작성자 / 공지 작성 관리자 / 알림 수신자 |
-| driver 1 : 0..1 vehicle | 담당 차량 |
-| driver 1 : N driver_schedule / dispatch / settlement / review | 근무 일정 / 배차 / 정산 / 받은 리뷰 |
+| driver 1 : N vehicle | 기사 1명이 여러 차량 등록 가능 (같은 차종은 1대만) |
+| driver 1 : N driver_schedule / dispatch / dispatch_application / settlement / review | 근무 일정 / 확정 배차 / 배차 신청 / 정산 / 받은 리뷰 |
+| shipment 1 : N dispatch_application | 배송 1건에 여러 기사가 지원 가능 |
+| vehicle 1 : N dispatch_application | 차량 1대로 여러 배송에 지원한 이력 보존 |
 | vehicle_type 1 : N vehicle / shipment | 차종 (shipment는 요청 차종) |
 | cargo_type 1 : N shipment | 화물 종류 |
 | shipment 1 : 1 payment | 배송당 결제 1건 |
@@ -146,7 +148,10 @@
 | plate_no (UQ) | VARCHAR(20) | 차량번호 |
 | vehicle_type_id (FK) | BIGINT | 차종 |
 | status | VARCHAR(20) | AVAILABLE · MAINTENANCE · INACTIVE |
-| driver_id (FK, UQ, NULL) | BIGINT | 담당 기사 |
+| driver_id (FK, NULL) | BIGINT | 차량 소유 기사 (미배정 시 NULL) |
+
+- 제약조건: `UNIQUE(driver_id, vehicle_type_id)` — 기사별 동일 차종 중복 등록 방지
+- 차량번호 `plate_no`는 전체 차량에서 UNIQUE
 
 ### driver_schedule (driver + work_date UQ)
 | 컬럼 | 타입 | 설명 |
@@ -161,9 +166,25 @@
 |---|---|---|
 | shipment_id (FK) | BIGINT | 배송 |
 | driver_id / vehicle_id (FK) | BIGINT | 배정 기사 / 차량 |
-| assigned_by (FK) | BIGINT | 배차한 관리자 |
+| assigned_by (FK) | BIGINT | 배차를 확정한 회원 (고객 선택 시 해당 고객) |
 | active | BOOLEAN | 현재 유효 배차 (배송당 1건) |
 | assigned_at / released_at | DATETIME | 배정 / 해제 |
+
+### dispatch_application (기사 배차 지원 내역)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id (PK) | BIGINT | 배차 신청 ID |
+| shipment_id (FK) | BIGINT | 지원한 배송 요청 |
+| driver_id (FK) | BIGINT | 지원한 기사 |
+| vehicle_id (FK) | BIGINT | 지원 시 사용할 차량 |
+| status | VARCHAR(20) | PENDING · SELECTED · REJECTED · NOT_SELECTED |
+
+- 배송 1건에 여러 기사가 지원할 수 있음
+- 기사가 지원하면 `PENDING`
+- 고객이 선택한 지원은 `SELECTED`
+- 고객이 개별 거절한 지원은 `REJECTED`
+- 다른 기사가 선택되어 자동 마감된 지원은 `NOT_SELECTED`
+- 확정된 배차 정보는 별도의 `dispatch` 테이블에 저장
 
 ### settlement (driver + settle_month UQ)
 | 컬럼 | 타입 | 설명 |

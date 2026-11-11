@@ -31,6 +31,15 @@ public enum ErrorCode {
 	// 배차 · 정산 (팀원 2)
 	DUPLICATE_VEHICLE_PLATE(HttpStatus.CONFLICT, "이미 등록된 차량번호입니다."),
 	DUPLICATE_DRIVER_VEHICLE_TYPE(HttpStatus.CONFLICT, "차종당 1대만 등록 가능합니다."),
+    // 배차 신청 중복
+    DUPLICATE_DISPATCH_APPLICATION(HttpStatus.CONFLICT, "이미 배차 신청한 운송 요청입니다."),
+    // 확정 배차 시간 중복
+    DISPATCH_TIME_CONFLICT(HttpStatus.CONFLICT, "기존 확정 배차와 운송 시간이 겹칩니다."),
+    // 배차 신청이 불가능한 배송 상태
+    SHIPMENT_NOT_REQUESTED(HttpStatus.CONFLICT, "현재 배차 대기 중인 운송 요청이 아닙니다."),
+    // 이미 선택 또는 거절 등으로 처리된 배차 신청
+    DISPATCH_APPLICATION_NOT_PENDING(HttpStatus.CONFLICT, "이미 처리되었거나 대기 중이 아닌 배차 신청입니다."),
+
 
 	// 배송 · 결제 (팀원 3)
 	DISTANCE_CALCULATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "거리 계산 중 오류가 발생했습니다."),
