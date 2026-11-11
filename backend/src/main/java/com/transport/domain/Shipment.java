@@ -55,7 +55,8 @@ public class Shipment extends BaseEntity {
 
 	private double distanceKm;  // 도로 거리
 
-	private int durationMin;  // 예상 소요(분)
+	@Column(nullable = true)
+	private Integer durationMin;  // 예상 소요(분), 경로 대체 계산 시 null
 
 	@Column(nullable = false)
 	private String cargoName;
@@ -64,6 +65,12 @@ public class Shipment extends BaseEntity {
 
 	@Column(nullable = false)
 	private LocalDateTime pickupAt;  // 희망 상차 일시 (할증 기준)
+
+	@Column(nullable = true)
+	private String senderName;
+
+	@Column(nullable = true)
+	private String senderPhone;
 
 	@Column(nullable = false)
 	private String receiverName;

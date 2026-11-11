@@ -12,4 +12,6 @@ public interface VehicleTypeService {
 
 	Optional<VehicleType> findById(Long id);
 
+	List<VehicleType> findAllEntities();
+
 }

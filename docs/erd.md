@@ -41,6 +41,7 @@
 | distance_km / duration_min | DOUBLE / INT | 도로 거리 / 예상 소요(분) |
 | cargo_name / cargo_weight_kg | VARCHAR / INT | 화물명 / 무게 |
 | pickup_at | DATETIME | 희망 상차 일시 (할증 기준) |
+| sender_name / sender_phone | VARCHAR | 보내는 사람 |
 | receiver_name / receiver_phone | VARCHAR | 수령인 |
 | memo / cancel_reason | VARCHAR(500) | 요청사항 / 취소 사유 |
 | fare | INT | 운임 = 결제 금액 (서버 계산) |

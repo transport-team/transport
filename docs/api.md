@@ -338,7 +338,7 @@
 |---|---|---|---|
 | GET | /api/cargo-types | 화물 종류 목록 | 전체 |
 | GET · POST · PUT | /api/admin/cargo-types(/{id}) | 화물 종류 관리 | ADMIN |
-| POST | /api/fares/estimate | 예상 운임 → 좌표 · 거리 · 추천 차종 · 운임 내역 | CUSTOMER |
+| POST | /api/fares/estimate | 예상 운임 → 좌표 · 거리 · 추천 차종 · 운임 내역 (표준 운임 API) | CUSTOMER |
 | POST | /api/shipments | 신청 → 결제대기 + 결제 준비(orderId · amount) | CUSTOMER |
 | POST | /api/payments/confirm | 결제 승인 { paymentKey, orderId, amount } → 접수 | CUSTOMER |
 | POST | /api/shipments/{id}/payment/retry | 재시도 (새 orderId) | CUSTOMER |
@@ -348,6 +348,8 @@
 | PATCH | /api/shipments/{id}/cancel | 취소 { reason } → 자동 환불 | CUSTOMER · ADMIN |
 | GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
 | GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
+
+`/api/shipments/calculate-fare`는 사용하지 않으며, 운임 미리보기와 배송 신청 내부 재계산 모두 `FareService`를 통해 처리합니다. 카카오 주소 검색 실패는 `400 ADDRESS_NOT_FOUND`로 반환하고, 주소 좌표를 확보한 뒤 길찾기만 실패하면 하버사인 직선거리 × 1.3으로 대체 계산합니다. 대체 경로의 `durationMin`은 `null`입니다.
 
 ### 화물 종류 목록 예시
 
@@ -390,6 +392,7 @@
   "destAddress": "경기도 수원시 영통구 OO로 34", "destDetail": "B동 창고",
   "cargoTypeId": 2, "cargoName": "유리 진열장", "cargoWeightKg": 600, "vehicleTypeId": 2,
   "pickupAt": "2026-12-03T09:00:00",
+  "senderName": "김보내", "senderPhone": "010-1111-2222",
   "receiverName": "김수령", "receiverPhone": "010-0000-0000", "memo": "엘리베이터 없음"
 }
 // 201 — 1톤 · 38.4km · 평일 오전 · 파손주의 → 98,500원 (fare.md 예시 ③)

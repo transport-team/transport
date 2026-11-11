@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -458,6 +459,48 @@ class DispatchApplicationServiceImplTest {
 
         // 7. 시간 중복 검사까지 진행하지 않음
         verifyNoInteractions(dispatchRepository);
+    }
+
+    @Test
+    @DisplayName("예상 운송 시간이 없으면 배차 신청을 거부한다")
+    void apply_rejectsShipmentWithoutDuration() {
+        Long memberId = 10L;
+        Long shipmentId = 20L;
+        Long vehicleId = 30L;
+        Driver driver = Driver.builder()
+                .id(40L)
+                .status(DriverStatus.ACTIVE)
+                .build();
+        VehicleType vehicleType = VehicleType.builder().id(50L).build();
+        Vehicle vehicle = Vehicle.builder()
+                .id(vehicleId)
+                .driver(driver)
+                .vehicleType(vehicleType)
+                .status(VehicleStatus.AVAILABLE)
+                .build();
+        Shipment shipment = Shipment.builder()
+                .id(shipmentId)
+                .vehicleType(vehicleType)
+                .status(ShipmentStatus.REQUESTED)
+                .pickupAt(LocalDateTime.now().plusDays(1))
+                .durationMin(null)
+                .build();
+
+        when(driverRepository.findByMemberId(memberId)).thenReturn(Optional.of(driver));
+        when(shipmentService.getShipment(shipmentId)).thenReturn(shipment);
+        when(vehicleRepository.findById(vehicleId)).thenReturn(Optional.of(vehicle));
+        when(applicationRepository.existsByShipmentAndDriverAndStatus(
+                shipment, driver, DispatchApplicationStatus.PENDING)).thenReturn(false);
+        when(driverScheduleRepository.findByDriver_IdAndWorkDate(
+                driver.getId(), shipment.getPickupAt().toLocalDate())).thenReturn(Optional.empty());
+
+        CustomException exception = org.assertj.core.api.Assertions.catchThrowableOfType(
+                () -> dispatchApplicationService.apply(memberId, shipmentId, vehicleId),
+                CustomException.class);
+
+        assertThat(exception).isNotNull();
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
+        assertThat(exception).hasMessage("예상 운송 시간이 제공되지 않은 배송은 배차를 신청할 수 없습니다.");
     }
 
     // 테스트용 배송 생성

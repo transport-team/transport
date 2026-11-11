@@ -51,6 +51,14 @@ public class ShipmentRequestDTO {
 	@NotNull(message = "희망 상차 일시는 필수입니다.")
 	private LocalDateTime pickupAt;
 
+	// 보내는 사람 정보
+	@NotBlank(message = "보내는 사람 이름은 필수입니다.")
+	private String senderName;
+
+	@NotBlank(message = "보내는 사람 연락처는 필수입니다.")
+	@Pattern(regexp = "^01(?:0|1|[6-9])-(?:\\d{3}|\\d{4})-\\d{4}$", message = "연락처는 010-0000-0000 형식으로 입력해 주세요.")
+	private String senderPhone;
+
 	// 받는 사람 정보
 	@NotBlank(message = "받는 사람 이름은 필수입니다.")
 	private String receiverName;

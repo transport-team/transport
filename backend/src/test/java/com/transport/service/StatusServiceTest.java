@@ -18,12 +18,12 @@ import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.ShipmentStatusHistoryResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
+import com.transport.repository.ShipmentImageRepository;
 import com.transport.repository.ShipmentRepository;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -47,7 +47,10 @@ class StatusServiceTest {
 	@Mock
 	NotificationService notificationService;
 
-	Shipment shipment; // 실제 배송 객체로 상태 변경 규칙 검증
+    @Mock
+    ShipmentImageRepository shipmentImageRepository; // 5-2 사진 필수 검사용
+
+    Shipment shipment; // 실제 배송 객체로 상태 변경 규칙 검증
 
 	@InjectMocks
 	StatusServiceImpl statusService;
@@ -65,6 +68,12 @@ class StatusServiceTest {
 
             lenient().when(dispatchService.getActiveDriver(1L))
                             .thenReturn(driverId);
+
+            // 5-2 사진 필수 검사: 기본은 사진 있음으로 설정
+            lenient().when(shipmentImageRepository.existsPickupImage(1L))
+                            .thenReturn(true);
+            lenient().when(shipmentImageRepository.existsReceiptImage(1L))
+                            .thenReturn(true);
     }
 
 	@Test
@@ -185,5 +194,52 @@ class StatusServiceTest {
 
 		assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
 		verify(statusHistoryService, never()).getHistory(anyLong());
+	}
+
+	// ===== 5-2 사진 필수 검사 =====
+
+	@Test
+	@DisplayName("예외: 상차 처리인데 PICKUP 사진이 없음 (PHOTO_REQUIRED)")
+	void changeStatus_pickupWithoutPhoto() {
+		givenShipment(ShipmentStatus.ASSIGNED, 10L);
+		when(shipmentImageRepository.existsPickupImage(1L)).thenReturn(false); // 사진 없음
+
+		CustomException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
+				() -> statusService.changeStatus(1L, ShipmentStatus.PICKED_UP, "", 10L),
+				CustomException.class);
+
+		org.assertj.core.api.Assertions.assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.PHOTO_REQUIRED);
+		org.assertj.core.api.Assertions.assertThat(ex.getMessage()).isEqualTo("상차 사진을 먼저 업로드해 주세요.");
+
+		assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.ASSIGNED);
+		verify(statusHistoryService, never()).record(any(), any(), any(), any(), anyString());
+	}
+
+	@Test
+	@DisplayName("예외: 배송완료 처리인데 RECEIPT(인수증) 사진이 없음 (PHOTO_REQUIRED)")
+	void changeStatus_completeWithoutReceipt() {
+		givenShipment(ShipmentStatus.ARRIVED, 10L);
+		when(shipmentImageRepository.existsReceiptImage(1L)).thenReturn(false); // 인수증 없음
+
+		CustomException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
+				() -> statusService.changeStatus(1L, ShipmentStatus.COMPLETED, "", 10L),
+				CustomException.class);
+
+		org.assertj.core.api.Assertions.assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.PHOTO_REQUIRED);
+
+		assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.ARRIVED);
+	}
+
+	@Test
+	@DisplayName("정상: PICKUP 사진이 있으면 상차 처리 성공")
+	void changeStatus_pickupWithPhoto() {
+		givenShipment(ShipmentStatus.ASSIGNED, 10L);
+		when(shipmentImageRepository.existsPickupImage(1L)).thenReturn(true); // 사진 있음
+
+		statusService.changeStatus(1L, ShipmentStatus.PICKED_UP, "상차 완료", 10L);
+
+		assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.PICKED_UP);
+		verify(statusHistoryService).record(eq(shipment), eq(ShipmentStatus.ASSIGNED),
+				eq(ShipmentStatus.PICKED_UP), any(), anyString());
 	}
 }

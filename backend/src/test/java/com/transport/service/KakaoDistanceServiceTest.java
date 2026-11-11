@@ -58,12 +58,12 @@ class KakaoDistanceServiceTest {
 		Route route = distanceService.findRoute("서울 중구 세종대로 110", "수원 팔달구 효원로 241");
 
 		// 길찾기 실패 → 보정 거리와 평균 속도 40km/h로 예상 시간 계산
-		assertThat(route.durationMin()).isEqualTo(67);
+		assertThat(route.durationMin()).isNull();
 		assertThat(route.distanceKm()).isCloseTo(44.1, within(0.5));
 		server.verify();
 	}
 
-    // 길찾기 응답의 예상 시간이 0분이면 대체 시간 계산
+    // 길찾기 응답의 예상 시간이 0분이면 대체 거리 계산
     @Test
     void fallbackWhenDurationIsZero() {
             givenAddresses();
@@ -78,14 +78,14 @@ class KakaoDistanceServiceTest {
                             "서울 중구 세종대로 110",
                             "수원 팔달구 효원로 241");
 
-            // 0분 대신 직선거리 보정값으로 계산한 예상 시간 반환
-            assertThat(route.durationMin()).isEqualTo(67);
+            // 대체 경로는 거리는 계산하지만 예상 시간은 알 수 없으므로 null
+            assertThat(route.durationMin()).isNull();
             assertThat(route.distanceKm()).isCloseTo(44.1, within(0.5));
 
             server.verify();
     }
 
-    // 출발지와 도착지가 같아도 예상 시간은 최소 1분 보장
+    // 출발지와 도착지가 같으면 대체 예상 시간 없이 거리만 반환
     @Test
     void fallbackDurationAtLeastOneMinute() {
             String addressResponse =
@@ -106,9 +106,9 @@ class KakaoDistanceServiceTest {
 
             Route route = distanceService.findRoute("서울시청", "서울시청");
 
-            // 계산된 거리가 0km여도 예상 운송 시간은 최소 1분
+            // 계산된 거리가 0km이면 예상 운송 시간은 null
             assertThat(route.distanceKm()).isZero();
-            assertThat(route.durationMin()).isEqualTo(1);
+            assertThat(route.durationMin()).isNull();
 
             server.verify();
     }

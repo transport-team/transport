@@ -12,7 +12,6 @@ import com.transport.dto.CustomerAddressResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.CustomerAddressRepository;
-import com.transport.repository.MemberRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class CustomerAddressServiceImpl implements CustomerAddressService {
 
 	private final CustomerAddressRepository customerAddressRepository;
-	private final MemberRepository memberRepository;
+	private final MemberService memberService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -33,7 +32,7 @@ public class CustomerAddressServiceImpl implements CustomerAddressService {
 
 	@Override
 	public CustomerAddressResponseDTO saveDefaultAddress(Long memberId, CustomerAddressRequestDTO requestDTO) {
-		Member member = memberRepository.findById(memberId)
+		Member member = memberService.findById(memberId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 		CustomerAddress address = customerAddressRepository.findByMemberId(memberId)
 				.map(existing -> {
