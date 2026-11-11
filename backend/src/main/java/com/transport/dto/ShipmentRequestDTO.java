@@ -2,6 +2,7 @@ package com.transport.dto;
 
 import java.time.LocalDateTime;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -52,6 +53,7 @@ public class ShipmentRequestDTO {
 	private LocalDateTime pickupAt;
 
 	// 보내는 사람 정보
+	@Schema(description = "보내는 사람 이름", example = "홍길동")
 	@NotBlank(message = "보내는 사람 이름은 필수입니다.")
 	private String senderName;
 

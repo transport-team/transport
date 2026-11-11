@@ -1,5 +1,6 @@
 package com.transport.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.transport.dto.CustomerAddressRequestDTO;
@@ -12,4 +13,6 @@ public interface CustomerAddressService {
 	CustomerAddressResponseDTO saveDefaultAddress(Long memberId, CustomerAddressRequestDTO requestDTO);
 
 	void deleteDefaultAddress(Long memberId);
+
+	List<CustomerAddressResponseDTO> findRecentAddressesByMemberId(Long memberId);
 }
