@@ -15,4 +15,6 @@ public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
 	// 기사별 현재 유효한 배차 목록 조회 (운송 시간 중복 검사에 사용)
 	List<Dispatch> findByDriver_IdAndActiveTrue(Long driverId);
 
+	// 특정 차량에 현재 유효한 배차가 있는지 확인
+	boolean existsByVehicle_IdAndActiveTrue(Long vehicleId);
 }

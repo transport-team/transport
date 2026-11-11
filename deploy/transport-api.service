@@ -1,0 +1,23 @@
+# systemd 서비스 — 서버가 켜지면 백엔드를 자동으로 실행하고, 죽으면 10초 뒤 다시 띄운다
+# 서버에서: sudo cp deploy/transport-api.service /etc/systemd/system/ && sudo systemctl enable --now transport-api
+# 설정 파일은 /opt/transport/config/application-prod.yml (WorkingDirectory 기준 ./config를 Spring Boot가 읽는다)
+# 로그 보기: journalctl -u transport-api -f
+
+[Unit]
+Description=transport API (Spring Boot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=transport
+Group=transport
+WorkingDirectory=/opt/transport
+Environment=SPRING_PROFILES_ACTIVE=prod
+# 작은 서버(메모리 1GB)라 힙을 512MB로 묶는다 (스왑 2GB와 함께, docs/deploy.md)
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -Duser.timezone=Asia/Seoul -jar /opt/transport/backend.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

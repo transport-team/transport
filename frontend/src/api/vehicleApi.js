@@ -79,3 +79,19 @@ export const rejectVehicleRequest = async (requestId, rejectionReason) => {
 
     return res.data
 }
+
+// 기사: 본인 차량 목록 조회
+export const getMyVehicles = async () => {
+  const res = await jwtAxios.get('/api/driver/vehicles')
+
+  return res.data
+}
+
+// 기사: 본인 차량 운행 상태 변경
+export const changeMyVehicleStatus = async (vehicleId, status) => {
+  const res = await jwtAxios.patch(
+    `/api/driver/vehicles/${vehicleId}/status`,
+    { status }
+  )
+  return res.data
+}

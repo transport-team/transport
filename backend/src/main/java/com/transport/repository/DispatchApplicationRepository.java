@@ -25,4 +25,10 @@ public interface DispatchApplicationRepository extends JpaRepository<DispatchApp
             DispatchApplicationStatus status
     );
 
+	// 기사별 배차 신청 대기 목록 조회 (운송 시간 중복 경고에 사용)
+	List<DispatchApplication> findByDriver_IdAndStatus(
+			Long driverId,
+			DispatchApplicationStatus status
+	);
+
 }

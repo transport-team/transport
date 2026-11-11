@@ -56,6 +56,14 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         FareCalculateResponseDTO fareResponse = fareService.calculateFare(fareRequest);
 
+        // 예상 운송 시간을 계산하지 못한 경우 확인
+        Integer durationMin = fareResponse.getDurationMin();
+
+        if (durationMin == null || durationMin <= 0) {
+            throw new CustomException(
+                    ErrorCode.INVALID_INPUT, "예상 운송 시간을 계산할 수 없습니다.");
+        }
+
         // 연관 엔티티 조회 (회원, 차종, 화물유형)
         Member customer = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND)); // 회원 조회 추가
@@ -81,7 +89,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .receiverName(requestDTO.getReceiverName())
                 .receiverPhone(requestDTO.getReceiverPhone())
                 .memo(requestDTO.getMemo())
-                .distanceKm(fareResponse.getDistanceKm()) 
+                .distanceKm(fareResponse.getDistanceKm())
+                .durationMin(durationMin)
                 .fare(fareResponse.getTotalFare())      
                 .status(ShipmentStatus.PENDING_PAYMENT)         
                 .build();
