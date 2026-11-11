@@ -47,20 +47,25 @@ class StatusServiceTest {
 	@Mock
 	NotificationService notificationService;
 
-	@Mock
-	Shipment shipment; // changeStatus/updateStatus 검증용 mock
+	Shipment shipment; // 실제 배송 객체로 상태 변경 규칙 검증
 
 	@InjectMocks
 	StatusServiceImpl statusService;
 
-	private void givenShipment(ShipmentStatus status, Long driverId) {
-		lenient().doNothing().when(shipment).updateStatus(any(ShipmentStatus.class));
-		lenient().when(shipment.getId()).thenReturn(1L);
-		lenient().when(shipment.getStatus()).thenReturn(status);
-		lenient().when(shipment.getCustomer()).thenReturn(Member.builder().id(100L).build());
-		when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
-		lenient().when(dispatchService.getActiveDriver(1L)).thenReturn(driverId);
-	}
+    private void givenShipment(ShipmentStatus status, Long driverId) {
+            // 실제 Shipment 객체 생성
+            shipment = Shipment.builder()
+                            .id(1L)
+                            .status(status)
+                            .customer(Member.builder().id(100L).build())
+                            .build();
+
+            when(shipmentRepository.findById(1L))
+                            .thenReturn(Optional.of(shipment));
+
+            lenient().when(dispatchService.getActiveDriver(1L))
+                            .thenReturn(driverId);
+    }
 
 	@Test
 	@DisplayName("정상: 배정 기사가 상태 변경 성공")
@@ -69,7 +74,7 @@ class StatusServiceTest {
 
 		statusService.changeStatus(1L, ShipmentStatus.PICKED_UP, "상차 완료", 10L);
 
-		verify(shipment).updateStatus(ShipmentStatus.PICKED_UP);
+		assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.PICKED_UP);
 		verify(statusHistoryService).record(eq(shipment), eq(ShipmentStatus.ASSIGNED),
 				eq(ShipmentStatus.PICKED_UP), any(), anyString());
 		verify(notificationService).send(any(), any(), anyString(), eq(shipment));
@@ -86,7 +91,8 @@ class StatusServiceTest {
 
 		org.assertj.core.api.Assertions.assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_STATUS_CHANGE);
 
-		verify(shipment, never()).updateStatus(any(ShipmentStatus.class));
+		// 잘못된 상태 변경을 시도해도 기존 상태 유지
+		assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.REQUESTED);
 		verify(statusHistoryService, never()).record(any(), any(), any(), any(), anyString());
 	}
 
@@ -101,7 +107,8 @@ class StatusServiceTest {
 
 		org.assertj.core.api.Assertions.assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NOT_ASSIGNED_DRIVER);
 
-		verify(shipment, never()).updateStatus(any(ShipmentStatus.class));
+		// 권한이 없으면 배송 상태가 변경되지 않음
+		assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.ASSIGNED);
 	}
 
 	@Test
@@ -115,7 +122,8 @@ class StatusServiceTest {
 
 		org.assertj.core.api.Assertions.assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NOT_ASSIGNED_DRIVER);
 
-		verify(shipment, never()).updateStatus(any(ShipmentStatus.class));
+		// 권한이 없으면 배송 상태가 변경되지 않음
+		assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.ASSIGNED);
 	}
 
 	@Test

@@ -3,6 +3,8 @@ package com.transport.domain;
 import java.time.LocalDateTime;
 
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.exception.CustomException;
+import com.transport.exception.ErrorCode;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -87,5 +89,14 @@ public class Shipment extends BaseEntity {
 	public void updateStatus(ShipmentStatus status) {
 		this.status = status;
 	}
+
+    // 배송 상태 전이 규칙을 검사한 후 상태 변경
+    public void changeStatus(ShipmentStatus next) {
+        if (this.status == null || !this.status.canChangeTo(next)) {
+            throw new CustomException(ErrorCode.INVALID_STATUS_CHANGE);
+        }
+
+        this.status = next;
+    }
 	
 }

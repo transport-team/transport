@@ -1,8 +1,6 @@
 package com.transport.service;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import com.transport.domain.Member;
 import com.transport.domain.Shipment;
@@ -34,14 +32,6 @@ public class StatusServiceImpl implements StatusService {
 
 	// 임시 전이 규칙 (docs/status.md) — TODO: 팀원3이 ShipmentStatus.canChangeTo() + Shipment.changeStatus()를
 	// 머지하면 이 상수와 validateTransition()을 제거하고 shipment.changeStatus(nextStatus) 한 줄로 교체한다
-	private static final Map<ShipmentStatus, Set<ShipmentStatus>> NEXT = Map.of(
-			ShipmentStatus.PENDING_PAYMENT, Set.of(ShipmentStatus.REQUESTED, ShipmentStatus.CANCELED),
-			ShipmentStatus.REQUESTED, Set.of(ShipmentStatus.ASSIGNED, ShipmentStatus.CANCELED),
-			ShipmentStatus.ASSIGNED, Set.of(ShipmentStatus.PICKED_UP, ShipmentStatus.REQUESTED, ShipmentStatus.CANCELED),
-			ShipmentStatus.PICKED_UP, Set.of(ShipmentStatus.IN_TRANSIT),
-			ShipmentStatus.IN_TRANSIT, Set.of(ShipmentStatus.ARRIVED),
-			ShipmentStatus.ARRIVED, Set.of(ShipmentStatus.COMPLETED)
-	);
 
 	@Override
 	public void changeStatus(Long shipmentId, ShipmentStatus nextStatus, String memo, Long driverId) {
@@ -54,10 +44,9 @@ public class StatusServiceImpl implements StatusService {
 			throw new CustomException(ErrorCode.NOT_ASSIGNED_DRIVER);
 		}
 
-		// 2. 상태 변경 (임시 검증 → 팀원3 canChangeTo() 머지 시 교체)
+		// 2. 공통 상태 전이 규칙을 검사한 후 상태 변경
 		ShipmentStatus fromStatus = shipment.getStatus();
-		validateTransition(fromStatus, nextStatus);
-		shipment.updateStatus(nextStatus);
+		shipment.changeStatus(nextStatus);
 
 		// 3. 이력 저장
 		Member driver = Member.builder().id(driverId).build(); // 최소 필드만 (변경자 기록용)
@@ -91,14 +80,6 @@ public class StatusServiceImpl implements StatusService {
 		return statusHistoryService.getHistory(shipmentId).stream()
 				.map(ShipmentStatusHistoryResponseDTO::from)
 				.toList();
-	}
-
-	/** 임시 전이 검증 — 팀원3의 canChangeTo() 머지 시 제거 */
-	private void validateTransition(ShipmentStatus from, ShipmentStatus to) {
-		Set<ShipmentStatus> allowed = NEXT.get(from);
-		if (allowed == null || !allowed.contains(to)) {
-			throw new CustomException(ErrorCode.INVALID_STATUS_CHANGE);
-		}
 	}
 
 	private NotificationType mapNotificationType(ShipmentStatus status) {

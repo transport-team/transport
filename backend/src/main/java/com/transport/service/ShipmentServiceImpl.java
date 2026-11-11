@@ -1,6 +1,7 @@
 package com.transport.service;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -130,4 +131,18 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .forEach(row -> counts.put(row.getStatus(), row.getShipmentCount()));
         return counts;
     }
+
+    // 배차 서비스에서 사용할 배송 단건 조회
+    @Override
+    public Shipment getShipment(Long shipmentId) {
+        return shipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+    }
+
+    // 기사: 배차 대기 중인 운송 요청 목록 조회
+    @Override
+    public List<Shipment> getRequestedShipments() {
+        return shipmentRepository.findByStatusOrderByPickupAtAsc(ShipmentStatus.REQUESTED);
+    }
+
 }
