@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.transport.domain.CargoType;
-import com.transport.domain.Member; // 추가
+import com.transport.domain.Member;
 import com.transport.domain.Payment;
 import com.transport.domain.Shipment;
 import com.transport.domain.VehicleType;
@@ -23,8 +23,6 @@ import com.transport.exception.ErrorCode;
 import com.transport.repository.CargoTypeRepository;
 import com.transport.repository.PaymentRepository;
 import com.transport.repository.ShipmentRepository;
-import com.transport.repository.VehicleTypeRepository;
-import com.transport.repository.MemberRepository; // 추가
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,9 +34,9 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final FareService fareService;
     private final ShipmentRepository shipmentRepository;
     private final PaymentRepository paymentRepository;
-    private final VehicleTypeRepository vehicleTypeRepository;
     private final CargoTypeRepository cargoTypeRepository;
-    private final MemberRepository memberRepository; // 회원 조회를 위해 추가
+    private final MemberService memberService;
+    private final VehicleTypeService vehicleTypeService;
 
     @Override
     @Transactional
@@ -56,19 +54,13 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         FareCalculateResponseDTO fareResponse = fareService.calculateFare(fareRequest);
 
-        // 예상 운송 시간을 계산하지 못한 경우 확인
         Integer durationMin = fareResponse.getDurationMin();
 
-        if (durationMin == null || durationMin <= 0) {
-            throw new CustomException(
-                    ErrorCode.INVALID_INPUT, "예상 운송 시간을 계산할 수 없습니다.");
-        }
-
         // 연관 엔티티 조회 (회원, 차종, 화물유형)
-        Member customer = memberRepository.findById(memberId)
+        Member customer = memberService.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND)); // 회원 조회 추가
 
-        VehicleType vehicleType = vehicleTypeRepository.findById(requestDTO.getVehicleTypeId())
+        VehicleType vehicleType = vehicleTypeService.findById(requestDTO.getVehicleTypeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
         
         CargoType cargoType = cargoTypeRepository.findById(requestDTO.getCargoTypeId())
@@ -86,9 +78,15 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .cargoName(requestDTO.getCargoName())
                 .cargoWeightKg(requestDTO.getCargoWeightKg())
                 .pickupAt(requestDTO.getPickupAt())
+                .senderName(requestDTO.getSenderName())
+                .senderPhone(requestDTO.getSenderPhone())
                 .receiverName(requestDTO.getReceiverName())
                 .receiverPhone(requestDTO.getReceiverPhone())
                 .memo(requestDTO.getMemo())
+                .originLat(fareResponse.getOriginLat())
+                .originLng(fareResponse.getOriginLng())
+                .destLat(fareResponse.getDestLat())
+                .destLng(fareResponse.getDestLng())
                 .distanceKm(fareResponse.getDistanceKm())
                 .durationMin(durationMin)
                 .fare(fareResponse.getTotalFare())      

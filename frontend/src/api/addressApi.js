@@ -13,3 +13,8 @@ export const saveDefaultAddress = async (address) => {
 export const deleteDefaultAddress = async () => {
   await jwtAxios.delete('/api/members/me/default-address')
 }
+
+export const getRecentAddress = async () => {
+  const response = await jwtAxios.get('/api/members/me/recent-address')
+  return response.data
+}
