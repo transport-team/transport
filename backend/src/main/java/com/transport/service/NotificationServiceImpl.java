@@ -1,31 +1,50 @@
 package com.transport.service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.transport.domain.Member;
 import com.transport.domain.Notification;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.NotificationType;
+import com.transport.dto.NotificationResponseDTO;
+import com.transport.dto.PageRequestDTO;
+import com.transport.dto.PageResponseDTO;
+import com.transport.exception.CustomException;
+import com.transport.exception.ErrorCode;
+import com.transport.repository.NotificationRepository;
+import com.transport.service.event.NotificationSavedEvent;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-// 알림 서비스 구현 (팀원 4)
+// ???逾???類λ룴????뚮뿭寃?(????4)
+// 6-1: send() = DB ????+ ???繹???꾩룇裕됵쭛? ???깆젷 SSE ?熬곣뫖苑?? NotificationSseListener?띠럾?
+// ?筌뤾퍔???????ｋ걞???繹먭퍓沅???AFTER_COMMIT)????類ｋ펲 ???β뼯?뉐첎??濡?듆 ???逾?????嶺뚯솘? ???낅츎??
+// 6-2: ?????逾?嶺뚮ㅄ維뽨빳???瑜곷턄嶺? 鸚?????? ?띠룇裕??鸚?????쾳 嶺뚳퐣瑗???곌랜梨??우춹?
 @Service
+@RequiredArgsConstructor
+@Transactional
 @Log4j2
 public class NotificationServiceImpl implements NotificationService {
 
-	// 회원별 SSE emitter 저장소
 	private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
+	private final NotificationRepository notificationRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
-	// Heartbeat 스케줄러 (30초마다)
 	private final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
 		Thread t = new Thread(r, "notification-heartbeat");
 		t.setDaemon(true);
@@ -38,15 +57,61 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	public void send(Member receiver, NotificationType type, String message, Shipment shipment) {
-		// TODO: DB 저장 + SSE 실시간 전송 (6주차에 구현)
-		// 지금은 로그만
-		log.info("[알림 전송] receiverId={}, type={}, message={}, shipmentId={}",
-				receiver.getId(), type, message, shipment != null ? shipment.getId() : null);
+		Notification saved = notificationRepository.save(Notification.builder()
+				.receiver(receiver)
+				.type(type)
+				.message(message)
+				.shipment(shipment)
+				.isRead(false)
+				.build());
+
+		eventPublisher.publishEvent(new NotificationSavedEvent(
+				saved.getId(), receiver.getId(), type, message,
+				shipment != null ? shipment.getId() : null,
+				LocalDateTime.now()));
+
+		log.info("[???逾????? id={}, receiverId={}, type={}, shipmentId={}",
+				saved.getId(), receiver.getId(), type, shipment != null ? shipment.getId() : null);
+	}
+
+	/** SSE ?洹먮봾裕???깅뮔 ?????????熬곣뫗??emitter (??怨몃さ嶺?null) */
+	public SseEmitter getEmitter(Long memberId) {
+		return emitters.get(memberId);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public PageResponseDTO<NotificationResponseDTO> getMyNotifications(Long memberId, PageRequestDTO pageRequestDTO) {
+		Member receiver = Member.builder().id(memberId).build();
+		Pageable pageable = pageRequestDTO.getPageable(Sort.by("createdAt").descending());
+		Page<Notification> page = notificationRepository.findByReceiverOrderByCreatedAtDesc(receiver, pageable);
+
+		return new PageResponseDTO<>(
+				page.getContent().stream().map(NotificationResponseDTO::from).toList(),
+				pageRequestDTO, page.getTotalElements());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public long getUnreadCount(Long memberId) {
+		Member receiver = Member.builder().id(memberId).build();
+		return notificationRepository.countByReceiverAndIsReadFalse(receiver);
+	}
+
+	@Override
+	public void markAsRead(Long notificationId, Long memberId) {
+		Notification notification = notificationRepository.findByIdAndReceiver(notificationId,
+				Member.builder().id(memberId).build());
+		if (notification == null) {
+			throw new CustomException(ErrorCode.FORBIDDEN, "?곌랜梨??????逾앯춯?????쾳 嶺뚳퐣瑗????????곕????덈펲.");
+		}
+		if (!notification.isRead()) {
+			notification.markAsRead();
+		}
 	}
 
 	@Override
 	public void subscribe(Long memberId, SseEmitter emitter) {
-		// 기존 연결 있으면 정리
 		SseEmitter existing = emitters.put(memberId, emitter);
 		if (existing != null) {
 			try {
@@ -54,25 +119,22 @@ public class NotificationServiceImpl implements NotificationService {
 			} catch (Exception ignored) {}
 		}
 
-		// 연결 종료/타임아웃/에러 시 맵에서 제거
 		emitter.onCompletion(() -> emitters.remove(memberId, emitter));
 		emitter.onTimeout(() -> emitters.remove(memberId, emitter));
 		emitter.onError(e -> emitters.remove(memberId, emitter));
 
-		// 초기 연결 이벤트 전송 (브라우저가 연결됐음을 알림)
 		try {
 			emitter.send(SseEmitter.event()
 				.name("connected")
 				.data("{\"connected\":true}"));
 		} catch (IOException e) {
 			emitters.remove(memberId, emitter);
-			log.warn("SSE 초기 이벤트 전송 실패: memberId={}", memberId);
+			log.warn("SSE ?貫?껆뵳????繹???熬곣뫖苑????덉넮: memberId={}", memberId);
 		}
 
-		log.info("SSE 구독 등록: memberId={}, 현재 연결 수={}", memberId, emitters.size());
+		log.info("SSE ??뚮맧利??繹먮굞夷? memberId={}, ?熬곣뫗????⑤슡????{}", memberId, emitters.size());
 	}
 
-	/** 30초마다 heartbeat 전송 */
 	private void sendHeartbeat() {
 		if (emitters.isEmpty()) return;
 
@@ -83,7 +145,7 @@ public class NotificationServiceImpl implements NotificationService {
 					.data(""));
 			} catch (IOException e) {
 				emitters.remove(memberId, emitter);
-				log.debug("Heartbeat 실패, 연결 제거: memberId={}", memberId);
+				log.debug("Heartbeat ???덉넮, ??⑤슡????蹂ㅽ깴: memberId={}", memberId);
 			}
 		});
 	}
