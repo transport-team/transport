@@ -111,15 +111,15 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
         });
 
         // 예상 운송 시간이 없으면 배차 신청 불가
-        if (shipment.getDurationMin() <= 0) {
+        if (isInvalidDuration(shipment)) {
             throw new CustomException(
-                    ErrorCode.INVALID_INPUT, "예상 운송 시간이 올바르지 않습니다.");
+                    ErrorCode.INVALID_INPUT, "예상 운송 시간이 제공되지 않은 배송은 배차를 신청할 수 없습니다.");
         }
 
         // 새 운송 요청의 예상 시작 및 종료 시간
         LocalDateTime requestedStart = shipment.getPickupAt();
         LocalDateTime requestedEnd =
-                requestedStart.plusMinutes(shipment.getDurationMin());
+                requestedStart.plusMinutes(durationOrZero(shipment));
 
         // 이미 확정된 배차와 운송 시간이 겹치는지 확인
         boolean hasOverlappingDispatch =
@@ -129,9 +129,12 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
                             Shipment assignedShipment = dispatch.getShipment();
 
+                            if (isInvalidDuration(assignedShipment)) {
+                                return false;
+                            }
                             LocalDateTime assignedStart = assignedShipment.getPickupAt();
                             LocalDateTime assignedEnd =
-                                    assignedStart.plusMinutes(assignedShipment.getDurationMin());
+                                    assignedStart.plusMinutes(durationOrZero(assignedShipment));
 
                             return requestedStart.isBefore(assignedEnd)
                                     && assignedStart.isBefore(requestedEnd);
@@ -218,15 +221,15 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
         }
 
         // 배차 확정 전 예상 운송 시간 검증
-        if (shipment.getDurationMin() <= 0) {
+        if (isInvalidDuration(shipment)) {
             throw new CustomException(
-                    ErrorCode.INVALID_INPUT, "예상 운송 시간이 올바르지 않습니다.");
+                    ErrorCode.INVALID_INPUT, "예상 운송 시간이 제공되지 않은 배송은 배차를 확정할 수 없습니다.");
         }
 
         // 선택한 기사의 기존 확정 배차와 시간 중복 확인
         LocalDateTime requestedStart = shipment.getPickupAt();
         LocalDateTime requestedEnd =
-                requestedStart.plusMinutes(shipment.getDurationMin());
+                requestedStart.plusMinutes(durationOrZero(shipment));
 
         boolean hasOverlappingDispatch =
                 dispatchRepository.findByDriver_IdAndActiveTrue(
@@ -236,9 +239,12 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
                             Shipment assignedShipment = dispatch.getShipment();
 
+                            if (isInvalidDuration(assignedShipment)) {
+                                return false;
+                            }
                             LocalDateTime assignedStart = assignedShipment.getPickupAt();
                             LocalDateTime assignedEnd =
-                                    assignedStart.plusMinutes(assignedShipment.getDurationMin());
+                                    assignedStart.plusMinutes(durationOrZero(assignedShipment));
 
                             return requestedStart.isBefore(assignedEnd)
                                     && assignedStart.isBefore(requestedEnd);
@@ -356,7 +362,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					List<String> warningMessages = new ArrayList<>();
 
 					// 예상 운송 시간이 올바르지 않으면 배차 신청 불가
-					if (shipment.getDurationMin() <= 0) {
+					if (isInvalidDuration(shipment)) {
 						blockReasons.add("예상 운송 시간이 올바르지 않아 배차 신청할 수 없습니다.");
 					}
 
@@ -416,7 +422,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 							// 운송 요청의 예상 종료 일시
 							LocalDateTime deliveryEnd = shipment.getPickupAt()
-									.plusMinutes(shipment.getDurationMin());
+									.plusMinutes(durationOrZero(shipment));
 
 							// 근무 종료 시간을 초과하면 경고만 표시
 							if (deliveryEnd.isAfter(workEnd)) {
@@ -435,7 +441,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					// 새 운송 요청의 예상 시작 및 종료 시간
 					LocalDateTime requestedStart = shipment.getPickupAt();
 					LocalDateTime requestedEnd =
-							requestedStart.plusMinutes(shipment.getDurationMin());
+							requestedStart.plusMinutes(durationOrZero(shipment));
 
 					// 기존 확정 배차와 운송 시간이 겹치는지 확인
 					boolean hasOverlappingDispatch = activeDispatches.stream()
@@ -445,7 +451,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 								LocalDateTime assignedStart = assignedShipment.getPickupAt();
 								LocalDateTime assignedEnd =
-										assignedStart.plusMinutes(assignedShipment.getDurationMin());
+										assignedStart.plusMinutes(durationOrZero(assignedShipment));
 
 								// 두 운송 시간 구간이 겹치는지 검사
 								return requestedStart.isBefore(assignedEnd)
@@ -466,7 +472,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 								LocalDateTime appliedStart = appliedShipment.getPickupAt();
 								LocalDateTime appliedEnd =
-										appliedStart.plusMinutes(appliedShipment.getDurationMin());
+										appliedStart.plusMinutes(durationOrZero(appliedShipment));
 
 								return requestedStart.isBefore(appliedEnd)
 										&& appliedStart.isBefore(requestedEnd);
@@ -495,6 +501,12 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 				.toList();
 	}
 
+	private boolean isInvalidDuration(Shipment shipment) {
+		return shipment.getDurationMin() == null || shipment.getDurationMin() <= 0;
+	}
 
+	private long durationOrZero(Shipment shipment) {
+		return shipment.getDurationMin() == null ? 0L : shipment.getDurationMin();
+	}
 
 }

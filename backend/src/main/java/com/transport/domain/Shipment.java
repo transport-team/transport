@@ -53,7 +53,8 @@ public class Shipment extends BaseEntity {
 
 	private double distanceKm;  // 도로 거리
 
-	private int durationMin;  // 예상 소요(분)
+	@Column(nullable = true)
+	private Integer durationMin;  // 예상 소요(분), 경로 대체 계산 시 null
 
 	@Column(nullable = false)
 	private String cargoName;

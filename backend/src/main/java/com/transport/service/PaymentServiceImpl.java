@@ -22,16 +22,23 @@ import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.PaymentRepository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 @Transactional(readOnly = true)
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final TossPaymentClient tossPaymentClient;
     private final StatusHistoryService statusHistoryService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional
@@ -59,13 +66,24 @@ public class PaymentServiceImpl implements PaymentService {
 
         tossPaymentClient.confirm(requestDTO.getPaymentKey(), requestDTO.getOrderId(), requestDTO.getAmount());
 
-        ShipmentStatus fromStatus = shipment.getStatus();
-        payment.updatePaymentKey(requestDTO.getPaymentKey());
-        payment.updateStatus(PaymentStatus.PAID);
-        payment.updatePaidAt(LocalDateTime.now());
-        shipment.updateStatus(ShipmentStatus.REQUESTED); 
-        statusHistoryService.record(shipment, fromStatus, ShipmentStatus.REQUESTED, null, "토스 결제 승인");
-        return PaymentConfirmResponseDTO.from(payment);
+        try {
+            ShipmentStatus fromStatus = shipment.getStatus();
+            payment.updatePaymentKey(requestDTO.getPaymentKey());
+            payment.updateStatus(PaymentStatus.PAID);
+            payment.updatePaidAt(LocalDateTime.now());
+            shipment.updateStatus(ShipmentStatus.REQUESTED);
+            statusHistoryService.record(shipment, fromStatus, ShipmentStatus.REQUESTED, null, "토스 결제 승인");
+            entityManager.flush();
+            return PaymentConfirmResponseDTO.from(payment);
+        } catch (RuntimeException databaseException) {
+            try {
+                tossPaymentClient.cancelPayment(requestDTO.getPaymentKey(), "결제 승인 후 배송 저장 실패");
+            } catch (RuntimeException cancelException) {
+                log.error("결제 승인 후 저장 실패 및 토스 결제 취소 실패: orderId={}",
+                        requestDTO.getOrderId(), cancelException);
+            }
+            throw databaseException;
+        }
     }
 
     // ===== 관리자 대시보드 집계 (팀원 1 대시보드가 쓰는 읽기 전용 메서드) =====

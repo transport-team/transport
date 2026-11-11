@@ -22,6 +22,14 @@ const PaymentSuccessPage = () => {
         setMessage('결제가 완료되었습니다. 배송 접수가 확정되었습니다.')
       })
       .catch((error) => {
+        if (
+          error.response?.status === 409
+          && error.response?.data?.code === 'PAYMENT_ALREADY_COMPLETED'
+        ) {
+          setSuccess(true)
+          setMessage('결제가 이미 완료되었습니다. 배송 접수가 확정되었습니다.')
+          return
+        }
         setMessage(error.response?.data?.message || '결제 승인에 실패했습니다.')
       })
   }, [amount, hasPaymentParams, orderId, paymentKey])

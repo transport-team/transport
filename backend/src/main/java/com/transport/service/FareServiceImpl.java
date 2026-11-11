@@ -11,7 +11,6 @@ import com.transport.dto.FareCalculateResponseDTO;
 import com.transport.domain.CargoType;
 import com.transport.domain.VehicleType;
 import com.transport.repository.CargoTypeRepository;
-import com.transport.repository.VehicleTypeRepository;
 import com.transport.service.DistanceService.Route;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -24,14 +23,14 @@ import lombok.extern.log4j.Log4j2;
 @Transactional(readOnly = true)
 public class FareServiceImpl implements FareService {
 
-	private final VehicleTypeRepository vehicleTypeRepository;
+	private final VehicleTypeService vehicleTypeService;
 	private final CargoTypeRepository cargoTypeRepository;
 	private final DistanceService distanceService;
 	private final FareCalculator fareCalculator;
 
 	@Override
 	public FareCalculateResponseDTO calculateFare(FareCalculateRequestDTO requestDTO) {
-		VehicleType type = vehicleTypeRepository.findById(requestDTO.getVehicleTypeId())
+		VehicleType type = vehicleTypeService.findById(requestDTO.getVehicleTypeId())
 				.orElseThrow(() -> new EntityNotFoundException("존재하지 않는 차종입니다."));
 		CargoType cargo = cargoTypeRepository.findById(requestDTO.getCargoTypeId())
 				.orElseThrow(() -> new EntityNotFoundException("존재하지 않는 화물 유형입니다."));
@@ -48,7 +47,7 @@ public class FareServiceImpl implements FareService {
 		int surchargeFare = totalFare - (baseFare + distanceFare + cargoFare);
 
 		// 무게 기준 자동 추천: 무게를 실을 수 있는 가장 작은 차종 (없으면 문의 안내)
-		Optional<VehicleType> recommended = vehicleTypeRepository.findAll().stream()
+		Optional<VehicleType> recommended = vehicleTypeService.findAllEntities().stream()
 				.filter(v -> v.getMaxLoadKg() >= weightKg)
 				.min(Comparator.comparingInt(VehicleType::getMaxLoadKg));
 

@@ -30,7 +30,6 @@ public class KakaoDistanceService implements DistanceService {
 	private static final String DIRECTIONS_URL = "https://apis-navi.kakaomobility.com/v1/directions";
 	private static final double DETOUR_FACTOR = 1.3; // 직선거리 → 도로거리 보정 계수
 	// 길찾기 실패 시 예상 운송 시간 계산용 평균 속도 (임시 기준)
-	private static final double FALLBACK_SPEED_KMH = 40.0;
 	private static final double EARTH_RADIUS_KM = 6371.0;
 
 	private final RestTemplate restTemplate = new RestTemplate();
@@ -74,15 +73,12 @@ public class KakaoDistanceService implements DistanceService {
 			return new Route(distanceKm, durationMin, origin[1], origin[0], dest[1], dest[0]);
 
 		} catch (Exception e) {
-			log.warn("길찾기 실패, 직선거리 및 예상 시간 대체 계산 사용: {}", e.getMessage());
+			log.warn("길찾기 실패, 직선거리 보정값 사용: {}", e.getMessage());
 
 			// 기존 방식대로 직선거리를 도로거리로 보정
 			double distanceKm = haversineKm(origin[1], origin[0], dest[1], dest[0]) * DETOUR_FACTOR;
 
-			// 평균 속도 40km/h를 가정하여 예상 운송 시간 계산 (최소 1분 보장)
-			int durationMin = Math.max(1, (int) Math.ceil(distanceKm / FALLBACK_SPEED_KMH * 60));
-
-			return new Route(distanceKm, durationMin, origin[1], origin[0], dest[1], dest[0]);
+			return new Route(distanceKm, null, origin[1], origin[0], dest[1], dest[0]);
 		}
 	}
 

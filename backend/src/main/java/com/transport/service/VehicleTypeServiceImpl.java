@@ -47,4 +47,9 @@ public class VehicleTypeServiceImpl implements VehicleTypeService {
 
 		return vehicleTypeRepository.findById(id);
 	}
+
+	@Override
+	public List<VehicleType> findAllEntities() {
+		return vehicleTypeRepository.findAll();
+	}
 }
