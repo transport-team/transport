@@ -34,5 +34,10 @@ public class Notification extends BaseEntity {
 	@Column(nullable = false)
 	private String message;
 
-	private boolean isRead;  // 읽음 여부 (READ는 SQL 예약어라 is_read)
+	private boolean isRead;
+
+	/** 읽음 처리 (6-2) — setter 대신 의미 메서드 */
+	public void markAsRead() {
+		this.isRead = true;
+	}  // 읽음 여부 (READ는 SQL 예약어라 is_read)
 }

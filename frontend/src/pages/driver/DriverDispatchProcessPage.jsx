@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getShipment, changeShipmentStatus, uploadShipmentImages } from '../../api/shipmentApi'
 import StatusBadge from '../../components/common/StatusBadge'
+import useLocationShare from '../../hooks/useLocationShare'
 import Button from '../../components/common/Button'
 
 // 팀원 3 상세 API 머지 전까지 쓰는 임시 데이터 (api.md의 GET /api/shipments/{id} 예시 필드 기준)
@@ -62,6 +63,9 @@ const DriverDispatchProcessPage = () => {
     const [uploadedCount, setUploadedCount] = useState(0)
 
     const step = shipment ? NEXT_STEP[shipment.status] : null
+
+    // 위치 공유 (7-2) — IN_TRANSIT일 때만 watchPosition + 30초 간격 전송
+    const { sharing, secondsAgo, error: locationError } = useLocationShare(shipmentId, shipment?.status)
 
     useEffect(() => {
         const load = async () => {
@@ -238,6 +242,18 @@ const DriverDispatchProcessPage = () => {
                 </p>
             )}
 
+            {/* 위치 공유 상태 표시 (7-2) — 운송중에만 */}
+            {shipment?.status === 'IN_TRANSIT' && (
+                <div className={`rounded-2xl border p-4 text-sm ${locationError ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-green-200 bg-green-50 text-green-800'}`}>
+                    {locationError ? (
+                        <p>📍 {locationError}</p>
+                    ) : sharing ? (
+                        <p>📍 공유 중 · {secondsAgo}초 전 전송</p>
+                    ) : (
+                        <p>📍 위치 신호를 기다리는 중...</p>
+                    )}
+                </div>
+            )}
             {actionError && (
                 <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-600">{actionError}</p>
             )}
