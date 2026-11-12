@@ -1,0 +1,98 @@
+# CI: develop · main으로 가는 PR과 develop push마다 백엔드 테스트 · 프론트 빌드를 돌린다 (관리: 팀원 1)
+# 로컬과 같은 조건으로: MariaDB 11.4(utf8mb4 · +09:00 · 3307) + application-local.yml.example 그대로
+# 예시 설정의 DB 비밀번호 · JWT 비밀키는 테스트용 값이라 실제 키 · 비밀번호는 쓰지 않는다
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+# 같은 PR에 새 커밋이 오면 이전 실행은 멈춘다
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: 백엔드 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: MariaDB 띄우기 (docker-compose와 같은 설정)
+        run: |
+          docker run -d --name transport-db -p 3307:3306 \
+            -e MARIADB_ROOT_PASSWORD=ci-root-password \
+            -e MARIADB_DATABASE=transportdb \
+            -e MARIADB_USER=transport \
+            -e MARIADB_PASSWORD=transport1234 \
+            -e TZ=Asia/Seoul \
+            mariadb:11.4 \
+            --character-set-server=utf8mb4 \
+            --collation-server=utf8mb4_unicode_ci \
+            --default-time-zone=+09:00
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: 로컬 설정 파일 (예시 그대로)
+        run: cp backend/src/main/resources/application-local.yml.example backend/src/main/resources/application-local.yml
+
+      - name: DB 준비 기다리기
+        run: |
+          for i in $(seq 1 60); do
+            if docker exec transport-db healthcheck.sh --connect --innodb_initialized; then exit 0; fi
+            sleep 2
+          done
+          docker logs transport-db
+          exit 1
+
+      - name: 테스트
+        working-directory: backend
+        run: ./gradlew test --no-daemon
+
+      - name: 테스트 리포트 올리기 (실패했을 때)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: backend/build/reports/tests/test
+          retention-days: 7
+
+  frontend:
+    name: 프론트 빌드 · lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      # 지금은 develop에 기존 lint 오류가 있어 결과만 보여 주고 실패로 치지 않는다
+      # 오류를 모두 정리하면 continue-on-error 줄을 지워 lint도 실패로 친다
+      - name: lint (결과만 표시)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: 빌드
+        run: npm run build
