@@ -21,4 +21,8 @@ public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
 
 	// 특정 차량에 현재 유효한 배차가 있는지 확인
 	boolean existsByVehicle_IdAndActiveTrue(Long vehicleId);
+
+    // 배송 ID로 현재 활성화된 배차 조회 (최근 배차 우선)
+    Optional<Dispatch> findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(Long shipmentId);
+
 }
