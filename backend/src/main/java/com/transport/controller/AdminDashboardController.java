@@ -35,8 +35,8 @@ public class AdminDashboardController {
 	// ?from=2026-10-24&to=2026-11-06 (to가 없으면 오늘, from이 없으면 to까지 14일)
 	@GetMapping("/stats/daily")
 	public List<DailyStatDTO> daily(
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+			@RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+			@RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 		LocalDate end = (to != null) ? to : LocalDate.now();
 		LocalDate start = (from != null) ? from : end.minusDays(DEFAULT_DAILY_DAYS - 1);
 		return dashboardService.getDailyStats(start, end);
