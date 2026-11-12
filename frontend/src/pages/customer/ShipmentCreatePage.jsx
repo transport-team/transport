@@ -24,6 +24,20 @@ const getLocalDateTimeValue = () => {
   const offset = date.getTimezoneOffset() * 60000
   return new Date(date.getTime() - offset).toISOString().slice(0, 16)
 }
+const getRecommendedCargoTypeId = (items, types) => {
+  const categories = items.map((item) => item.category).join(' ')
+  let matchedType
+
+  if (categories.includes('냉장') || categories.includes('음식')) {
+    matchedType = types.find((type) => type.name.includes('냉동') || type.name.includes('냉장') || type.name.includes('탑차'))
+  } else if (categories.includes('가구') || categories.includes('가전')) {
+    matchedType = types.find((type) => type.name.includes('카고') || type.name.includes('윙바디'))
+  } else {
+    matchedType = types.find((type) => type.name.includes('카고') || type.name.includes('일반'))
+  }
+
+  return matchedType ? String(matchedType.id) : ''
+}
 
 const ShipmentCreatePage = () => {
   const [form, setForm] = useState(initialForm)
@@ -129,26 +143,8 @@ const ShipmentCreatePage = () => {
     return detail ? detail.defaultWeight * Number(item.quantity || 0) : 0
   }
   const estimatedTotalWeight = cargoItems.reduce((total, item) => total + getEstimatedWeight(item), 0)
-
-  // 선택된 물건 카테고리에 따라 화물 유형 자동 추천
-  useEffect(() => {
-    if (cargoTypeManuallyEdited || cargoTypes.length === 0) return
-
-    const categories = cargoItems.map(item => item.category).join(' ')
-    let matchedType = null
-
-    if (categories.includes('냉장') || categories.includes('음식')) {
-      matchedType = cargoTypes.find(c => c.name.includes('냉동') || c.name.includes('냉장') || c.name.includes('탑차'))
-    } else if (categories.includes('가구') || categories.includes('가전')) {
-      matchedType = cargoTypes.find(c => c.name.includes('카고') || c.name.includes('윙바디'))
-    } else {
-      matchedType = cargoTypes.find(c => c.name.includes('카고') || c.name.includes('일반'))
-    }
-
-    if (matchedType && form.cargoTypeId !== String(matchedType.id)) {
-      setForm(current => ({ ...current, cargoTypeId: String(matchedType.id) }))
-    }
-  }, [cargoItems, cargoTypes, cargoTypeManuallyEdited])
+  const recommendedCargoTypeId = getRecommendedCargoTypeId(cargoItems, cargoTypes)
+  const effectiveCargoTypeId = cargoTypeManuallyEdited ? form.cargoTypeId : recommendedCargoTypeId
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -237,14 +233,14 @@ const ShipmentCreatePage = () => {
     ...form,
     cargoName: [cargoItems.filter((item) => item.detail).map((item) => `${item.detail} ${item.quantity}개`).join(', '), form.cargoName.trim()].filter(Boolean).join(', '),
     vehicleTypeId: Number(form.vehicleTypeId),
-    cargoTypeId: Number(form.cargoTypeId),
+    cargoTypeId: Number(effectiveCargoTypeId),
     cargoWeightKg: Number(form.cargoWeightKg),
     senderName: form.senderName.trim(),
     senderPhone: form.senderPhone.trim(),
   })
 
   const canMoveToTransport = Boolean(
-    form.vehicleTypeId && form.cargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
+    form.vehicleTypeId && effectiveCargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
   )
 
   const canEstimateFare = Boolean(
@@ -383,6 +379,7 @@ const ShipmentCreatePage = () => {
                   </button>
                 ))}
               </div>
+              {vehicleTypeError && <p className="mt-3 text-sm font-semibold text-red-600">{vehicleTypeError}</p>}
               {vehicleWeightWarning && <p className={`mt-3 rounded-xl px-4 py-3 text-sm font-semibold ${vehicleWeightWarning.includes('신청할 수 없습니다') ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{vehicleWeightWarning}</p>}
             </div>
 
@@ -421,13 +418,14 @@ const ShipmentCreatePage = () => {
               </div>
 
               <label className="mt-6 block text-sm font-medium text-gray-700" htmlFor="cargoTypeId">화물 유형
-                <select id="cargoTypeId" name="cargoTypeId" value={form.cargoTypeId} onChange={handleChange} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" required>
+                <select id="cargoTypeId" name="cargoTypeId" value={effectiveCargoTypeId} onChange={handleChange} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" required>
                   <option value="">화물 유형을 선택하세요</option>
                   {cargoTypes.filter((cargoType) => cargoType.active).map((cargoType) => (
                     <option key={cargoType.id} value={cargoType.id}>{cargoType.name}</option>
                   ))}
                 </select>
               </label>
+              {cargoTypeError && <p className="mt-2 text-sm font-semibold text-red-600">{cargoTypeError}</p>}
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Input id="cargoName" label="추가 설명" name="cargoName" value={form.cargoName} onChange={handleChange} placeholder="직접 입력" />
