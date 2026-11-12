@@ -375,8 +375,9 @@
 | GET | /api/shipments/{id}/locations/latest | 마지막 위치 — IN_TRANSIT일 때만, 아니거나 기록이 없으면 204 · 남의 배송은 403 | 본인 고객 · 배정 기사 · ADMIN |
 | GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트 — 알림 본문은 목록 한 건과 같은 모양) | 로그인 |
 | GET · PATCH | /api/notifications, /{id}/read | 알림 목록 (한 건: id · type · message · shipmentId · isRead · createdAt) · 읽음 | 로그인 |
-| POST | /api/shipments/{id}/review | 리뷰 (배송완료 · 1회) | CUSTOMER |
-| GET | /api/drivers/{id}/reviews | 기사 리뷰 · 평균 평점 | 로그인 |
+| POST | /api/shipments/{id}/review | 리뷰 { rating 1~5, content 500자 이하 } — 본인 배송 · 배송완료 · 1회 (이미 있으면 409 `REVIEW_EXISTS`) | CUSTOMER |
+| GET | /api/shipments/{id}/review | 배송의 리뷰 (아직 없으면 204) | 로그인 |
+| GET | /api/drivers/{id}/reviews | 기사 리뷰 목록(최신순) · 평균 평점(리뷰가 없으면 0.0) | 로그인 |
 
 ## 결제 흐름
 

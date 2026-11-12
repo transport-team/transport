@@ -2,6 +2,7 @@ package com.transport.service;
 
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,13 +63,20 @@ public class ReviewServiceImpl implements ReviewService {
 		Driver driver = driverRepository.findById(driverId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "배정 기사를 찾을 수 없습니다."));
 
-		Review saved = reviewRepository.save(Review.builder()
-				.shipment(shipment)
-				.customer(shipment.getCustomer())
-				.driver(driver)
-				.rating(rating)
-				.content(content)
-				.build());
+		// 4번 검사와 저장 사이에 같은 요청이 동시에 들어오면(두 탭 · 다시 시도) DB 유니크 키(shipment_id)가 막는다
+		// → 그 오류를 500이 아니라 4번과 같은 REVIEW_EXISTS(409)로 돌려준다
+		Review saved;
+		try {
+			saved = reviewRepository.save(Review.builder()
+					.shipment(shipment)
+					.customer(shipment.getCustomer())
+					.driver(driver)
+					.rating(rating)
+					.content(content)
+					.build());
+		} catch (DataIntegrityViolationException e) {
+			throw new CustomException(ErrorCode.REVIEW_EXISTS);
+		}
 
 		log.info("리뷰 저장: shipmentId={}, driverId={}, rating={}", shipmentId, driverId, rating);
 		return ReviewResponseDTO.from(saved);
