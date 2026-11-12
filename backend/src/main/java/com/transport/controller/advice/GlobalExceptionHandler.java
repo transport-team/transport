@@ -52,8 +52,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 		ErrorCode errorCode = toErrorCode(statusCode);
 		String message = errorCode.getMessage();
-		if (ex instanceof MethodArgumentNotValidException e && e.getFieldError() != null) {
-			message = e.getFieldError().getDefaultMessage();  // @Valid 실패: DTO에 적은 message
+		// @Valid 실패: DTO에 적은 message
+		// 형 변환 실패(예: ?page=abc)는 Spring의 영어 기술 문구가 나가므로 기본 문구를 그대로 쓴다
+		if (ex instanceof MethodArgumentNotValidException e && e.getFieldError() != null
+				&& !e.getFieldError().isBindingFailure()) {
+			message = e.getFieldError().getDefaultMessage();
 		}
 		return super.handleExceptionInternal(ex, new ErrorResponseDTO(errorCode.name(), message), headers, statusCode, request);
 	}
