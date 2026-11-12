@@ -14,6 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.transport.domain.enums.ShipmentImageType;
 import com.transport.dto.ShipmentImageResponseDTO;
+import com.transport.exception.CustomException;
+import com.transport.exception.ErrorCode;
 import com.transport.security.LoginMember;
 import com.transport.service.ShipmentImageService;
 
@@ -34,7 +36,7 @@ public class ShipmentImageController {
 	 * 배송 사진 업로드 (배정 기사만)
 	 * @param id 배송 ID
 	 * @param files 사진 파일들 (multipart, 1장 이상)
-	 * @param type 사진 종류 — PICKUP(상차) / RECEIPT(인수증) / ETC
+	 * @param type 사진 종류 — PICKUP(상차) / RECEIPT(인수증) / ETC(기타), 대소문자 무관
 	 */
 	@Operation(summary = "배송 사진 업로드", description = "배정 기사가 상차·인수증 사진을 올린다. multipart/form-data: files(여러 장), type")
 	@PostMapping(value = "/{id}/images", consumes = "multipart/form-data")
@@ -45,8 +47,16 @@ public class ShipmentImageController {
 			@RequestPart("type") String type,
 			@AuthenticationPrincipal LoginMember loginMember
 	) {
-		ShipmentImageType imageType = ShipmentImageType.valueOf(type.toUpperCase());
 		return ResponseEntity.ok(
-				shipmentImageService.upload(id, files, imageType, loginMember.getId()));
+				shipmentImageService.upload(id, files, toImageType(type), loginMember.getId()));
+	}
+
+	// 모르는 사진 종류는 500이 아니라 400 (valueOf의 IllegalArgumentException을 그대로 두면 500)
+	private ShipmentImageType toImageType(String type) {
+		try {
+			return ShipmentImageType.valueOf(type.trim().toUpperCase());
+		} catch (IllegalArgumentException e) {
+			throw new CustomException(ErrorCode.INVALID_INPUT, "사진 종류는 PICKUP(상차) · RECEIPT(인수증) · ETC(기타) 중 하나여야 합니다.");
+		}
 	}
 }

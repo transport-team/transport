@@ -31,10 +31,10 @@ import com.transport.service.event.NotificationSavedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
-// ???逾???類λ룴????뚮뿭寃?(????4)
-// 6-1: send() = DB ????+ ???繹???꾩룇裕됵쭛? ???깆젷 SSE ?熬곣뫖苑?? NotificationSseListener?띠럾?
-// ?筌뤾퍔???????ｋ걞???繹먭퍓沅???AFTER_COMMIT)????類ｋ펲 ???β뼯?뉐첎??濡?듆 ???逾?????嶺뚯솘? ???낅츎??
-// 6-2: ?????逾?嶺뚮ㅄ維뽨빳???瑜곷턄嶺? 鸚?????? ?띠룇裕??鸚?????쾳 嶺뚳퐣瑗???곌랜梨??우춹?
+// 알림 서비스 구현 (팀원 4)
+// 6-1: send() = DB 저장 + 저장 완료 이벤트 발행 → 실제 SSE 전송은 NotificationSseListener가 한다
+// 커밋이 성공한 뒤(AFTER_COMMIT)에만 보낸다 — 롤백되면 저장되지 않은 알림이 실시간으로 나가지 않는다
+// 6-2: 내 알림 목록 (페이지) · 안 읽은 개수 · 읽음 처리 (본인 알림만)
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -70,11 +70,11 @@ public class NotificationServiceImpl implements NotificationService {
 				shipment != null ? shipment.getId() : null,
 				LocalDateTime.now()));
 
-		log.info("[???逾????? id={}, receiverId={}, type={}, shipmentId={}",
+		log.info("[알림 저장] id={}, receiverId={}, type={}, shipmentId={}",
 				saved.getId(), receiver.getId(), type, shipment != null ? shipment.getId() : null);
 	}
 
-	/** SSE ?洹먮봾裕???깅뮔 ?????????熬곣뫗??emitter (??怨몃さ嶺?null) */
+	/** SSE 리스너가 쓰는 회원별 현재 emitter (없으면 null) */
 	public SseEmitter getEmitter(Long memberId) {
 		return emitters.get(memberId);
 	}
@@ -103,7 +103,7 @@ public class NotificationServiceImpl implements NotificationService {
 		Notification notification = notificationRepository.findByIdAndReceiver(notificationId,
 				Member.builder().id(memberId).build());
 		if (notification == null) {
-			throw new CustomException(ErrorCode.FORBIDDEN, "?곌랜梨??????逾앯춯?????쾳 嶺뚳퐣瑗????????곕????덈펲.");
+			throw new CustomException(ErrorCode.FORBIDDEN, "본인 알림만 읽음 처리할 수 있습니다.");
 		}
 		if (!notification.isRead()) {
 			notification.markAsRead();
@@ -129,10 +129,10 @@ public class NotificationServiceImpl implements NotificationService {
 				.data("{\"connected\":true}"));
 		} catch (IOException e) {
 			emitters.remove(memberId, emitter);
-			log.warn("SSE ?貫?껆뵳????繹???熬곣뫖苑????덉넮: memberId={}", memberId);
+			log.warn("SSE 초기 이벤트 전송 실패: memberId={}", memberId);
 		}
 
-		log.info("SSE ??뚮맧利??繹먮굞夷? memberId={}, ?熬곣뫗????⑤슡????{}", memberId, emitters.size());
+		log.info("SSE 구독 등록: memberId={}, 현재 연결 수={}", memberId, emitters.size());
 	}
 
 	private void sendHeartbeat() {
@@ -145,7 +145,7 @@ public class NotificationServiceImpl implements NotificationService {
 					.data(""));
 			} catch (IOException e) {
 				emitters.remove(memberId, emitter);
-				log.debug("Heartbeat ???덉넮, ??⑤슡????蹂ㅽ깴: memberId={}", memberId);
+				log.debug("Heartbeat 실패, 연결 제거: memberId={}", memberId);
 			}
 		});
 	}

@@ -10,6 +10,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.transport.domain.Driver;
 import com.transport.domain.LocationLog;
 import com.transport.domain.Shipment;
+import com.transport.domain.enums.MemberRole;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.LocationResponseDTO;
 import com.transport.exception.CustomException;
@@ -36,6 +37,7 @@ public class LocationServiceImpl implements LocationService {
 	private final DispatchRepository dispatchRepository;
 	private final DriverRepository driverRepository;
 	private final NotificationServiceImpl notificationService; // SSE emitter 저장소 재사용 (getEmitter)
+	private final DispatchService dispatchService;             // 배정 기사 회원 ID (약속된 getActiveDriver)
 
 	@Override
 	public LocationResponseDTO sendLocation(Long shipmentId, Long memberId, double lat, double lng) {
@@ -93,7 +95,25 @@ public class LocationServiceImpl implements LocationService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public LocationResponseDTO getLatestLocation(Long shipmentId) {
+	public LocationResponseDTO getLatestLocation(Long shipmentId, Long memberId, MemberRole role) {
+		Shipment shipment = shipmentRepository.findById(shipmentId)
+				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+
+		// 권한: 관리자 · 본인 고객 · 배정 기사만 (이력 조회 StatusServiceImpl.getHistory와 같은 규칙)
+		boolean isAdmin = role == MemberRole.ADMIN;
+		boolean isOwner = shipment.getCustomer() != null
+				&& shipment.getCustomer().getId().equals(memberId);
+		Long assignedDriverId = dispatchService.getActiveDriver(shipmentId); // 배정 기사의 회원 ID
+		boolean isAssignedDriver = assignedDriverId != null && assignedDriverId.equals(memberId);
+		if (!isAdmin && !isOwner && !isAssignedDriver) {
+			throw new CustomException(ErrorCode.FORBIDDEN, "본인 배송의 위치만 볼 수 있습니다.");
+		}
+
+		// 운송중(IN_TRANSIT)일 때만 보여 준다 — 개인정보: 운송 전 · 끝난 뒤에는 위치를 보여주지 않는다
+		if (shipment.getStatus() != ShipmentStatus.IN_TRANSIT) {
+			return null;
+		}
+
 		return locationLogRepository.findTopByShipmentIdOrderByRecordedAtDesc(shipmentId)
 				.map(LocationResponseDTO::from)
 				.orElse(null); // 아직 위치 기록이 없으면 null (정상)
