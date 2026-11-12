@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 import java.util.Map;
@@ -20,6 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.transport.security.LoginMember;
 import com.transport.service.NotificationService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
@@ -54,10 +54,8 @@ public class NotificationController {
 	@GetMapping
 	public Map<String, Object> getMyNotifications(
 			@AuthenticationPrincipal LoginMember loginMember,
-			@RequestParam(defaultValue = "1") int page,
-			@RequestParam(defaultValue = "10") int size) {
+			@Valid PageRequestDTO pageRequestDTO) { // page ≥ 1 · size 1~100 (다른 목록 API와 같은 검사 — 틀리면 400)
 
-		PageRequestDTO pageRequestDTO = PageRequestDTO.builder().page(page).size(size).build();
 		PageResponseDTO<NotificationResponseDTO> dto =
 				notificationService.getMyNotifications(loginMember.getId(), pageRequestDTO);
 		long unreadCount = notificationService.getUnreadCount(loginMember.getId());
