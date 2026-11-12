@@ -11,6 +11,8 @@ const DriverShipmentList = lazy(() => import('../pages/driver/DriverShipmentList
 const DriverShipmentDetail = lazy(() => import('../pages/driver/DriverShipmentDetailPage'))
 const DriverVehicleManage = lazy(() => import('../pages/driver/DriverVehicleManagePage'))
 const DriverDispatchProcess = lazy(() => import('../pages/driver/DriverDispatchProcessPage'))
+const DriverMyDispatch = lazy(() => import('../pages/driver/DriverMyDispatchPage'))
+const DriverDispatchHistoryDetail = lazy(() => import('../pages/driver/DriverDispatchHistoryDetailPage'))
 
 // 기사 화면 경로 (/driver/...) — 공통 파일: 화면을 추가할 때 PR로 경로를 더한다
 const driverRouter = () => [
@@ -23,6 +25,8 @@ const driverRouter = () => [
   { path: 'shipments/:shipmentId', element: <Suspense fallback={Loading}><DriverShipmentDetail /></Suspense> },
   // 배정된 배송 처리 (상태 변경 · 사진) — 지원용 상세(shipments/:shipmentId)와 다른 화면 (#72)
   { path: 'dispatches/:shipmentId', element: <Suspense fallback={Loading}><DriverDispatchProcess /></Suspense> },
+  { path: 'dispatches', element: <Suspense fallback={Loading}><DriverMyDispatch /></Suspense> },
+{ path: 'dispatches/history/:applicationId', element: <Suspense fallback={Loading}><DriverDispatchHistoryDetail /></Suspense> },
 ]
 
 export default driverRouter

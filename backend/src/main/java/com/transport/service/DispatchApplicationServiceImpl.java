@@ -65,7 +65,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		// 4. 배차 대기 중인 배송인지 확인
 		if (shipment.getStatus() != ShipmentStatus.REQUESTED) {
 			throw new CustomException(
-			        ErrorCode.SHIPMENT_NOT_REQUESTED, "현재 지원할 수 없는 운송 요청입니다.");
+					ErrorCode.SHIPMENT_NOT_REQUESTED, "현재 지원할 수 없는 운송 요청입니다.");
 		}
 
 		// 5. 지원할 차량 조회
@@ -91,7 +91,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		if (applicationRepository.existsByShipmentAndDriverAndStatus(shipment, driver,
 				DispatchApplicationStatus.PENDING)) {
 			throw new CustomException(
-			        ErrorCode.DUPLICATE_DISPATCH_APPLICATION, "이미 지원한 운송 요청입니다.");
+					ErrorCode.DUPLICATE_DISPATCH_APPLICATION, "이미 지원한 운송 요청입니다.");
 		}
 
 		// 기사 휴무일에는 배차 신청 불가
@@ -131,7 +131,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 		if (hasOverlappingDispatch) {
 			throw new CustomException(
-			        ErrorCode.DISPATCH_TIME_CONFLICT, "이미 확정된 배차와 운송 시간이 겹칩니다.");
+					ErrorCode.DISPATCH_TIME_CONFLICT, "이미 확정된 배차와 운송 시간이 겹칩니다.");
 		}
 
 		// 10. 지원 내역 생성
@@ -140,6 +140,42 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 		// 11. DB에 저장 후 지원 ID 반환
 		return applicationRepository.save(application).getId();
+	}
+
+	// 기사: 배차 확정 전 신청 취소
+	@Override
+	@Transactional
+	public void withdrawApplication(Long memberId, Long shipmentId) {
+
+		// 1. 로그인한 기사 조회
+		Driver driver = driverRepository.findByMemberId(memberId)
+				.orElseThrow(() -> new CustomException(
+						ErrorCode.NOT_FOUND, "기사 정보를 찾을 수 없습니다."));
+
+		// 2. 운송 요청 조회
+		Shipment shipment = shipmentService.getShipment(shipmentId);
+
+		// 3. 배차 대기 중일 때만 취소 가능
+		if (shipment.getStatus() != ShipmentStatus.REQUESTED) {
+			throw new CustomException(
+					ErrorCode.SHIPMENT_NOT_REQUESTED,
+					"배차가 확정되었거나 종료된 요청은 신청을 취소할 수 없습니다.");
+		}
+
+		// 4. 로그인한 기사의 대기 중 신청 찾기
+		DispatchApplication application = applicationRepository
+				.findByDriver_IdAndStatus(
+						driver.getId(),
+						DispatchApplicationStatus.PENDING)
+				.stream()
+				.filter(item -> item.getShipment().getId().equals(shipmentId))
+				.findFirst()
+				.orElseThrow(() -> new CustomException(
+						ErrorCode.DISPATCH_APPLICATION_NOT_PENDING,
+						"취소할 수 있는 배차 신청이 없습니다."));
+
+		// 5. 신청 기록은 유지하고 철회 상태로 변경
+		application.withdraw();
 	}
 
 	// 고객이 자신의 배송에 지원한 기사 목록 조회
@@ -180,7 +216,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 		// 3. 배차 대기 중인 배송인지 확인
 		if (shipment.getStatus() != ShipmentStatus.REQUESTED) {
-		    throw new CustomException(ErrorCode.SHIPMENT_NOT_REQUESTED);
+			throw new CustomException(ErrorCode.SHIPMENT_NOT_REQUESTED);
 		}
 
 		// 4. 이미 확정된 배차가 있는지 확인
@@ -193,21 +229,21 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
 		// 6. 해당 배송에 들어온 PENDING 지원인지 확인
-        if (!selectedApplication.getShipment().getId().equals(shipmentId)) {
-            throw new CustomException(
-                    ErrorCode.INVALID_INPUT, "해당 운송 요청의 배차 신청이 아닙니다.");
-        }
+		if (!selectedApplication.getShipment().getId().equals(shipmentId)) {
+			throw new CustomException(
+					ErrorCode.INVALID_INPUT, "해당 운송 요청의 배차 신청이 아닙니다.");
+		}
 
-        if (selectedApplication.getStatus() != DispatchApplicationStatus.PENDING) {
-            throw new CustomException(
-                    ErrorCode.DISPATCH_APPLICATION_NOT_PENDING);
-        }
+		if (selectedApplication.getStatus() != DispatchApplicationStatus.PENDING) {
+			throw new CustomException(
+					ErrorCode.DISPATCH_APPLICATION_NOT_PENDING);
+		}
 
 		// 배차 확정 전 예상 운송 시간 검증
-        if (isInvalidDuration(shipment)) {
-            throw new CustomException(
-                    ErrorCode.INVALID_INPUT, "예상 운송 시간이 제공되지 않은 배송은 배차를 확정할 수 없습니다.");
-        }
+		if (isInvalidDuration(shipment)) {
+			throw new CustomException(
+					ErrorCode.INVALID_INPUT, "예상 운송 시간이 제공되지 않은 배송은 배차를 확정할 수 없습니다.");
+		}
 
 		// 선택한 기사의 기존 확정 배차와 시간 중복 확인
 		LocalDateTime requestedStart = shipment.getPickupAt();
@@ -219,7 +255,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					Shipment assignedShipment = dispatch.getShipment();
 
 					if (isInvalidDuration(assignedShipment)) {
-					    return false;
+						return false;
 					}
 
 					LocalDateTime assignedStart = assignedShipment.getPickupAt();
@@ -230,8 +266,8 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 		if (hasOverlappingDispatch) {
 			throw new CustomException(
-			        ErrorCode.DISPATCH_TIME_CONFLICT,
-			        "선택한 기사에게 시간이 겹치는 확정 배차가 있습니다.");
+					ErrorCode.DISPATCH_TIME_CONFLICT,
+					"선택한 기사에게 시간이 겹치는 확정 배차가 있습니다.");
 		}
 
 		// 배차 확정 시 기사 상태 재검증
@@ -294,65 +330,63 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		ShipmentStatus previousStatus = shipment.getStatus();
 		shipment.changeStatus(ShipmentStatus.ASSIGNED);
 
-        // 12. 배송 상태 변경 이력 저장
-        statusHistoryService.record(
-                shipment,
-                previousStatus,
-                ShipmentStatus.ASSIGNED,
-                shipment.getCustomer(),
-                "고객이 지원 기사를 선택하여 배차 확정"
-        );
+		// 12. 배송 상태 변경 이력 저장
+		statusHistoryService.record(
+				shipment,
+				previousStatus,
+				ShipmentStatus.ASSIGNED,
+				shipment.getCustomer(),
+				"고객이 지원 기사를 선택하여 배차 확정");
 
-        // 13. 선택된 기사에게 배차 확정 알림
-        notificationService.send(
-                selectedDriver.getMember(),
-                NotificationType.DISPATCHED,
-                "배송 " + shipment.getId() + "번의 배차가 확정되었습니다.",
-                shipment
-        );
+		// 13. 선택된 기사에게 배차 확정 알림
+		notificationService.send(
+				selectedDriver.getMember(),
+				NotificationType.DISPATCHED,
+				"배송 " + shipment.getId() + "번의 배차가 확정되었습니다.",
+				shipment);
 
-        return dispatch.getId();
+		return dispatch.getId();
 
 	}
 
-    // 고객이 지원한 기사를 개별적으로 거절
-    @Override
-    @Transactional
-    public void rejectApplicant(Long memberId, Long shipmentId, Long applicationId) {
+	// 고객이 지원한 기사를 개별적으로 거절
+	@Override
+	@Transactional
+	public void rejectApplicant(Long memberId, Long shipmentId, Long applicationId) {
 
-        // 1. 배송 조회
-        Shipment shipment = shipmentService.getShipment(shipmentId);
+		// 1. 배송 조회
+		Shipment shipment = shipmentService.getShipment(shipmentId);
 
-        // 2. 본인이 등록한 배송인지 확인
-        if (!shipment.getCustomer().getId().equals(memberId)) {
-            throw new CustomException(
-                    ErrorCode.FORBIDDEN, "본인의 운송 요청만 관리할 수 있습니다.");
-        }
+		// 2. 본인이 등록한 배송인지 확인
+		if (!shipment.getCustomer().getId().equals(memberId)) {
+			throw new CustomException(
+					ErrorCode.FORBIDDEN, "본인의 운송 요청만 관리할 수 있습니다.");
+		}
 
 		// 3. 배차 대기 중인 배송인지 확인
 		if (shipment.getStatus() != ShipmentStatus.REQUESTED) {
 			throw new CustomException(ErrorCode.SHIPMENT_NOT_REQUESTED, "현재 지원을 거절할 수 없는 운송 요청입니다.");
 		}
 
-        // 4. 거절할 지원 신청 조회
-        DispatchApplication application = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new CustomException(
-                        ErrorCode.NOT_FOUND, "배차 신청을 찾을 수 없습니다."));
+		// 4. 거절할 지원 신청 조회
+		DispatchApplication application = applicationRepository.findById(applicationId)
+				.orElseThrow(() -> new CustomException(
+						ErrorCode.NOT_FOUND, "배차 신청을 찾을 수 없습니다."));
 
-        // 5. 해당 배송의 대기 중인 지원인지 확인
-        if (!application.getShipment().getId().equals(shipmentId)) {
-            throw new CustomException(
-                    ErrorCode.INVALID_INPUT, "해당 운송 요청의 배차 신청이 아닙니다.");
-        }
+		// 5. 해당 배송의 대기 중인 지원인지 확인
+		if (!application.getShipment().getId().equals(shipmentId)) {
+			throw new CustomException(
+					ErrorCode.INVALID_INPUT, "해당 운송 요청의 배차 신청이 아닙니다.");
+		}
 
-        if (application.getStatus() != DispatchApplicationStatus.PENDING) {
-            throw new CustomException(
-                    ErrorCode.DISPATCH_APPLICATION_NOT_PENDING);
-        }
+		if (application.getStatus() != DispatchApplicationStatus.PENDING) {
+			throw new CustomException(
+					ErrorCode.DISPATCH_APPLICATION_NOT_PENDING);
+		}
 
-        // 6. 지원 거절
-        application.reject();
-    }
+		// 6. 지원 거절
+		application.reject();
+	}
 
 	// 기사: 배차 대기 중인 운송 요청 목록 조회
 	@Override
@@ -500,11 +534,11 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					.cargoName(shipment.getCargoName()).cargoWeightKg(shipment.getCargoWeightKg())
 					.vehicleTypeId(shipment.getVehicleType().getId()).fare(shipment.getFare())
 					.pickupAt(shipment.getPickupAt()).durationMin(shipment.getDurationMin())
-					.canApply(blockReasons.isEmpty()).blockReasons(blockReasons).warningMessages(warningMessages)
+					.canApply(blockReasons.isEmpty()).alreadyApplied(alreadyApplied)
+					.blockReasons(blockReasons).warningMessages(warningMessages)
 					.build();
 		}).toList();
 	}
-
 
 	private boolean isInvalidDuration(Shipment shipment) {
 		return shipment.getDurationMin() == null || shipment.getDurationMin() <= 0;

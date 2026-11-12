@@ -53,11 +53,15 @@ const DriverShipmentListPage = () => {
     }
 
     if (availabilityFilter === 'available') {
-      return shipment.canApply === true
+      return shipment.canApply === true && !shipment.alreadyApplied
+    }
+
+    if (availabilityFilter === 'applied') {
+      return shipment.alreadyApplied === true
     }
 
     if (availabilityFilter === 'unavailable') {
-      return shipment.canApply === false
+      return shipment.canApply === false && !shipment.alreadyApplied
     }
 
     return true
@@ -86,6 +90,7 @@ const DriverShipmentListPage = () => {
           >
             <option value="all">전체</option>
             <option value="available">신청 가능</option>
+            <option value="applied">이미 신청함</option>
             <option value="unavailable">신청 불가</option>
           </select>
         </div>
@@ -129,7 +134,7 @@ const DriverShipmentListPage = () => {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : filteredShipments.length === 0 ? (
-        <div className="rounded-xl border bg-white p-6 text-center text-gray-500">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 text-center text-gray-500 shadow-sm">
           선택한 조건에 맞는 운송 요청이 없습니다.
         </div>
       ) : (
@@ -139,16 +144,26 @@ const DriverShipmentListPage = () => {
             <Link
               key={shipment.shipmentId}
               to={`/driver/shipments/${shipment.shipmentId}`}
-              className={`relative block w-full cursor-pointer overflow-hidden rounded-xl border p-5 text-inherit no-underline shadow-sm transition-shadow hover:shadow-md ${shipment.canApply
-                ? 'border-gray-200 bg-white'
-                : 'border-gray-300 bg-gray-100'
+              className={`relative block w-full cursor-pointer overflow-hidden rounded-xl border p-5 text-inherit no-underline shadow-sm transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-green-200 ${shipment.alreadyApplied
+                ? 'border-green-200 bg-green-50'
+                : shipment.canApply
+                  ? 'border-gray-200 bg-white'
+                  : 'border-gray-300 bg-gray-100'
                 }`}
             >
               {/* 신청 불가 카드에 회색 반투명 막 표시 */}
-              {!shipment.canApply && (
+              {!shipment.canApply && !shipment.alreadyApplied && (
                 <div
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-gray-300/35"
+                />
+              )}
+
+              {/* 이미 신청한 카드에는 연한 초록색 막 표시 */}
+              {shipment.alreadyApplied && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-green-200/30"
                 />
               )}
 
@@ -162,12 +177,14 @@ const DriverShipmentListPage = () => {
                     </h2>
 
                     <span
-                      className={`relative z-20 rounded-full px-3 py-1 text-xs font-semibold ${shipment.canApply
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-300 text-gray-700'
+                      className={`relative z-20 rounded-full px-3 py-1 text-xs font-semibold ${shipment.alreadyApplied
+                        ? 'bg-green-200 text-green-800'
+                        : shipment.canApply
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-300 text-gray-700'
                         }`}
                     >
-                      {shipment.canApply ? '배차 신청 가능' : '배차 신청 불가'}
+                      {shipment.alreadyApplied ? '이미 신청함' : shipment.canApply ? '배차 신청 가능' : '배차 신청 불가'}
                     </span>
                   </div>
 
@@ -224,7 +241,7 @@ const DriverShipmentListPage = () => {
               </div>
 
               {/* 배차 신청 불가 사유 */}
-              {shipment.blockReasons?.length > 0 && (
+              {!shipment.alreadyApplied && shipment.blockReasons?.length > 0 && (
                 <div className="relative z-20 mt-4 space-y-1">
                   {shipment.blockReasons.map((reason, index) => (
                     <p key={index} className="text-sm font-bold text-red-600">
