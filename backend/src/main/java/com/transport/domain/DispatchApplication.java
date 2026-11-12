@@ -9,7 +9,7 @@ import lombok.*;
 @Entity
 @Table(name = "dispatch_application")
 @Getter
-@ToString(exclude = {"shipment", "driver", "vehicle"})
+@ToString(exclude = { "shipment", "driver", "vehicle" })
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -52,5 +52,10 @@ public class DispatchApplication extends BaseEntity {
     // 다른 기사가 선택되어 자동 마감
     public void notSelect() {
         this.status = DispatchApplicationStatus.NOT_SELECTED;
+    }
+
+    // 기사가 배차 신청 취소
+    public void withdraw() {
+        this.status = DispatchApplicationStatus.WITHDRAWN;
     }
 }

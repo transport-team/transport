@@ -20,8 +20,16 @@ const DriverHomePage = () => (
     <Link
       to="/driver/shipments"
       className="block rounded-xl border border-blue-200 bg-white p-4 text-center font-semibold text-blue-600 hover:bg-blue-50"
-    >
+        >
       🚛 운송 요청 목록 보기
+    </Link>
+
+    {/* 내 배차 관리 페이지 이동 */}
+    <Link
+      to="/driver/dispatches"
+      className="block rounded-xl border border-green-200 bg-white p-4 text-center font-semibold text-green-700 hover:bg-green-50"
+    >
+      📋 내 배차 관리
     </Link>
 
   </section>

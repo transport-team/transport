@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 import com.transport.dto.DispatchApplyRequestDTO;
 import com.transport.dto.DriverShipmentListResponseDTO;
@@ -39,20 +40,31 @@ public class DriverDispatchApplicationController {
         return dispatchApplicationService.apply(
                 loginMember.getId(),
                 shipmentId,
-                requestDTO.getVehicleId()
-        );
+                requestDTO.getVehicleId());
     }
 
-	// 기사: 배차 대기 중인 운송 요청 목록 조회
-	@GetMapping
-	public ResponseEntity<List<DriverShipmentListResponseDTO>> getAvailableShipments(
-			@AuthenticationPrincipal LoginMember loginMember) {
+    // 기사: 배차 확정 전 신청 취소
+    @DeleteMapping("/{shipmentId}/applications/my")
+    public ResponseEntity<Void> withdrawApplication(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @PathVariable("shipmentId") Long shipmentId) {
 
-		List<DriverShipmentListResponseDTO> shipments =
-				dispatchApplicationService.getAvailableShipments(loginMember.getId());
+        dispatchApplicationService.withdrawApplication(
+                loginMember.getId(),
+                shipmentId);
 
-		return ResponseEntity.ok(shipments);
-	}
+        return ResponseEntity.noContent().build();
+    }
 
+    // 기사: 배차 대기 중인 운송 요청 목록 조회
+    @GetMapping
+    public ResponseEntity<List<DriverShipmentListResponseDTO>> getAvailableShipments(
+            @AuthenticationPrincipal LoginMember loginMember) {
+
+        List<DriverShipmentListResponseDTO> shipments = dispatchApplicationService
+                .getAvailableShipments(loginMember.getId());
+
+        return ResponseEntity.ok(shipments);
+    }
 
 }

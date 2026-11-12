@@ -4,13 +4,14 @@
 // API: 상태 변경 PATCH /{id}/status · 사진 업로드 POST /{id}/images (PHOTO_REQUIRED는 사람 말로 안내)
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getShipment, changeShipmentStatus, uploadShipmentImages } from '../../api/shipmentApi'
+import { changeShipmentStatus, uploadShipmentImages } from '../../api/shipmentApi'
+import { getMyAssignedDispatch } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import useLocationShare from '../../hooks/useLocationShare'
 import Button from '../../components/common/Button'
 
 // 팀원 3 상세 API 머지 전까지 쓰는 임시 데이터 (api.md의 GET /api/shipments/{id} 예시 필드 기준)
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 const MOCK_SHIPMENT = {
     shipmentId: 1,
     status: 'ASSIGNED',
@@ -78,8 +79,8 @@ const DriverDispatchProcessPage = () => {
                     if (!data) setLoadError('배송 정보를 찾을 수 없어요.')
                     else setShipment(data)
                 } else {
-                    // 실제 API (머지 후 이 줄만 살아남는다)
-                    const data = await getShipment(shipmentId)
+                    // 로그인한 기사 본인의 확정 배차 상세 조회
+                    const data = await getMyAssignedDispatch(shipmentId)
                     setShipment(data)
                 }
             } catch (err) {
@@ -141,7 +142,7 @@ const DriverDispatchProcessPage = () => {
     if (loadError) {
         return (
             <section className="grid gap-4 p-4">
-                <Link to="/driver" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 홈으로</Link>
+                <Link to="/driver/dispatches?tab=assigned" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 배차 확정 목록으로</Link>
                 <p className="rounded-2xl bg-white p-6 text-gray-600 shadow-sm">{loadError}</p>
             </section>
         )
@@ -149,7 +150,7 @@ const DriverDispatchProcessPage = () => {
 
     return (
         <section className="mx-auto grid max-w-md gap-4 p-4">
-            <Link to="/driver" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 홈으로</Link>
+            <Link to="/driver/dispatches?tab=assigned" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 배차 확정 목록으로</Link>
 
             {/* 제목 + 상태 배지 */}
             <div className="flex items-center justify-between gap-3">
