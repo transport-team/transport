@@ -6,17 +6,31 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import jwtAxios from '../util/jwtUtil'
 
 const SEND_INTERVAL_MS = 30_000 // 30초에 한 번 (계획서·decisions 기준)
+const GEO_SUPPORTED = typeof navigator !== 'undefined' && 'geolocation' in navigator
 
 const useLocationShare = (shipmentId, status) => {
-    const [sharing, setSharing] = useState(false)       // watchPosition 동작 중
+    const [sharing, setSharing] = useState(false)       // 좌표를 받는 중 (첫 좌표가 오면 true)
     const [lastSentAt, setLastSentAt] = useState(null)  // 마지막 전송 성공 시각 (Date)
-    const [error, setError] = useState('')              // 사용자에게 보여줄 안내 문구
+    const [watchError, setWatchError] = useState('')    // 위치 권한 · 신호 문제 (좌표가 다시 오면 지운다)
+    const [sendError, setSendError] = useState('')      // 서버 전송 문제 (전송에 성공하면 지운다)
     const [secondsAgo, setSecondsAgo] = useState(0)     // "n초 전 전송" 표시용
 
     const watchIdRef = useRef(null)
     const lastSentRef = useRef(null)                    // 마지막 전송 시각 (ref — 타이머/전송 로직 공용)
     const latestPosRef = useRef(null)                   // 가장 최근 좌표 (30초 타이머가 전송)
     const sendingRef = useRef(false)
+
+    const isTracking = status === 'IN_TRANSIT'
+
+    // 감시 멈추기 (sendNow가 쓰므로 먼저 선언한다)
+    const stopWatch = useCallback(() => {
+        if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current)
+            watchIdRef.current = null
+        }
+        latestPosRef.current = null
+        setSharing(false)
+    }, [])
 
     // 서버 전송 (IN_TRANSIT + 좌표 있을 때만)
     const sendNow = useCallback(async () => {
@@ -30,60 +44,43 @@ const useLocationShare = (shipmentId, status) => {
             })
             lastSentRef.current = new Date()
             setLastSentAt(lastSentRef.current)
-            setError('')
+            setSendError('')
         } catch (err) {
             const code = err.response?.data?.code
             if (code === 'NOT_IN_TRANSIT') {
                 // 상태가 이미 바뀜 (완료 등) — 감시를 멈추는 신호로 본다
-                setError('')
+                setSendError('')
                 stopWatch()
             } else if (code === 'NOT_ASSIGNED_DRIVER') {
-                setError('이 배송의 배정 기사가 아니에요.')
+                setSendError('이 배송의 배정 기사가 아니에요.')
                 stopWatch()
             } else {
-                setError('위치 전송에 실패했어요. 30초 뒤 다시 시도해요.')
+                setSendError('위치 전송에 실패했어요. 30초 뒤 다시 시도해요.')
             }
         } finally {
             sendingRef.current = false
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shipmentId])
+    }, [shipmentId, stopWatch])
 
-    const stopWatch = useCallback(() => {
-        if (watchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(watchIdRef.current)
-            watchIdRef.current = null
-        }
-        latestPosRef.current = null
-        setSharing(false)
-    }, [])
-
-    // 상태가 IN_TRANSIT일 때만 감시 시작 / 아니면 정리
+    // 상태가 IN_TRANSIT일 때만 감시 시작 — 상태가 바뀌거나 화면을 나가면 정리 함수가 멈춘다
+    // (effect 안에서 바로 setState 하지 않는다: sharing · 오류는 위치 콜백에서 바꾼다)
     useEffect(() => {
-        if (status !== 'IN_TRANSIT') {
-            stopWatch()
-            return
-        }
-        if (!('geolocation' in navigator)) {
-            setError('이 브라우저는 위치 기능을 지원하지 않아요.')
-            return
-        }
-
-        setError('')
-        setSharing(true)
+        if (!isTracking || !GEO_SUPPORTED) return
 
         watchIdRef.current = navigator.geolocation.watchPosition(
             (pos) => {
                 // 좌표만 갱신 — 전송은 30초 타이머가 한다 (API 호출 절약)
                 latestPosRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+                setSharing(true)
+                setWatchError('')
             },
             (err) => {
                 if (err.code === err.PERMISSION_DENIED) {
-                    setError('위치 권한이 거부됐어요. 브라우저 설정에서 위치 권한을 허용해 주세요.')
+                    setWatchError('위치 권한이 거부됐어요. 브라우저 설정에서 위치 권한을 허용해 주세요.')
                 } else if (err.code === err.POSITION_UNAVAILABLE) {
-                    setError('위치 신호를 찾을 수 없어요. GPS 상태를 확인해 주세요.')
+                    setWatchError('위치 신호를 찾을 수 없어요. GPS 상태를 확인해 주세요.')
                 } else {
-                    setError('위치를 가져오지 못했어요. 다시 시도해 주세요.')
+                    setWatchError('위치를 가져오지 못했어요. 다시 시도해 주세요.')
                 }
                 setSharing(false)
             },
@@ -91,7 +88,7 @@ const useLocationShare = (shipmentId, status) => {
         )
 
         return () => stopWatch()
-    }, [status, shipmentId, stopWatch])
+    }, [isTracking, shipmentId, stopWatch])
 
     // 30초 타이머 — 좌표가 있으면 전송
     useEffect(() => {
@@ -120,6 +117,10 @@ const useLocationShare = (shipmentId, status) => {
         }, 1000)
         return () => clearInterval(timer)
     }, [])
+
+    // 지원하지 않는 브라우저 안내는 상태로 두지 않고 계산한다
+    const unsupportedError = isTracking && !GEO_SUPPORTED ? '이 브라우저는 위치 기능을 지원하지 않아요.' : ''
+    const error = unsupportedError || watchError || sendError
 
     return { sharing, lastSentAt, secondsAgo, error }
 }
