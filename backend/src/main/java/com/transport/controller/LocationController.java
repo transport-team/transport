@@ -44,10 +44,13 @@ public class LocationController {
 		return ResponseEntity.ok(response);
 	}
 
-	@Operation(summary = "마지막 위치", description = "기록이 없으면 204 (아직 안 보낸 것 — 정상)")
+	@Operation(summary = "마지막 위치",
+			description = "본인 고객 · 배정 기사 · 관리자만 (아니면 403). 운송중(IN_TRANSIT)이 아니거나 기록이 없으면 204")
 	@GetMapping("/latest")
-	public ResponseEntity<?> getLatestLocation(@PathVariable Long id) {
-		LocationResponseDTO response = locationService.getLatestLocation(id);
+	public ResponseEntity<?> getLatestLocation(
+			@PathVariable Long id,
+			@AuthenticationPrincipal LoginMember loginMember) {
+		LocationResponseDTO response = locationService.getLatestLocation(id, loginMember.getId(), loginMember.getRole());
 		if (response == null) {
 			return ResponseEntity.noContent().build();
 		}

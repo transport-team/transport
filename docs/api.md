@@ -34,6 +34,7 @@
 | GET · PUT | /api/members/me | 내 정보 조회 · 수정(연락처) | 로그인 |
 | PATCH | /api/members/me/password | 비밀번호 변경 (현재 비밀번호 확인) | 로그인 |
 | GET · PUT · DELETE | /api/members/me/default-address | 기본 배송지 조회 · 저장/수정 · 삭제 | CUSTOMER |
+| GET | /api/members/me/recent-address | 저장된 배송지 목록 (최근 수정 순, 없으면 `[]`) — 배송 신청 화면의 '최근 주소' | 로그인 |
 | GET | /api/terms | 가입 화면 약관 목록 (필수 먼저 → 등록 순) | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
@@ -368,12 +369,12 @@
 |---|---|---|---|
 | PATCH | /api/shipments/{id}/status | 상태 변경 { nextStatus, memo } — 배정 기사만 | DRIVER |
 | GET | /api/shipments/{id}/history | 상태 이력 | 로그인 |
-| POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type) | DRIVER |
+| POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type = PICKUP · RECEIPT · ETC, 대소문자 무관 — 다른 값은 400 INVALID_INPUT) | DRIVER |
 | GET | /api/files/{fileName} | 사진 보기 (썸네일 `s_`) — `<img>` 때문에 인증 없이, UUID 파일명 | 전체 |
 | POST | /api/shipments/{id}/locations | 위치 전송 { lat, lng } — IN_TRANSIT만 | DRIVER |
-| GET | /api/shipments/{id}/locations/latest | 마지막 위치 | 로그인 |
-| GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트) | 로그인 |
-| GET · PATCH | /api/notifications, /{id}/read | 알림 목록 · 읽음 | 로그인 |
+| GET | /api/shipments/{id}/locations/latest | 마지막 위치 — IN_TRANSIT일 때만, 아니거나 기록이 없으면 204 · 남의 배송은 403 | 본인 고객 · 배정 기사 · ADMIN |
+| GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트 — 알림 본문은 목록 한 건과 같은 모양) | 로그인 |
+| GET · PATCH | /api/notifications, /{id}/read | 알림 목록 (한 건: id · type · message · shipmentId · isRead · createdAt) · 읽음 | 로그인 |
 | POST | /api/shipments/{id}/review | 리뷰 (배송완료 · 1회) | CUSTOMER |
 | GET | /api/drivers/{id}/reviews | 기사 리뷰 · 평균 평점 | 로그인 |
 

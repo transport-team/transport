@@ -1,10 +1,12 @@
 package com.transport.service;
 
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.transport.dto.NotificationResponseDTO;
 import com.transport.service.event.NotificationSavedEvent;
 
 import lombok.RequiredArgsConstructor;
@@ -31,20 +33,23 @@ public class NotificationSseListener {
 		try {
 			emitter.send(SseEmitter.event()
 					.name("notification")
-					.data("{\"id\":%d,\"type\":\"%s\",\"message\":\"%s\",\"shipmentId\":%s}"
-							.formatted(event.notificationId(), event.type(),
-									escape(event.message()),
-									event.shipmentId() == null ? "null" : event.shipmentId())));
+					.data(toPayload(event), MediaType.APPLICATION_JSON));
 			log.info("SSE 알림 전송: receiverId={}, type={}", event.receiverId(), event.type());
 		} catch (Exception e) {
 			log.warn("SSE 알림 전송 실패(연결 정리 필요): receiverId={}", event.receiverId());
 		}
 	}
 
-	// 메시지의 따옴표·개행 등을 이스케이프해서 JSON 안전하게
-	private String escape(String s) {
-		if (s == null) return "";
-		return s.replace("\\", "\\\\").replace("\"", "\\\\\"")
-				.replace("\r", "").replace("\n", " ");
+	// 목록 API(GET /api/notifications)의 한 건과 같은 모양 — JSON 변환은 Spring이 한다
+	// (손으로 JSON을 만들면 createdAt이 빠지거나 메시지의 따옴표 때문에 JSON이 깨진다)
+	static NotificationResponseDTO toPayload(NotificationSavedEvent event) {
+		return NotificationResponseDTO.builder()
+				.id(event.notificationId())
+				.type(event.type())
+				.message(event.message())
+				.shipmentId(event.shipmentId())
+				.read(false)
+				.createdAt(event.createdAt())
+				.build();
 	}
 }

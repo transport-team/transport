@@ -131,24 +131,25 @@ const ShipmentCreatePage = () => {
   const estimatedTotalWeight = cargoItems.reduce((total, item) => total + getEstimatedWeight(item), 0)
 
   // 선택된 물건 카테고리에 따라 화물 유형 자동 추천
-  useEffect(() => {
-    if (cargoTypeManuallyEdited || cargoTypes.length === 0) return
+  // effect로 form을 다시 바꾸지 않고 화면을 그릴 때 계산한다 (직접 고르면 고른 값이 우선)
+  const getRecommendedCargoTypeId = () => {
+    if (cargoTypes.length === 0) return ''
 
     const categories = cargoItems.map(item => item.category).join(' ')
-    let matchedType = null
+    const generalType = cargoTypes.find(c => c.name.includes('카고') || c.name.includes('일반'))
+    let matchedType
 
     if (categories.includes('냉장') || categories.includes('음식')) {
       matchedType = cargoTypes.find(c => c.name.includes('냉동') || c.name.includes('냉장') || c.name.includes('탑차'))
     } else if (categories.includes('가구') || categories.includes('가전')) {
       matchedType = cargoTypes.find(c => c.name.includes('카고') || c.name.includes('윙바디'))
-    } else {
-      matchedType = cargoTypes.find(c => c.name.includes('카고') || c.name.includes('일반'))
     }
 
-    if (matchedType && form.cargoTypeId !== String(matchedType.id)) {
-      setForm(current => ({ ...current, cargoTypeId: String(matchedType.id) }))
-    }
-  }, [cargoItems, cargoTypes, cargoTypeManuallyEdited])
+    // 맞는 유형이 없으면 처음 화면에서 고르던 기본값(카고 · 일반)을 그대로 둔다
+    const recommended = matchedType || generalType
+    return recommended ? String(recommended.id) : ''
+  }
+  const cargoTypeId = cargoTypeManuallyEdited ? form.cargoTypeId : (getRecommendedCargoTypeId() || form.cargoTypeId)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -237,14 +238,14 @@ const ShipmentCreatePage = () => {
     ...form,
     cargoName: [cargoItems.filter((item) => item.detail).map((item) => `${item.detail} ${item.quantity}개`).join(', '), form.cargoName.trim()].filter(Boolean).join(', '),
     vehicleTypeId: Number(form.vehicleTypeId),
-    cargoTypeId: Number(form.cargoTypeId),
+    cargoTypeId: Number(cargoTypeId),
     cargoWeightKg: Number(form.cargoWeightKg),
     senderName: form.senderName.trim(),
     senderPhone: form.senderPhone.trim(),
   })
 
   const canMoveToTransport = Boolean(
-    form.vehicleTypeId && form.cargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
+    form.vehicleTypeId && cargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
   )
 
   const canEstimateFare = Boolean(
@@ -383,6 +384,7 @@ const ShipmentCreatePage = () => {
                   </button>
                 ))}
               </div>
+              {vehicleTypeError && <p className="mt-3 text-sm font-bold text-red-500" role="alert">{vehicleTypeError}</p>}
               {vehicleWeightWarning && <p className={`mt-3 rounded-xl px-4 py-3 text-sm font-semibold ${vehicleWeightWarning.includes('신청할 수 없습니다') ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{vehicleWeightWarning}</p>}
             </div>
 
@@ -421,13 +423,14 @@ const ShipmentCreatePage = () => {
               </div>
 
               <label className="mt-6 block text-sm font-medium text-gray-700" htmlFor="cargoTypeId">화물 유형
-                <select id="cargoTypeId" name="cargoTypeId" value={form.cargoTypeId} onChange={handleChange} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" required>
+                <select id="cargoTypeId" name="cargoTypeId" value={cargoTypeId} onChange={handleChange} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" required>
                   <option value="">화물 유형을 선택하세요</option>
                   {cargoTypes.filter((cargoType) => cargoType.active).map((cargoType) => (
                     <option key={cargoType.id} value={cargoType.id}>{cargoType.name}</option>
                   ))}
                 </select>
               </label>
+              {cargoTypeError && <p className="mt-2 text-sm font-bold text-red-500" role="alert">{cargoTypeError}</p>}
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Input id="cargoName" label="추가 설명" name="cargoName" value={form.cargoName} onChange={handleChange} placeholder="직접 입력" />

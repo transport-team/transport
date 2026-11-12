@@ -93,11 +93,7 @@ public class Shipment extends BaseEntity {
 	@Version
 	private Long version;  // 낙관적 락
 
-	public void updateStatus(ShipmentStatus status) {
-		this.status = status;
-	}
-
-    // 배송 상태 전이 규칙을 검사한 후 상태 변경
+    // 배송 상태 전이 규칙을 검사한 후 상태 변경 (규칙을 건너뛰는 변경 메서드는 두지 않는다)
     public void changeStatus(ShipmentStatus next) {
         if (this.status == null || !this.status.canChangeTo(next)) {
             throw new CustomException(ErrorCode.INVALID_STATUS_CHANGE);
