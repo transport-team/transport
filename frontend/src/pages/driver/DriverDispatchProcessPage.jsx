@@ -4,13 +4,14 @@
 // API: 상태 변경 PATCH /{id}/status · 사진 업로드 POST /{id}/images (PHOTO_REQUIRED는 사람 말로 안내)
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getShipment, changeShipmentStatus, uploadShipmentImages } from '../../api/shipmentApi'
+import { changeShipmentStatus, uploadShipmentImages } from '../../api/shipmentApi'
+import { getMyAssignedDispatch } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import useLocationShare from '../../hooks/useLocationShare'
 import Button from '../../components/common/Button'
 
 // 팀원 3 상세 API 머지 전까지 쓰는 임시 데이터 (api.md의 GET /api/shipments/{id} 예시 필드 기준)
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 const MOCK_SHIPMENT = {
     shipmentId: 1,
     status: 'ASSIGNED',
@@ -47,6 +48,35 @@ const toMessage = (err) => {
     return ERROR_MESSAGES[code] || err.response?.data?.message || '요청에 실패했어요. 잠시 후 다시 시도해 주세요.'
 }
 
+// 선택하거나 업로드한 사진의 썸네일
+const PhotoThumbnail = ({ file, alt }) => {
+    const [previewUrl, setPreviewUrl] = useState('')
+
+    useEffect(() => {
+        let isActive = true
+        const url = URL.createObjectURL(file)
+
+        Promise.resolve().then(() => {
+            if (isActive) setPreviewUrl(url)
+        })
+
+        return () => {
+            isActive = false
+            URL.revokeObjectURL(url)
+        }
+    }, [file])
+
+    if (!previewUrl) return null
+
+    return (
+        <img
+            src={previewUrl}
+            alt={alt}
+            className="h-24 w-full rounded-lg border border-gray-200 object-cover"
+        />
+    )
+}
+
 const DriverDispatchProcessPage = () => {
     const { shipmentId } = useParams()
     const [shipment, setShipment] = useState(null)
@@ -58,6 +88,7 @@ const DriverDispatchProcessPage = () => {
 
     // 사진 업로드 상태 (5-4)
     const [photos, setPhotos] = useState([])        // File 목록 (미리보기용)
+    const [uploadedPhotos, setUploadedPhotos] = useState([]) // 업로드 성공한 사진
     const [uploading, setUploading] = useState(false)
     const [uploadError, setUploadError] = useState('')
     const [uploadedCount, setUploadedCount] = useState(0)
@@ -78,8 +109,8 @@ const DriverDispatchProcessPage = () => {
                     if (!data) setLoadError('배송 정보를 찾을 수 없어요.')
                     else setShipment(data)
                 } else {
-                    // 실제 API (머지 후 이 줄만 살아남는다)
-                    const data = await getShipment(shipmentId)
+                    // 로그인한 기사 본인의 확정 배차 상세 조회
+                    const data = await getMyAssignedDispatch(shipmentId)
                     setShipment(data)
                 }
             } catch (err) {
@@ -91,11 +122,23 @@ const DriverDispatchProcessPage = () => {
         load()
     }, [shipmentId])
 
-    // 파일 선택 → 이미지 미리보기만 (업로드는 버튼)
+    // 파일 선택 → 기존 사진에 새 사진 추가
     const handleSelectFiles = (e) => {
         setUploadError('')
-        setUploadedCount(0)
-        setPhotos(Array.from(e.target.files || []))
+
+        const selectedFiles = Array.from(e.target.files || [])
+
+        setPhotos((prev) => [...prev, ...selectedFiles])
+
+        // 같은 파일을 다시 선택해도 onChange가 작동하도록 초기화
+        e.target.value = ''
+    }
+
+    // 업로드 전 선택한 사진 한 장 삭제
+    const handleRemovePhoto = (indexToRemove) => {
+        setPhotos((prev) =>
+            prev.filter((_, index) => index !== indexToRemove)
+        )
     }
 
     const handleUpload = async () => {
@@ -104,7 +147,8 @@ const DriverDispatchProcessPage = () => {
         setUploadError('')
         try {
             const saved = await uploadShipmentImages(shipmentId, photos, step.photoType)
-            setUploadedCount(saved.length)
+            setUploadedCount((prev) => prev + saved.length)
+            setUploadedPhotos((prev) => [...prev, ...photos.slice(0, saved.length)])
             setPhotos([])
             clearPhotoInput()
         } catch (err) {
@@ -129,6 +173,10 @@ const DriverDispatchProcessPage = () => {
             await changeShipmentStatus(shipmentId, step.next)
             // 성공: 화면 데이터의 상태를 바로 갱신 (상세 API 머지 후에는 재조회로 교체)
             setShipment((prev) => ({ ...prev, status: step.next }))
+            setPhotos([])
+            setUploadedPhotos([])
+            setUploadedCount(0)
+            clearPhotoInput()
         } catch (err) {
             setActionError(toMessage(err))
         } finally {
@@ -141,7 +189,7 @@ const DriverDispatchProcessPage = () => {
     if (loadError) {
         return (
             <section className="grid gap-4 p-4">
-                <Link to="/driver" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 홈으로</Link>
+                <Link to="/driver/dispatches?tab=assigned" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 배차 확정 목록으로</Link>
                 <p className="rounded-2xl bg-white p-6 text-gray-600 shadow-sm">{loadError}</p>
             </section>
         )
@@ -149,7 +197,7 @@ const DriverDispatchProcessPage = () => {
 
     return (
         <section className="mx-auto grid max-w-md gap-4 p-4">
-            <Link to="/driver" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 홈으로</Link>
+            <Link to="/driver/dispatches?tab=assigned" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 배차 확정 목록으로</Link>
 
             {/* 제목 + 상태 배지 */}
             <div className="flex items-center justify-between gap-3">
@@ -206,26 +254,54 @@ const DriverDispatchProcessPage = () => {
                         capture="environment"
                         multiple
                         onChange={handleSelectFiles}
-                        className="w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700"
+                        className="w-full text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 file:transition-colors file:hover:bg-blue-200"
                     />
-                    {/* 미리보기 */}
+                    {/* 업로드 전 미리보기 */}
                     {photos.length > 0 && (
                         <div className="grid grid-cols-3 gap-2">
                             {photos.map((file, i) => (
-                                <img
-                                    key={i}
-                                    src={URL.createObjectURL(file)}
-                                    alt={`미리보기 ${i + 1}`}
-                                    className="h-20 w-full rounded-lg object-cover"
-                                />
+                                <div key={i} className="relative">
+                                    <PhotoThumbnail
+                                        file={file}
+                                        alt={`미리보기 ${i + 1}`}
+                                    />
+
+                                    {/* 선택한 사진 삭제 */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemovePhoto(i)}
+                                        disabled={uploading}
+                                        aria-label={`사진 ${i + 1} 삭제`}
+                                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-lg font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     )}
+
                     <Button onClick={handleUpload} loading={uploading} disabled={photos.length === 0} size="sm">
                         {photos.length > 0 ? `${photos.length}장 업로드` : '사진을 선택해 주세요'}
                     </Button>
+
+                    {/* 업로드 성공한 사진 */}
                     {uploadedCount > 0 && (
-                        <p className="text-sm font-semibold text-green-700">{uploadedCount}장 저장 완료!</p>
+                        <div className="grid gap-3">
+                            <p className="text-sm font-semibold text-green-700">
+                                ✓ 사진 {uploadedCount}장 저장 완료!
+                            </p>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                {uploadedPhotos.map((file, i) => (
+                                    <PhotoThumbnail
+                                        key={i}
+                                        file={file}
+                                        alt={`업로드 완료 사진 ${i + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     )}
                     {uploadError && <p className="text-sm font-semibold text-red-600">{uploadError}</p>}
                 </div>

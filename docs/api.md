@@ -20,8 +20,8 @@
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
 | 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING |
-| 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
-| 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
+| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(취소 기능과 함께 추가 예정) |
+| 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS, REVIEW_NOT_ALLOWED |
 
 ## 팀원 1 — 회원 · 인증 · 운영
 
@@ -34,11 +34,12 @@
 | GET · PUT | /api/members/me | 내 정보 조회 · 수정(연락처) | 로그인 |
 | PATCH | /api/members/me/password | 비밀번호 변경 (현재 비밀번호 확인) | 로그인 |
 | GET · PUT · DELETE | /api/members/me/default-address | 기본 배송지 조회 · 저장/수정 · 삭제 | CUSTOMER |
+| GET | /api/members/me/recent-address | 저장된 배송지 목록 (최근 수정 순, 없으면 `[]`) — 배송 신청 화면의 '최근 주소' | 로그인 |
 | GET | /api/terms | 가입 화면 약관 목록 (필수 먼저 → 등록 순) | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
 | POST · GET | /api/inquiries, /api/inquiries/my | 1:1 문의 등록 · 내 문의 (관리자는 403) | 고객 · 기사 |
-| GET | /api/admin/dashboard | 대시보드 1단계: 오늘 접수 · 배차 대기 · 진행 중 · 이번 달 매출 · 처리할 일 · 이번 달 차종별 | ADMIN |
+| GET | /api/admin/dashboard | 대시보드: 오늘 접수 · 완료, 배차 대기 · 진행 중, 이번 달 매출, 평균 평점, 처리할 일, 이번 달 차종별 · 기사 순위 | ADMIN |
 | GET | /api/admin/stats/daily | 일별 결제 완료 건수 · 매출 (from, to — 기본 오늘까지 14일, 최대 92일) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
 | POST · PUT · DELETE | /api/admin/notices · /faqs (/{id}) | 공지 · FAQ 관리 | ADMIN |
@@ -219,11 +220,16 @@
 // GET /api/admin/dashboard — 기준일은 서버 날짜, 접수 · 매출은 결제 완료(PAID) 기준
 { "baseDate": "2026-11-06",
   "todayReceivedCount": 3, "todayRevenue": 150000,       // 오늘 결제가 끝난 건수 · 금액
+  "todayCompletedCount": 4,                               // 오늘 배송완료(COMPLETED)로 바뀐 건수 (상태 이력)
   "waitingDispatchCount": 2,                              // 지금 REQUESTED
   "inProgressCount": 5,                                   // 지금 ASSIGNED · PICKED_UP · IN_TRANSIT · ARRIVED
   "monthPaidCount": 42, "monthRevenue": 4200000,         // 이번 달 1일 0시 ~ 지금
   "vehicleTypeStats": [{ "vehicleTypeId": 1, "vehicleTypeName": "소형 (다마스 · 라보)", "count": 0, "revenue": 0 },
                        { "vehicleTypeId": 2, "vehicleTypeName": "1톤", "count": 40, "revenue": 4000000 }],
+  "driverRanks": [{ "rank": 1, "driverId": 3, "driverName": "김기사", "completedCount": 7, "averageRating": 4.8 },
+                  { "rank": 1, "driverId": 5, "driverName": "이기사", "completedCount": 7, "averageRating": 0.0 },
+                  { "rank": 3, "driverId": 1, "driverName": "박기사", "completedCount": 3, "averageRating": 4.0 }],
+  "averageRating": 4.6, "reviewCount": 12,               // 전체 기간 리뷰
   "pendingDriverCount": 1, "pendingVehicleRequestCount": 0, "waitingInquiryCount": 2 }
 
 // GET /api/admin/stats/daily?from=2026-11-01&to=2026-11-03 — from · to 포함, 결제가 없는 날은 0
@@ -236,6 +242,9 @@
 - 환불돼 CANCELED가 된 결제는 매출 · 건수에서 빠진다. 월 정산(U)은 완료(COMPLETED) 기준이라 대시보드 매출과 다를 수 있다
 - 차종별: 사용 중인 차종은 결제가 없어도 0으로, 사용 중지된 차종은 결제가 있을 때만 (차종 id 순)
 - 처리할 일: 기사 승인 대기(`DriverService.getDrivers`), 차량 등록 신청 대기(`VehicleRegistrationService.getPendingRequests`), 답변 대기 문의
+- 오늘 완료: 상태 이력에서 오늘 0시 ~ 지금 COMPLETED로 바뀐 건수 (`StatusHistoryService.countCompleted`)
+- 기사 순위(`driverRanks`): 이번 달 COMPLETED 이력의 변경자(배정 기사)별 건수가 많은 5명, 같으면 기사 id 순으로 자른다. 건수가 같으면 같은 순위(1 · 1 · 3). 평점은 `ReviewService.getAverageRating`(전체 기간, 리뷰가 없으면 0.0). 이번 달 완료가 없으면 빈 목록
+- 평균 평점: 전체 기간 리뷰 평균(소수 첫째 자리, 리뷰가 없으면 0.0)과 리뷰 수 (`ReviewService.getRatingStat`)
 - 오늘 완료 · 평균 평점 · 기사 순위는 2단계 (완료 처리 · 리뷰 · 배차 기능이 생긴 뒤 — docs/collaboration.md 약속 표)
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
@@ -294,7 +303,7 @@
 | 400 | INVALID_INPUT | 입력값 검증 실패 |
 | 404 | NOT_FOUND | 차종 또는 기사 정보 없음 |
 | 409 | DUPLICATE_VEHICLE_PLATE | 차량번호 중복 |
-| 409 | DRIVER_ALREADY_ASSIGNED | 다른 차량에 이미 배정된 기사 |
+| 409 | DUPLICATE_DRIVER_VEHICLE_TYPE | 그 기사에게 같은 차종 차량이 이미 있음 (차종당 1대) |
 
 ### 기사 관리 예시 (관리자)
 
@@ -368,14 +377,15 @@
 |---|---|---|---|
 | PATCH | /api/shipments/{id}/status | 상태 변경 { nextStatus, memo } — 배정 기사만 | DRIVER |
 | GET | /api/shipments/{id}/history | 상태 이력 | 로그인 |
-| POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type) | DRIVER |
+| POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type = PICKUP · RECEIPT · ETC, 대소문자 무관 — 다른 값은 400 INVALID_INPUT) | DRIVER |
 | GET | /api/files/{fileName} | 사진 보기 (썸네일 `s_`) — `<img>` 때문에 인증 없이, UUID 파일명 | 전체 |
 | POST | /api/shipments/{id}/locations | 위치 전송 { lat, lng } — IN_TRANSIT만 | DRIVER |
-| GET | /api/shipments/{id}/locations/latest | 마지막 위치 | 로그인 |
-| GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트) | 로그인 |
-| GET · PATCH | /api/notifications, /{id}/read | 알림 목록 · 읽음 | 로그인 |
-| POST | /api/shipments/{id}/review | 리뷰 (배송완료 · 1회) | CUSTOMER |
-| GET | /api/drivers/{id}/reviews | 기사 리뷰 · 평균 평점 | 로그인 |
+| GET | /api/shipments/{id}/locations/latest | 마지막 위치 — IN_TRANSIT일 때만, 아니거나 기록이 없으면 204 · 남의 배송은 403 | 본인 고객 · 배정 기사 · ADMIN |
+| GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트 — 알림 본문은 목록 한 건과 같은 모양) | 로그인 |
+| GET · PATCH | /api/notifications, /{id}/read | 알림 목록 (한 건: id · type · message · shipmentId · isRead · createdAt) · 읽음 | 로그인 |
+| POST | /api/shipments/{id}/review | 리뷰 { rating 1~5, content 500자 이하 } — 본인 배송 · 배송완료 · 1회 (이미 있으면 409 `REVIEW_EXISTS`) | CUSTOMER |
+| GET | /api/shipments/{id}/review | 배송의 리뷰 (아직 없으면 204) | 로그인 |
+| GET | /api/drivers/{id}/reviews | 기사 리뷰 목록(최신순) · 평균 평점(리뷰가 없으면 0.0) | 로그인 |
 
 ## 결제 흐름
 

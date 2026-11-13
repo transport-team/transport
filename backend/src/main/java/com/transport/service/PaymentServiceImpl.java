@@ -71,7 +71,7 @@ public class PaymentServiceImpl implements PaymentService {
             payment.updatePaymentKey(requestDTO.getPaymentKey());
             payment.updateStatus(PaymentStatus.PAID);
             payment.updatePaidAt(LocalDateTime.now());
-            shipment.updateStatus(ShipmentStatus.REQUESTED);
+            shipment.changeStatus(ShipmentStatus.REQUESTED); // 전이 규칙 검사 (PENDING_PAYMENT → REQUESTED)
             statusHistoryService.record(shipment, fromStatus, ShipmentStatus.REQUESTED, null, "토스 결제 승인");
             entityManager.flush();
             return PaymentConfirmResponseDTO.from(payment);

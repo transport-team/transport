@@ -1,5 +1,6 @@
 package com.transport.service;
 
+import com.transport.domain.enums.MemberRole;
 import com.transport.dto.LocationResponseDTO;
 
 // 위치 서비스 (7-1 — 팀원 4)
@@ -17,7 +18,10 @@ public interface LocationService {
 
 	/**
 	 * 마지막 위치 (고객 상세 지도 초기 위치)
-	 * 기록이 없으면 null (404 아님 — 아직 위치를 안 보낸 건 정상 상태)
+	 * 권한: 관리자 · 본인 고객 · 배정 기사만 (아니면 FORBIDDEN)
+	 * 운송중(IN_TRANSIT)이 아니거나 기록이 없으면 null (404 아님 — 보여 줄 위치가 없는 정상 상태)
+	 * @param memberId 로그인 회원 ID
+	 * @param role 로그인 회원 역할
 	 */
-	LocationResponseDTO getLatestLocation(Long shipmentId);
+	LocationResponseDTO getLatestLocation(Long shipmentId, Long memberId, MemberRole role);
 }

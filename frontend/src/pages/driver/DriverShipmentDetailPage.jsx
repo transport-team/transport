@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { getAvailableShipments } from '../../api/dispatchApi'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { getAvailableShipments, applyDispatch, cancelDispatch } from '../../api/dispatchApi'
 import { getMyVehicles } from '../../api/vehicleApi'
-import { applyDispatch } from '../../api/dispatchApi'
 
 // 기사: 운송 요청 상세 페이지
 const DriverShipmentDetailPage = () => {
     const { shipmentId } = useParams()
+    const [searchParams] = useSearchParams()
+
+    // 어느 목록에서 상세 페이지로 들어왔는지 확인
+    const fromMyDispatches = searchParams.get('from') === 'my-dispatches'
+
+    const backPath = fromMyDispatches
+        ? '/driver/dispatches?tab=pending'
+        : '/driver/shipments'
     const [shipment, setShipment] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -21,6 +28,11 @@ const DriverShipmentDetailPage = () => {
     const [applying, setApplying] = useState(false)
     const [applyError, setApplyError] = useState('')
     const [applySuccess, setApplySuccess] = useState(false)
+
+    // 배차 신청 취소 처리 상태
+    const [cancelling, setCancelling] = useState(false)
+    const [cancelError, setCancelError] = useState('')
+    const [cancelSuccess, setCancelSuccess] = useState(false)
 
     // 차종별 이름 (목록 화면과 동일)
     const vehicleTypeNames = {
@@ -89,6 +101,7 @@ const DriverShipmentDetailPage = () => {
         try {
             await applyDispatch(Number(shipmentId), Number(selectedVehicleId))
             setApplySuccess(true)
+            setShipment((prev) => prev ? { ...prev, alreadyApplied: true, canApply: false } : prev)
         } catch (err) {
             console.error('배차 신청 실패:', err)
             setApplyError(
@@ -99,14 +112,69 @@ const DriverShipmentDetailPage = () => {
         }
     }
 
+    // 기사 배차 신청 취소
+    const handleCancelDispatch = async () => {
+        if (!shipment?.alreadyApplied || cancelling) {
+            return
+        }
+
+        const confirmed = window.confirm(
+            '배차 신청을 취소하시겠습니까?\n배차 확정 전까지만 취소할 수 있습니다.'
+        )
+
+        if (!confirmed) return
+
+        setCancelling(true)
+        setCancelError('')
+
+        try {
+            await cancelDispatch(Number(shipmentId))
+
+            setApplySuccess(false)
+            setCancelSuccess(true)
+
+            // 취소 성공 후 이전 신청 상태 해제
+            setShipment((prev) => prev ? {
+                ...prev,
+                alreadyApplied: false,
+                canApply: false,
+                blockReasons: prev.blockReasons?.filter(
+                    (reason) => reason !== '이미 배차 신청한 운송 요청입니다.'
+                ) || [],
+            } : prev)
+
+            // 서버에서 신청 가능 여부를 다시 계산해 가져오기
+            try {
+                const data = await getAvailableShipments()
+                const updated = data.find(
+                    (item) => String(item.shipmentId) === String(shipmentId)
+                )
+
+                if (updated) {
+                    setShipment(updated)
+                }
+            } catch (refreshError) {
+                console.error('신청 취소 후 목록 갱신 실패:', refreshError)
+            }
+
+        } catch (err) {
+            console.error('배차 신청 취소 실패:', err)
+            setCancelError(
+                err.response?.data?.message || '배차 신청 취소 중 오류가 발생했습니다.'
+            )
+        } finally {
+            setCancelling(false)
+        }
+    }
+
     return (
         <section className="grid gap-5">
             {/* 목록으로 돌아가기 */}
             <Link
-                to="/driver/shipments"
+                to={backPath}
                 className="w-fit text-sm text-gray-500 transition hover:text-blue-600"
             >
-                ← 운송 요청 목록으로
+                {fromMyDispatches ? '← 신청 대기 목록으로' : '← 운송 요청 목록으로'}
             </Link>
 
             <div>
@@ -139,12 +207,14 @@ const DriverShipmentDetailPage = () => {
                         </div>
 
                         <span
-                            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${shipment.canApply
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'bg-gray-100 text-gray-600'
+                            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${shipment.alreadyApplied
+                                ? 'bg-green-100 text-green-700'
+                                : shipment.canApply
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'bg-gray-100 text-gray-600'
                                 }`}
                         >
-                            {shipment.canApply ? '배차 신청 가능' : '배차 신청 불가'}
+                            {shipment.alreadyApplied ? '이미 신청함' : shipment.canApply ? '배차 신청 가능' : '배차 신청 불가'}
                         </span>
                     </div>
 
@@ -231,7 +301,7 @@ const DriverShipmentDetailPage = () => {
                     </div>
 
                     {/* 배차 신청 불가 사유 */}
-                    {shipment.blockReasons?.length > 0 && (
+                    {!shipment.alreadyApplied && shipment.blockReasons?.length > 0 && (
                         <div className="mt-5 space-y-2 rounded-xl border border-red-100 bg-red-50 p-4">
                             {shipment.blockReasons.map((reason, index) => (
                                 <p key={index} className="text-sm font-semibold text-red-700">
@@ -252,74 +322,110 @@ const DriverShipmentDetailPage = () => {
                         </div>
                     )}
 
-
                     {/* 배차 신청 버튼 */}
-                    <div className="mt-6 border-t border-gray-100 pt-6">
-                        {/* 배차에 사용할 차량 선택 */}
-                        <label className="mb-2 block text-sm font-semibold text-gray-700">
-                            배차에 사용할 내 차량
-                        </label>
-
-                        <select
-                            value={selectedVehicleId}
-                            onChange={(e) => setSelectedVehicleId(e.target.value)}
-                            disabled={!shipment.canApply || vehiclesLoading || availableVehicles.length === 0}
-                            className="mb-4 h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <option value="">
-                                {vehiclesLoading ? '차량 불러오는 중...' : '차량을 선택해 주세요'}
-                            </option>
-
-                            {availableVehicles.map((vehicle) => (
-                                <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
-                                    {vehicle.plateNo} (차종 {vehicle.vehicleTypeId})
-                                </option>
-                            ))}
-                        </select>
-
-                        {vehicleError && (
-                            <p className="mb-3 text-sm text-red-600">
-                                {vehicleError}
-                            </p>
+                    <>
+                        {/* 신청 취소 완료 안내 */}
+                        {cancelSuccess && (
+                            <div className="mt-6 rounded-xl border border-green-100 bg-green-50 p-4 text-center text-sm font-semibold text-green-800">
+                                배차 신청이 취소되었습니다.
+                            </div>
                         )}
 
-                        {shipment.canApply &&
-                            !vehiclesLoading &&
-                            !vehicleError &&
-                            availableVehicles.length === 0 && (
-                                <p className="mb-3 text-sm text-red-600">
-                                    이 운송 요청에 사용할 수 있는 차량이 없습니다.
-                                </p>
-                            )}
+                        {shipment.alreadyApplied ? (
+                            <div className="mt-6 space-y-3">
 
-                        {/* 배차 신청 */}
-                        <button
-                            type="button"
-                            onClick={handleApplyDispatch}
-                            disabled={!shipment.canApply || !selectedVehicleId || applying || applySuccess}
-                            className={`w-full rounded-xl px-6 py-3.5 text-base font-bold transition ${shipment.canApply && selectedVehicleId && !applying && !applySuccess
-                                    ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
-                                    : 'cursor-not-allowed bg-gray-200 text-gray-400'
-                                }`}
-                        >
-                            {applying ? '신청 처리 중...' : applySuccess ? '신청 완료' : '배차 신청'}
-                        </button>
+                                {/* 이미 신청한 요청 안내 */}
+                                <div className="rounded-xl border border-green-100 bg-green-50 p-4 text-center text-sm font-semibold text-green-800">
+                                    {applySuccess
+                                        ? '배차 신청이 완료되었습니다. 고객의 선택을 기다려 주세요.'
+                                        : '이미 신청한 운송 요청입니다. 고객의 선택을 기다려 주세요.'}
+                                </div>
 
-                        {/* 배차 신청 성공 */}
-                        {applySuccess && (
-                            <p className="mt-3 text-center text-sm font-semibold text-green-700">
-                                배차 신청이 완료되었습니다. 고객의 선택을 기다려 주세요.
-                            </p>
+                                {/* 배차 신청 취소 버튼 */}
+                                <button
+                                    type="button"
+                                    onClick={handleCancelDispatch}
+                                    disabled={cancelling}
+                                    className="w-full rounded-xl border border-red-200 bg-white px-6 py-3.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {cancelling ? '취소 처리 중...' : '배차 신청 취소'}
+                                </button>
+
+                                {/* 배차 신청 취소 실패 */}
+                                {cancelError && (
+                                    <p className="text-center text-sm font-semibold text-red-600">
+                                        {cancelError}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="mt-6 border-t border-gray-100 pt-6">
+                                {/* 배차에 사용할 차량 선택 */}
+                                <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                    배차에 사용할 내 차량
+                                </label>
+
+                                <select
+                                    value={selectedVehicleId}
+                                    onChange={(e) => setSelectedVehicleId(e.target.value)}
+                                    disabled={!shipment.canApply || vehiclesLoading || availableVehicles.length === 0}
+                                    className="mb-4 h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <option value="">
+                                        {vehiclesLoading ? '차량 불러오는 중...' : '차량을 선택해 주세요'}
+                                    </option>
+
+                                    {availableVehicles.map((vehicle) => (
+                                        <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
+                                            {vehicle.plateNo} (차종 {vehicle.vehicleTypeId})
+                                        </option>
+                                    ))}
+                                </select>
+
+                                {vehicleError && (
+                                    <p className="mb-3 text-sm text-red-600">
+                                        {vehicleError}
+                                    </p>
+                                )}
+
+                                {shipment.canApply &&
+                                    !vehiclesLoading &&
+                                    !vehicleError &&
+                                    availableVehicles.length === 0 && (
+                                        <p className="mb-3 text-sm text-red-600">
+                                            이 운송 요청에 사용할 수 있는 차량이 없습니다.
+                                        </p>
+                                    )}
+
+                                {/* 배차 신청 */}
+                                <button
+                                    type="button"
+                                    onClick={handleApplyDispatch}
+                                    disabled={!shipment.canApply || !selectedVehicleId || applying || applySuccess}
+                                    className={`w-full rounded-xl px-6 py-3.5 text-base font-bold transition ${shipment.canApply && selectedVehicleId && !applying && !applySuccess
+                                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'cursor-not-allowed bg-gray-200 text-gray-400'
+                                        }`}
+                                >
+                                    {applying ? '신청 처리 중...' : applySuccess ? '신청 완료' : '배차 신청'}
+                                </button>
+
+                                {/* 배차 신청 성공 */}
+                                {applySuccess && (
+                                    <p className="mt-3 text-center text-sm font-semibold text-green-700">
+                                        배차 신청이 완료되었습니다. 고객의 선택을 기다려 주세요.
+                                    </p>
+                                )}
+
+                                {/* 배차 신청 실패 */}
+                                {applyError && (
+                                    <p className="mt-3 text-center text-sm font-semibold text-red-600">
+                                        {applyError}
+                                    </p>
+                                )}
+                            </div>
                         )}
-
-                        {/* 배차 신청 실패 */}
-                        {applyError && (
-                            <p className="mt-3 text-center text-sm font-semibold text-red-600">
-                                {applyError}
-                            </p>
-                        )}
-                    </div>
-
+                    </>
 
                 </div>
             )}

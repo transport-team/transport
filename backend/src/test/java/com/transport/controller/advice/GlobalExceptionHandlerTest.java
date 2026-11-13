@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.transport.dto.PageRequestDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 
@@ -57,6 +58,23 @@ class GlobalExceptionHandlerTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("INVALID_INPUT"))
 				.andExpect(jsonPath("$.message").value("이름을 입력하세요."));
+	}
+
+	@Test
+	void queryValidationFailureUsesDtoMessage() throws Exception {
+		mockMvc.perform(get("/test/paging").param("page", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+				.andExpect(jsonPath("$.message").value("page는 1 이상이어야 합니다."));
+	}
+
+	@Test
+	void queryTypeMismatchUsesDefaultMessage() throws Exception {
+		// 숫자 자리에 글자(?page=abc) — Spring의 영어 형 변환 문구 대신 기본 문구
+		mockMvc.perform(get("/test/paging").param("page", "abc"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+				.andExpect(jsonPath("$.message").value(ErrorCode.INVALID_INPUT.getMessage()));
 	}
 
 	@Test
@@ -109,6 +127,10 @@ class GlobalExceptionHandlerTest {
 
 		@PostMapping("/test/valid")
 		void valid(@Valid @RequestBody NameRequest request) {
+		}
+
+		@GetMapping("/test/paging")
+		void paging(@Valid PageRequestDTO pageRequestDTO) {
 		}
 
 		@GetMapping("/test/boom")

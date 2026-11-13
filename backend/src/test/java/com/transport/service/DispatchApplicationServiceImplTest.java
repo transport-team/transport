@@ -491,6 +491,8 @@ class DispatchApplicationServiceImplTest {
         when(vehicleRepository.findById(vehicleId)).thenReturn(Optional.of(vehicle));
         when(applicationRepository.existsByShipmentAndDriverAndStatus(
                 shipment, driver, DispatchApplicationStatus.PENDING)).thenReturn(false);
+        when(applicationRepository.existsByShipmentAndDriverAndStatus(
+                shipment, driver, DispatchApplicationStatus.REJECTED)).thenReturn(false);
         when(driverScheduleRepository.findByDriver_IdAndWorkDate(
                 driver.getId(), shipment.getPickupAt().toLocalDate())).thenReturn(Optional.empty());
 
@@ -501,6 +503,69 @@ class DispatchApplicationServiceImplTest {
         assertThat(exception).isNotNull();
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         assertThat(exception).hasMessage("예상 운송 시간이 제공되지 않은 배송은 배차를 신청할 수 없습니다.");
+    }
+
+    @Test
+    @DisplayName("고객이 거절한 운송 요청에는 다시 지원할 수 없다 (지원자 목록에 다시 나타나지 않게)")
+    void cannotReapplyAfterRejectedByCustomer() {
+        Long memberId = 10L;
+        Long vehicleId = 30L;
+        Driver driver = Driver.builder().id(40L).status(DriverStatus.ACTIVE).build();
+        VehicleType vehicleType = VehicleType.builder().id(50L).build();
+        Vehicle vehicle = Vehicle.builder()
+                .id(vehicleId).driver(driver).vehicleType(vehicleType).status(VehicleStatus.AVAILABLE).build();
+        Shipment shipment = Shipment.builder()
+                .id(20L).vehicleType(vehicleType).status(ShipmentStatus.REQUESTED)
+                .pickupAt(LocalDateTime.now().plusDays(1)).durationMin(60).build();
+
+        when(driverRepository.findByMemberId(memberId)).thenReturn(Optional.of(driver));
+        when(shipmentService.getShipment(20L)).thenReturn(shipment);
+        when(vehicleRepository.findById(vehicleId)).thenReturn(Optional.of(vehicle));
+        when(applicationRepository.existsByShipmentAndDriverAndStatus(
+                shipment, driver, DispatchApplicationStatus.PENDING)).thenReturn(false);
+        when(applicationRepository.existsByShipmentAndDriverAndStatus(
+                shipment, driver, DispatchApplicationStatus.REJECTED)).thenReturn(true);
+
+        assertThatThrownBy(() -> dispatchApplicationService.apply(memberId, 20L, vehicleId))
+                .isInstanceOf(CustomException.class)
+                .hasMessage("고객이 거절한 운송 요청에는 다시 지원할 수 없습니다.")
+                .extracting("errorCode").isEqualTo(ErrorCode.DUPLICATE_DISPATCH_APPLICATION);
+        verify(applicationRepository, never()).save(any(DispatchApplication.class));
+    }
+
+    @Test
+    @DisplayName("운송 요청 목록: 거절된 요청은 지원 불가와 이유를, 소요시간이 없는 요청은 500 없이 지원 불가로 보여 준다")
+    void availableShipmentsShowRejectedAndMissingDuration() {
+        Long memberId = 10L;
+        Driver driver = Driver.builder().id(40L).status(DriverStatus.ACTIVE).build();
+        VehicleType vehicleType = VehicleType.builder().id(50L).build();
+        Vehicle vehicle = Vehicle.builder()
+                .id(30L).driver(driver).vehicleType(vehicleType).status(VehicleStatus.AVAILABLE).build();
+        Shipment rejected = Shipment.builder()
+                .id(21L).vehicleType(vehicleType).status(ShipmentStatus.REQUESTED)
+                .pickupAt(LocalDateTime.now().plusDays(1)).durationMin(60).build();
+        Shipment noDuration = Shipment.builder()
+                .id(22L).vehicleType(vehicleType).status(ShipmentStatus.REQUESTED)
+                .pickupAt(LocalDateTime.now().plusDays(2)).durationMin(null).build();
+
+        when(driverRepository.findByMemberId(memberId)).thenReturn(Optional.of(driver));
+        when(vehicleRepository.findByDriver_Id(40L)).thenReturn(List.of(vehicle));
+        when(dispatchRepository.findByDriver_IdAndActiveTrue(40L)).thenReturn(List.of());
+        when(applicationRepository.findByDriver_IdAndStatus(40L, DispatchApplicationStatus.PENDING)).thenReturn(List.of());
+        when(applicationRepository.findByDriver_IdAndStatus(40L, DispatchApplicationStatus.REJECTED))
+                .thenReturn(List.of(createApplication(rejected, DispatchApplicationStatus.REJECTED)));
+        when(shipmentService.getRequestedShipments()).thenReturn(List.of(rejected, noDuration));
+        when(driverScheduleRepository.findByDriver_IdAndWorkDate(any(), any())).thenReturn(Optional.empty());
+
+        var result = dispatchApplicationService.getAvailableShipments(memberId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).isCanApply()).isFalse();
+        assertThat(result.get(0).isAlreadyApplied()).isFalse();
+        assertThat(result.get(0).getBlockReasons()).contains("고객이 거절한 운송 요청이라 다시 지원할 수 없습니다.");
+        assertThat(result.get(1).isCanApply()).isFalse();
+        assertThat(result.get(1).getDurationMin()).isZero();
+        assertThat(result.get(1).getBlockReasons()).contains("예상 운송 시간이 올바르지 않아 배차 신청할 수 없습니다.");
     }
 
     // 테스트용 배송 생성

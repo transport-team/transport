@@ -12,7 +12,7 @@
 ## 문서 (작업 전에 필요한 문서만 읽을 것)
 - docs/requirements.md  요구사항 (기능 ID · 담당)
 - docs/status.md        배송 상태 · 전이 규칙 (가장 중요한 규칙)
-- docs/erd.md           테이블 20개
+- docs/erd.md           테이블 23개
 - docs/api.md           API 명세 · 에러 코드
 - docs/fare.md          운임 계산 규칙
 - docs/collaboration.md 역할 분담 · 도메인 간 약속 · Git 규칙

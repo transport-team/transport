@@ -4,6 +4,8 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,11 @@ import com.transport.domain.Shipment;
 import com.transport.domain.VehicleType;
 import com.transport.domain.enums.PaymentStatus;
 import com.transport.domain.enums.ShipmentStatus; 
+import com.transport.domain.enums.MemberRole;
+import com.transport.dto.PageRequestDTO;
+import com.transport.dto.PageResponseDTO;
+import com.transport.dto.ShipmentListResponseDTO;
+import com.transport.dto.ShipmentDetailResponseDTO;
 import com.transport.dto.FareCalculateRequestDTO;
 import com.transport.dto.FareCalculateResponseDTO;
 import com.transport.dto.ShipmentRequestDTO;
@@ -38,6 +45,8 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final CargoTypeRepository cargoTypeRepository;
     private final MemberService memberService;
     private final VehicleTypeService vehicleTypeService;
+    private final DispatchService dispatchService;
+    private final StatusHistoryService statusHistoryService;
 
     @Override
     @Transactional
@@ -116,6 +125,40 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .orderId(payment.getOrderId())
                 .amount(payment.getAmount())
                 .build();
+    }
+
+    @Override
+    public PageResponseDTO<ShipmentListResponseDTO> getMyShipments(
+            Long memberId, PageRequestDTO pageRequestDTO, ShipmentStatus status,
+            LocalDate from, LocalDate to) {
+        LocalDateTime fromDateTime = from == null ? null : from.atStartOfDay();
+        LocalDateTime toDateTime = to == null ? null : to.plusDays(1).atStartOfDay();
+        var result = shipmentRepository.findMyShipments(
+                memberId, status, fromDateTime, toDateTime,
+                pageRequestDTO.getPageable(org.springframework.data.domain.Sort.by("createdAt").descending()));
+
+        return PageResponseDTO.<ShipmentListResponseDTO>withAll()
+                .dtoList(result.getContent().stream().map(ShipmentListResponseDTO::from).toList())
+                .pageRequestDTO(pageRequestDTO)
+                .totalCount(result.getTotalElements())
+                .build();
+    }
+
+    @Override
+    public ShipmentDetailResponseDTO getShipmentDetail(Long shipmentId, Long memberId, MemberRole role) {
+        Shipment shipment = getShipment(shipmentId);
+        boolean owner = shipment.getCustomer().getId().equals(memberId);
+        boolean admin = role == MemberRole.ADMIN;
+        Long assignedDriverMemberId = dispatchService.getActiveDriver(shipmentId);
+        boolean assignedDriver = assignedDriverMemberId != null && assignedDriverMemberId.equals(memberId);
+        if (!owner && !admin && !assignedDriver) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "본인 배송만 조회할 수 있습니다.");
+        }
+
+        var history = statusHistoryService.getHistory(shipmentId).stream()
+                .map(com.transport.dto.ShipmentStatusHistoryResponseDTO::from)
+                .toList();
+        return ShipmentDetailResponseDTO.from(shipment, assignedDriverMemberId, history);
     }
 
     // 관리자 대시보드: 지금 상태별 배송 건수 (팀원 1 대시보드가 쓰는 읽기 전용 메서드)

@@ -12,7 +12,7 @@ public interface DashboardService {
 	// 일별 통계로 한 번에 볼 수 있는 최대 일수
 	int MAX_DAILY_DAYS = 92;
 
-	// 오늘 · 지금 · 이번 달 숫자, 처리할 일, 이번 달 차종별 (today: 기준일 — 컨트롤러가 서버 날짜를 넘긴다)
+	// 오늘 · 지금 · 이번 달 숫자, 평균 평점, 처리할 일, 이번 달 차종별 · 기사 순위 (today: 기준일 — 컨트롤러가 서버 날짜를 넘긴다)
 	DashboardDTO getDashboard(LocalDate today);
 
 	// from ~ to(포함) 날짜별 결제 완료 건수 · 매출. 결제가 없는 날은 0, 최대 92일

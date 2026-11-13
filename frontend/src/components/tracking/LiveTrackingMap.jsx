@@ -20,6 +20,13 @@ const loadKakaoSdk = () =>
         document.head.appendChild(script)
     })
 
+// 두 위치 중 recordedAt이 더 최근인 것 (한쪽만 있으면 그것, 시각을 모르면 SSE 쪽)
+const pickLatest = (fetched, live) => {
+    if (!fetched) return live
+    if (!live) return fetched
+    return new Date(live.recordedAt) < new Date(fetched.recordedAt) ? fetched : live
+}
+
 const LiveTrackingMap = ({ shipmentId, status, sseLocation }) => {
     const mapRef = useRef(null)          // <div> DOM
     const kakaoRef = useRef(null)        // kakao 객체
@@ -28,9 +35,13 @@ const LiveTrackingMap = ({ shipmentId, status, sseLocation }) => {
 
     const [loaded, setLoaded] = useState(false)
     const [error, setError] = useState('')
-    const [lastLoc, setLastLoc] = useState(null)   // { lat, lng, recordedAt }
+    const [fetchedLoc, setFetchedLoc] = useState(null)   // latest API로 받은 위치 { lat, lng, recordedAt }
+    const [now, setNow] = useState(() => Date.now())     // "n초 전" 계산 기준 (1초마다 갱신)
 
     const isTracking = status === 'IN_TRANSIT'
+    // 보여 줄 위치: API로 받은 것과 SSE로 받은 것 중 최신 (effect로 상태에 다시 복사하지 않고 계산)
+    const lastLoc = pickLatest(fetchedLoc, sseLocation?.lat != null ? sseLocation : null)
+    const hasRecordedAt = Boolean(lastLoc?.recordedAt)
 
     // 1) SDK 로드 + 지도 생성 (1회)
     useEffect(() => {
@@ -58,16 +69,18 @@ const LiveTrackingMap = ({ shipmentId, status, sseLocation }) => {
         jwtAxios.get(`/api/shipments/${shipmentId}/locations/latest`)
             .then((res) => {
                 if (cancelled || !res.data) return
-                setLastLoc(res.data)
+                setFetchedLoc(res.data)
             })
             .catch(() => {/* 204 또는 실패 — 무시, SSE를 기다린다 */})
         return () => { cancelled = true }
     }, [loaded, shipmentId, isTracking])
 
-    // 3) SSE 좌표가 들어오면 최신으로 갱신
+    // 3) "n초 전" 표시용 1초 타이머 (그릴 때 Date.now()를 부르지 않는다)
     useEffect(() => {
-        if (sseLocation?.lat != null) setLastLoc(sseLocation)
-    }, [sseLocation])
+        if (!hasRecordedAt) return
+        const timer = setInterval(() => setNow(Date.now()), 1000)
+        return () => clearInterval(timer)
+    }, [hasRecordedAt])
 
     // 4) 마커 표시·이동 (lastLoc이 바뀔 때)
     useEffect(() => {
@@ -100,7 +113,7 @@ const LiveTrackingMap = ({ shipmentId, status, sseLocation }) => {
             {!error && lastLoc && (
                 <p className="border-t border-gray-100 p-3 text-xs text-gray-500">
                     📍 마지막 위치 {lastLoc.recordedAt
-                        ? `${Math.max(0, Math.floor((Date.now() - new Date(lastLoc.recordedAt).getTime()) / 1000))}초 전`
+                        ? `${Math.max(0, Math.floor((now - new Date(lastLoc.recordedAt).getTime()) / 1000))}초 전`
                         : ''}
                 </p>
             )}

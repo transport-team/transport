@@ -29,6 +29,7 @@ import com.transport.domain.Member;
 import com.transport.domain.enums.MemberRole;
 import com.transport.dto.DailyStatDTO;
 import com.transport.dto.DashboardDTO;
+import com.transport.dto.DriverRankDTO;
 import com.transport.dto.VehicleTypeStatDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -56,8 +57,12 @@ class AdminDashboardControllerTest {
 		when(dashboardService.getDashboard(any(LocalDate.class))).thenReturn(DashboardDTO.builder()
 				.baseDate(LocalDate.of(2026, 11, 6))
 				.todayReceivedCount(3)
+				.todayCompletedCount(4)
 				.monthRevenue(4_200_000)
 				.vehicleTypeStats(List.of(VehicleTypeStatDTO.builder().vehicleTypeId(2L).vehicleTypeName("1톤").count(40).revenue(4_000_000).build()))
+				.driverRanks(List.of(DriverRankDTO.builder().rank(1).driverId(3L).driverName("김기사").completedCount(7).averageRating(4.8).build()))
+				.averageRating(4.6)
+				.reviewCount(12)
 				.waitingInquiryCount(2)
 				.build());
 
@@ -66,8 +71,15 @@ class AdminDashboardControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.baseDate").value("2026-11-06"))
 				.andExpect(jsonPath("$.todayReceivedCount").value(3))
+				.andExpect(jsonPath("$.todayCompletedCount").value(4))
 				.andExpect(jsonPath("$.monthRevenue").value(4_200_000))
 				.andExpect(jsonPath("$.vehicleTypeStats[0].vehicleTypeName").value("1톤"))
+				.andExpect(jsonPath("$.driverRanks[0].rank").value(1))
+				.andExpect(jsonPath("$.driverRanks[0].driverName").value("김기사"))
+				.andExpect(jsonPath("$.driverRanks[0].completedCount").value(7))
+				.andExpect(jsonPath("$.driverRanks[0].averageRating").value(4.8))
+				.andExpect(jsonPath("$.averageRating").value(4.6))
+				.andExpect(jsonPath("$.reviewCount").value(12))
 				.andExpect(jsonPath("$.waitingInquiryCount").value(2));
 		LocalDate after = LocalDate.now();
 

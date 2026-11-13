@@ -1,4 +1,4 @@
-# ERD — 테이블 21개
+# ERD — 테이블 23개
 
 - 관리자: 팀원 2 (테이블 변경은 팀원 2에게 요청 → 주간 회의에서 확정 → 이 문서 수정)
 - 공통: 모든 테이블은 `id BIGINT PK AUTO_INCREMENT`, `created_at`, `updated_at`(BaseEntity)
@@ -152,6 +152,18 @@
 
 - 제약조건: `UNIQUE(driver_id, vehicle_type_id)` — 기사별 동일 차종 중복 등록 방지
 - 차량번호 `plate_no`는 전체 차량에서 UNIQUE
+
+### vehicle_registration_request (기사 차량 등록 신청)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| driver_id (FK) | BIGINT | 신청한 기사 |
+| vehicle_type_id (FK) | BIGINT | 신청한 차종 |
+| plate_no | VARCHAR(20) | 신청한 차량번호 |
+| status | VARCHAR(20) | PENDING · APPROVED · REJECTED |
+| rejection_reason (NULL) | VARCHAR(300) | 거절 사유 |
+| reviewed_at (NULL) | DATETIME | 관리자가 승인 · 거절한 시각 |
+
+- 기사가 신청하면 `PENDING`, 관리자가 승인하면 `vehicle`에 차량이 생기고 `APPROVED`, 거절하면 사유와 함께 `REJECTED`
 
 ### driver_schedule (driver + work_date UQ)
 | 컬럼 | 타입 | 설명 |

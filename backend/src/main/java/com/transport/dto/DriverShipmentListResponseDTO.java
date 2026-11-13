@@ -32,6 +32,9 @@ public class DriverShipmentListResponseDTO {
 	// 배차 신청 가능 여부
 	private boolean canApply;
 
+	// 로그인한 기사가 해당 운송 요청에 이미 지원했는지 (PENDING)
+	private boolean alreadyApplied;
+
 	// 배차 신청 불가 사유 (차종 불일치, 휴무, 확정 배차 중복 등)
 	private List<String> blockReasons;
 

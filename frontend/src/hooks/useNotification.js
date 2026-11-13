@@ -20,17 +20,21 @@ const useNotification = () => {
     const eventSourceRef = useRef(null)
     const reconnectTimer = useRef(null)
 
+    // 목록 1페이지 응답을 상태에 넣는다 (첫 조회 · 새로고침이 같이 쓴다)
+    const applyFirstPage = useCallback((data) => {
+        setNotifications(data.page?.dtoList || [])
+        setPageData(data.page || null)
+        setUnreadCount(data.unreadCount || 0)
+    }, [])
+
     // 목록 1페이지 + 안 읽은 개수 조회
     const refresh = useCallback(async () => {
         try {
-            const data = await getMyNotifications({ page: 1, size: 10 })
-            setNotifications(data.page?.dtoList || [])
-            setPageData(data.page || null)
-            setUnreadCount(data.unreadCount || 0)
+            applyFirstPage(await getMyNotifications({ page: 1, size: 10 }))
         } catch (err) {
             console.error('알림 목록 조회 실패:', err)
         }
-    }, [])
+    }, [applyFirstPage])
 
     // 더보기 (드롭다운에서 다음 페이지)
     const loadMore = useCallback(async () => {
@@ -72,12 +76,13 @@ const useNotification = () => {
     useEffect(() => {
         if (!memberId || !accessToken) return
 
-        refresh()
+        // 첫 조회 — 결과는 응답 콜백에서 넣는다 (effect 안에서 바로 setState 하지 않기)
+        getMyNotifications({ page: 1, size: 10 })
+            .then(applyFirstPage)
+            .catch((err) => console.error('알림 목록 조회 실패:', err))
 
-        // event-source-polyfill은 아직 없다(제안 상태) — 네이티브 EventSource로 먼저 연결.
-        // NOTE: 네이티브 EventSource는 Authorization 헤더를 못 붙인다.
-        //       임시로 쿼리스트링 토큰 방식 대신, polyfill 설치 전까지는 연결 실패해도 화면은 동작(폴링 아님, 수동 새로고침).
-        //       package.json에 event-source-polyfill 추가(PR 제안) 후 헤더 방식으로 교체한다.
+        // SSE 연결: main.jsx가 넣어 둔 window.EventSourcePolyfill로 Authorization 헤더를 붙인다 (#76)
+        // 네이티브 EventSource는 헤더를 못 붙여서 polyfill이 없으면 서버가 401 → onerror (화면은 그대로 동작)
         const connect = () => {
             try {
                 const es = new EventSourcePolyfillSafe(accessToken)
@@ -131,7 +136,7 @@ const useNotification = () => {
             }
             setConnected(false)
         }
-    }, [memberId, accessToken, refresh])
+    }, [memberId, accessToken, applyFirstPage])
 
     return { unreadCount, notifications, pageData, toast, connected, refresh, loadMore, markRead }
 }
