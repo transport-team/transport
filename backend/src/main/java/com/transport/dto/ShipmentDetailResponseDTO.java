@@ -13,6 +13,7 @@ import lombok.Getter;
 @Builder
 public class ShipmentDetailResponseDTO {
 
+	private ReviewResponseDTO review;
     private Long id;
     private ShipmentStatus status;
     private String originAddress;
@@ -40,7 +41,7 @@ public class ShipmentDetailResponseDTO {
     private List<ShipmentStatusHistoryResponseDTO> history;
 
     public static ShipmentDetailResponseDTO from(Shipment shipment,
-            Long assignedDriverMemberId, List<ShipmentStatusHistoryResponseDTO> history) {
+            Long assignedDriverMemberId, List<ShipmentStatusHistoryResponseDTO> history, ReviewResponseDTO review) {
         return ShipmentDetailResponseDTO.builder()
                 .id(shipment.getId())
                 .status(shipment.getStatus())
@@ -67,6 +68,7 @@ public class ShipmentDetailResponseDTO {
                 .fare(shipment.getFare())
                 .assignedDriverMemberId(assignedDriverMemberId)
                 .history(history)
+                .review(review)
                 .build();
     }
 }

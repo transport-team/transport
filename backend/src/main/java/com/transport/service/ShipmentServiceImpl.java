@@ -30,6 +30,7 @@ import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.CargoTypeRepository;
 import com.transport.repository.PaymentRepository;
+import com.transport.repository.ReviewRepository;
 import com.transport.repository.ShipmentRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ShipmentServiceImpl implements ShipmentService {
-
+	
     private final FareService fareService;
     private final ShipmentRepository shipmentRepository;
     private final PaymentRepository paymentRepository;
@@ -47,6 +48,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final VehicleTypeService vehicleTypeService;
     private final DispatchService dispatchService;
     private final StatusHistoryService statusHistoryService;
+    private final ReviewRepository reviewRepository;
 
     @Override
     @Transactional
@@ -158,7 +160,13 @@ public class ShipmentServiceImpl implements ShipmentService {
         var history = statusHistoryService.getHistory(shipmentId).stream()
                 .map(com.transport.dto.ShipmentStatusHistoryResponseDTO::from)
                 .toList();
-        return ShipmentDetailResponseDTO.from(shipment, assignedDriverMemberId, history);
+        
+     // 이미 정의된 findByShipmentId를 호출하여 리뷰 엔티티를 DTO로 변환
+        var review = reviewRepository.findByShipmentId(shipmentId)
+                .map(com.transport.dto.ReviewResponseDTO::from)
+                .orElse(null); 
+        
+        return ShipmentDetailResponseDTO.from(shipment, assignedDriverMemberId, history, review);
     }
 
     // 관리자 대시보드: 지금 상태별 배송 건수 (팀원 1 대시보드가 쓰는 읽기 전용 메서드)
