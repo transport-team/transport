@@ -6,14 +6,30 @@ import com.transport.domain.enums.ShipmentStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.time.LocalDateTime;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
-    // 향후 회원별 배송 내역 조회 기능 등을 위해 추가할 메서드 예시
-    // List<Shipment> findAllByCustomerId(Long customerId);
+    @Query("""
+            select s from Shipment s
+            where s.customer.id = :customerId
+              and (:status is null or s.status = :status)
+              and (:from is null or s.createdAt >= :from)
+              and (:to is null or s.createdAt < :to)
+            """)
+    Page<Shipment> findMyShipments(
+            @Param("customerId") Long customerId,
+            @Param("status") ShipmentStatus status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 
     // 기사: 배차 대기 중인 운송 요청 목록 조회 (상차 예정일 빠른 순)
     List<Shipment> findByStatusOrderByPickupAtAsc(ShipmentStatus status);

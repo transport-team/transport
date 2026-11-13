@@ -24,15 +24,30 @@ const getLocalDateTimeValue = () => {
   const offset = date.getTimezoneOffset() * 60000
   return new Date(date.getTime() - offset).toISOString().slice(0, 16)
 }
+const getRecommendedCargoTypeId = (items, types) => {
+  if (!types || types.length === 0) return ''
+  const categories = items.map((item) => item.category).join(' ')
+  let matchedType
+
+  if (categories.includes('냉장') || categories.includes('음식')) {
+    matchedType = types.find((type) => type.name.includes('냉동') || type.name.includes('냉장') || type.name.includes('탑차'))
+  } else if (categories.includes('가구') || categories.includes('가전')) {
+    matchedType = types.find((type) => type.name.includes('카고') || type.name.includes('윙바디'))
+  } else {
+    matchedType = types.find((type) => type.name.includes('카고') || type.name.includes('일반'))
+  }
+
+  return matchedType ? String(matchedType.id) : ''
+}
 
 const ShipmentCreatePage = () => {
   const [form, setForm] = useState(initialForm)
   const [defaultAddress, setDefaultAddress] = useState(null)
-  const [recentAddress, setRecentAddress] = useState(null) // 최근 배송 주소 상태
+  const [recentAddress, setRecentAddress] = useState(null)
   const [selectedAddressPreset, setSelectedAddressPreset] = useState('')
   const [cargoItems, setCargoItems] = useState([createCargoItem()])
   const [weightManuallyEdited, setWeightManuallyEdited] = useState(false)
-  const [cargoTypeManuallyEdited, setCargoTypeManuallyEdited] = useState(false) // 화물 유형 수동 수정 여부
+  const [cargoTypeManuallyEdited, setCargoTypeManuallyEdited] = useState(false)
   const [vehicleTypes, setVehicleTypes] = useState([])
   const [cargoTypes, setCargoTypes] = useState([])
   const [activeCargoCategory, setActiveCargoCategory] = useState(Object.keys(CARGO_CATEGORIES)[0])
@@ -67,7 +82,6 @@ const ShipmentCreatePage = () => {
       receiverPhone: current.receiverPhone || formatPhone(member.phone || ''),
     }))).catch(() => {})
 
-    // 기본 주소 및 최근 배송 주소 불러오기
     getDefaultAddress().then(setDefaultAddress).catch(() => setDefaultAddress(null))
 
     if (typeof getRecentAddress === 'function') {
@@ -84,7 +98,6 @@ const ShipmentCreatePage = () => {
   const handleChange = ({ target }) => {
     setForm((current) => ({ ...current, [target.name]: target.value }))
 
-    // 화물 유형을 수동으로 변경한 경우 플래그 설정
     if (target.name === 'cargoTypeId') {
       setCargoTypeManuallyEdited(true)
     }
@@ -129,27 +142,9 @@ const ShipmentCreatePage = () => {
     return detail ? detail.defaultWeight * Number(item.quantity || 0) : 0
   }
   const estimatedTotalWeight = cargoItems.reduce((total, item) => total + getEstimatedWeight(item), 0)
-
-  // 선택된 물건 카테고리에 따라 화물 유형 자동 추천
-  // effect로 form을 다시 바꾸지 않고 화면을 그릴 때 계산한다 (직접 고르면 고른 값이 우선)
-  const getRecommendedCargoTypeId = () => {
-    if (cargoTypes.length === 0) return ''
-
-    const categories = cargoItems.map(item => item.category).join(' ')
-    const generalType = cargoTypes.find(c => c.name.includes('카고') || c.name.includes('일반'))
-    let matchedType
-
-    if (categories.includes('냉장') || categories.includes('음식')) {
-      matchedType = cargoTypes.find(c => c.name.includes('냉동') || c.name.includes('냉장') || c.name.includes('탑차'))
-    } else if (categories.includes('가구') || categories.includes('가전')) {
-      matchedType = cargoTypes.find(c => c.name.includes('카고') || c.name.includes('윙바디'))
-    }
-
-    // 맞는 유형이 없으면 처음 화면에서 고르던 기본값(카고 · 일반)을 그대로 둔다
-    const recommended = matchedType || generalType
-    return recommended ? String(recommended.id) : ''
-  }
-  const cargoTypeId = cargoTypeManuallyEdited ? form.cargoTypeId : (getRecommendedCargoTypeId() || form.cargoTypeId)
+  
+  const recommendedCargoTypeId = getRecommendedCargoTypeId(cargoItems, cargoTypes)
+  const effectiveCargoTypeId = cargoTypeManuallyEdited ? form.cargoTypeId : (recommendedCargoTypeId || form.cargoTypeId)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -238,14 +233,14 @@ const ShipmentCreatePage = () => {
     ...form,
     cargoName: [cargoItems.filter((item) => item.detail).map((item) => `${item.detail} ${item.quantity}개`).join(', '), form.cargoName.trim()].filter(Boolean).join(', '),
     vehicleTypeId: Number(form.vehicleTypeId),
-    cargoTypeId: Number(cargoTypeId),
+    cargoTypeId: Number(effectiveCargoTypeId),
     cargoWeightKg: Number(form.cargoWeightKg),
     senderName: form.senderName.trim(),
     senderPhone: form.senderPhone.trim(),
   })
 
   const canMoveToTransport = Boolean(
-    form.vehicleTypeId && cargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
+    form.vehicleTypeId && effectiveCargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
   )
 
   const canEstimateFare = Boolean(
@@ -317,7 +312,7 @@ const ShipmentCreatePage = () => {
       setShipment(result)
       await requestTossPayment({ orderId: result.orderId, amount: result.amount, cargoName: request.cargoName })
     } catch (requestError) {
-      console.error("토스 결제창 호출 에러 상세:", requestError); // 👈 F12 콘솔에 진짜 원인 출력
+      console.error("토스 결제창 호출 에러 상세:", requestError);
       setError(requestError.response?.data?.message || '배송 신청 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
@@ -331,8 +326,7 @@ const ShipmentCreatePage = () => {
   return (
     <section className="mx-auto min-h-screen w-full max-w-[480px] bg-white pb-32 shadow-lg md:max-w-[768px] lg:grid lg:max-w-[1200px] lg:grid-cols-[minmax(0,650px)_380px] lg:gap-8 lg:bg-transparent lg:pb-10 lg:shadow-none">
 
-      {/* 상단 Progress 헤더 */}
-      <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur lg:col-span-2">
+      <header className="sticky top-0 z-25 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur lg:col-span-2">
         <div className="flex items-center gap-3">
           <Link className="text-2xl leading-none text-gray-700" to="/customer" aria-label="고객 홈으로">←</Link>
           <h1 className="text-lg font-bold text-gray-900">배송 신청</h1>
@@ -361,10 +355,8 @@ const ShipmentCreatePage = () => {
         </div>
       </header>
 
-      {/* 좌측 메인 입력 폼 영역 */}
       <form id="shipment-create-form" className="space-y-7 px-5 py-6 lg:rounded-2xl lg:bg-white lg:shadow-sm" onSubmit={inputStep === 1 ? handleNextInputStep : handleEstimate}>
 
-        {/* ===================== Step 1: 화물 입력 ===================== */}
         {inputStep === 1 && (
           <section className="space-y-10 animate-in fade-in duration-300">
             <div>
@@ -396,7 +388,7 @@ const ShipmentCreatePage = () => {
               <div className="mb-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                 {Object.keys(CARGO_CATEGORIES).map((category) => (
                   <button key={category} type="button" onClick={() => setActiveCargoCategory(category)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${activeCargoCategory === category ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                    {category.replace('·박스', '')}
+                    {category.replace('·박ส', '')}
                   </button>
                 ))}
               </div>
@@ -423,7 +415,7 @@ const ShipmentCreatePage = () => {
               </div>
 
               <label className="mt-6 block text-sm font-medium text-gray-700" htmlFor="cargoTypeId">화물 유형
-                <select id="cargoTypeId" name="cargoTypeId" value={cargoTypeId} onChange={handleChange} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" required>
+                <select id="cargoTypeId" name="cargoTypeId" value={effectiveCargoTypeId} onChange={handleChange} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" required>
                   <option value="">화물 유형을 선택하세요</option>
                   {cargoTypes.filter((cargoType) => cargoType.active).map((cargoType) => (
                     <option key={cargoType.id} value={cargoType.id}>{cargoType.name}</option>
@@ -444,10 +436,8 @@ const ShipmentCreatePage = () => {
           </section>
         )}
 
-        {/* ===================== Step 2: 운송 정보 입력 ===================== */}
         {inputStep === 2 && (
           <section className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            {/* 이전 단계 화살표 버튼 */}
             <div className="flex items-center">
               <button
                 type="button"
@@ -458,7 +448,6 @@ const ShipmentCreatePage = () => {
               </button>
             </div>
 
-            {/* 경로 입력 */}
             <div>
               <div className="mb-3 flex items-end justify-between">
                 <div>
@@ -511,13 +500,11 @@ const ShipmentCreatePage = () => {
               </div>
             </div>
 
-            {/* 보내는 분 / 받는 분 입력 */}
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-gray-900">보내는 분 · 받는 분 정보</h2>
 
               <div className="rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
                 <p className="mb-3 text-sm font-bold text-emerald-700">보내는 분</p>
-                {/* 💡 수정된 부분: grid-cols-1로 모바일 세로 배치, sm:grid-cols-2로 태블릿 이상 가로 배치 */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Input id="senderName" label="이름" name="senderName" value={form.senderName} onChange={handleChange} placeholder="보내는 분 이름" required />
                   <Input id="senderPhone" label="연락처" name="senderPhone" value={form.senderPhone} onChange={handleReceiverPhoneChange} pattern={PHONE_PATTERN.source} inputMode="numeric" placeholder="010-0000-0000" required />
@@ -527,7 +514,6 @@ const ShipmentCreatePage = () => {
 
               <div className="rounded-2xl border border-gray-100 bg-white p-4">
                 <p className="mb-3 text-sm font-bold text-gray-800">받는 분</p>
-                {/* 💡 수정된 부분: 여기도 동일하게 적용 */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Input id="receiverName" label="이름" name="receiverName" value={form.receiverName} onChange={handleChange} placeholder="받는 분 이름" required />
                   <Input id="receiverPhone" label="연락처" name="receiverPhone" value={form.receiverPhone} onChange={handleReceiverPhoneChange} pattern={PHONE_PATTERN.source} inputMode="numeric" placeholder="010-0000-0000" required />
@@ -547,7 +533,6 @@ const ShipmentCreatePage = () => {
         {error && <p className="text-sm font-bold text-red-500" role="alert">{error}</p>}
       </form>
 
-      {/* ===================== 우측 사이드바 (PC 환경) ===================== */}
       <aside className="sticky top-24 m-5 hidden h-fit rounded-2xl bg-white p-6 shadow-sm lg:col-start-2 lg:row-start-2 lg:block border border-gray-100">
         <p className="text-xs font-semibold text-emerald-600">FARE SUMMARY</p>
         <h2 className="mt-1 text-xl font-bold text-gray-900">실시간 요금 계산서</h2>
@@ -598,7 +583,6 @@ const ShipmentCreatePage = () => {
         )}
       </aside>
 
-      {/* ===================== 모바일 요금 내역 / 완료 카드 ===================== */}
       {fare && (
         <details className="mx-5 mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 lg:hidden" open>
           <summary className="cursor-pointer text-sm font-bold text-emerald-700">운임 상세 내역 보기</summary>
@@ -621,7 +605,6 @@ const ShipmentCreatePage = () => {
         </section>
       )}
 
-      {/* ===================== 모바일/태블릿 하단 고정 바 ===================== */}
       <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex h-16 max-w-[480px] items-center justify-between gap-3 border-t border-gray-100 bg-white/95 px-5 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur md:h-[72px] md:max-w-[768px] md:px-6 lg:hidden">
         <div className="min-w-0 flex-1">
           {fare ? (

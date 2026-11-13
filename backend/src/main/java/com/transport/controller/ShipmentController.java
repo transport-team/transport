@@ -4,6 +4,13 @@ import com.transport.dto.ShipmentRequestDTO;
 import com.transport.dto.ShipmentResponseDTO;
 import com.transport.security.LoginMember;
 import com.transport.service.ShipmentService; // 추가
+import com.transport.dto.PageRequestDTO;
+import com.transport.dto.PageResponseDTO;
+import com.transport.dto.ShipmentListResponseDTO;
+import com.transport.dto.ShipmentDetailResponseDTO;
+import com.transport.domain.enums.ShipmentStatus;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,5 +43,27 @@ public class ShipmentController {
         
         // 생성 성공 시 201 Created 반환
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "내 배송 목록", description = "로그인한 고객의 배송을 최신 신청 순으로 조회합니다.")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @GetMapping("/my")
+    public ResponseEntity<PageResponseDTO<ShipmentListResponseDTO>> getMyShipments(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @Valid PageRequestDTO pageRequestDTO,
+            @RequestParam(required = false) ShipmentStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(shipmentService.getMyShipments(
+                loginMember.getId(), pageRequestDTO, status, from, to));
+    }
+
+    @Operation(summary = "배송 상세", description = "본인·배정 기사·관리자만 배송 상세를 조회합니다.")
+    @GetMapping("/{id}")
+    public ResponseEntity<ShipmentDetailResponseDTO> getShipment(
+            @PathVariable Long id,
+            @AuthenticationPrincipal LoginMember loginMember) {
+        return ResponseEntity.ok(shipmentService.getShipmentDetail(
+                id, loginMember.getId(), loginMember.getRole()));
     }
 }
