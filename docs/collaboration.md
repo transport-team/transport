@@ -35,8 +35,7 @@
 | 8주차 | 4 → 2 | `ReviewService.getAverageRating(driverId)` — `driverId`는 `driver.id` (Review가 Driver를 가리킨다. 위 `getActiveDriver`의 회원 ID와 다름) |
 | 7주차 (T) | 3 → 1 | 대시보드 집계(읽기 전용): `ShipmentService.countByStatus()` · `PaymentService.getPaidStat(from, to)` · `getDailyPaidStats(fromDate, toDate)` · `getPaidStatsByVehicleType(from, to)` (팀원 1이 작성, 팀원 3 리뷰) |
 | 보안 점검 후속 | 1 → 전원 | `MemberService.findById(memberId)` → `Optional<Member>` (회원 엔티티가 필요할 때 `MemberRepository` 대신, 예: 배송 신청 고객 연결) |
-| 2단계 예정 | 4 → 1 | 대시보드 오늘 완료 건수(상태 이력의 COMPLETED 기준) · 전체 평균 평점 — 이름은 그때 정한다 |
-| 2단계 예정 | 2 → 1 | 대시보드 기사 순위용 기사별 완료 건수 — 이름은 그때 정한다 |
+| 7주차 (T 2단계) | 4 → 1 | 대시보드 집계(읽기 전용): `StatusHistoryService.countCompleted(from, to)` · `getCompletedCountsByDriver(from, to, limit)` · `ReviewService.getRatingStat()` (팀원 1이 작성, 팀원 4 리뷰). 기사 순위도 상태 이력의 완료 변경자(배정 기사)로 세서, 예정했던 팀원 2의 기사별 완료 건수 메서드는 필요 없어졌다 (2026-11-13) |
 
 다른 도메인은 위 Service 메서드로만 호출한다. 다른 사람의 Repository를 직접 쓰지 않는다. 약속이 늦어지면 데일리 스크럼에서 바로 공유한다.
 
