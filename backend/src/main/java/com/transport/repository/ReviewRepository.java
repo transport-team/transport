@@ -25,4 +25,17 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
 	// 특정 배송의 리뷰 (이미 작성했는지 확인·보여주기용)
 	Optional<Review> findByShipmentId(Long shipmentId);
+
+	// ===== 관리자 대시보드 집계 (팀원 1 작성 · 팀원 4 리뷰) =====
+
+	// 전체 리뷰 수 · 평균 평점 (리뷰가 없으면 0건 · 평균 null — 서비스에서 0.0으로 변환)
+	@Query("select count(r) as reviewCount, avg(r.rating) as averageRating from Review r")
+	RatingSum sumAll();
+
+	// 전체 합계 결과
+	interface RatingSum {
+		Long getReviewCount();
+
+		Double getAverageRating();
+	}
 }
