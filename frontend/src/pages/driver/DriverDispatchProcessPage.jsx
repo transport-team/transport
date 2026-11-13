@@ -53,10 +53,17 @@ const PhotoThumbnail = ({ file, alt }) => {
     const [previewUrl, setPreviewUrl] = useState('')
 
     useEffect(() => {
+        let isActive = true
         const url = URL.createObjectURL(file)
-        setPreviewUrl(url)
 
-        return () => URL.revokeObjectURL(url)
+        Promise.resolve().then(() => {
+            if (isActive) setPreviewUrl(url)
+        })
+
+        return () => {
+            isActive = false
+            URL.revokeObjectURL(url)
+        }
     }, [file])
 
     if (!previewUrl) return null

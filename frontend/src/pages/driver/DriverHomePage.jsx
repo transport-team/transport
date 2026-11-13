@@ -128,14 +128,20 @@ const DriverHomePage = () => {
     }
   }, [])
 
+
   // 현재 달의 휴무일 조회
   useEffect(() => {
     let isActive = true
 
-    setOffLoading(true)
-    setOffError('')
+    Promise.resolve()
+      .then(() => {
+        if (!isActive) return
 
-    getDriverOffDays(currentMonth.year, currentMonth.month + 1)
+        setOffLoading(true)
+        setOffError('')
+
+        return getDriverOffDays(currentMonth.year, currentMonth.month + 1)
+      })
       .then((data) => {
         if (!isActive) return
         setOffDays(Array.isArray(data) ? data : [])
@@ -154,6 +160,7 @@ const DriverHomePage = () => {
       isActive = false
     }
   }, [currentMonth.year, currentMonth.month])
+
 
   // 이전 달 / 다음 달 이동
   const changeMonth = (amount) => {
