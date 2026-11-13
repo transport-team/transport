@@ -2,6 +2,7 @@ package com.transport.service;
 
 import java.util.List;
 
+import com.transport.dto.RatingStatDTO;
 import com.transport.dto.ReviewResponseDTO;
 
 // 리뷰 서비스 (8-1~8-2 — 팀원 4)
@@ -33,4 +34,10 @@ public interface ReviewService {
 	 * 리뷰가 없으면 0.0 (null 대신 — 호출 쪽에서 정렬에 바로 쓰도록)
 	 */
 	double getAverageRating(Long driverId);
+
+	/**
+	 * 전체 리뷰 수 · 평균 평점 — 관리자 대시보드 "평균 평점" (읽기 전용 — 팀원 1 작성 · 팀원 4 리뷰)
+	 * 평균은 getAverageRating처럼 소수 첫째 자리 반올림, 리뷰가 없으면 0건 · 0.0
+	 */
+	RatingStatDTO getRatingStat();
 }

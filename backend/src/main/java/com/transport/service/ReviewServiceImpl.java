@@ -11,6 +11,7 @@ import com.transport.domain.Member;
 import com.transport.domain.Review;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.RatingStatDTO;
 import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -104,5 +105,16 @@ public class ReviewServiceImpl implements ReviewService {
 		Double avg = reviewRepository.averageRatingByDriverId(driverId);
 		// 리뷰가 없으면 0.0 — 약속 문서에 명시 (팀원 2가 정렬에 바로 사용)
 		return avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public RatingStatDTO getRatingStat() {
+		ReviewRepository.RatingSum sum = reviewRepository.sumAll();
+		Double avg = sum.getAverageRating();
+		return RatingStatDTO.builder()
+				.reviewCount(sum.getReviewCount())
+				.averageRating(avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0)
+				.build();
 	}
 }

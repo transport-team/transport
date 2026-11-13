@@ -94,6 +94,14 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					ErrorCode.DUPLICATE_DISPATCH_APPLICATION, "이미 지원한 운송 요청입니다.");
 		}
 
+		// 9-1. 고객이 거절한 운송 요청에는 다시 지원할 수 없음 (거절한 기사가 지원자 목록에 다시 나타나지 않게)
+		// 기사가 스스로 취소(WITHDRAWN)한 신청은 다시 지원할 수 있다
+		if (applicationRepository.existsByShipmentAndDriverAndStatus(shipment, driver,
+				DispatchApplicationStatus.REJECTED)) {
+			throw new CustomException(
+					ErrorCode.DUPLICATE_DISPATCH_APPLICATION, "고객이 거절한 운송 요청에는 다시 지원할 수 없습니다.");
+		}
+
 		// 기사 휴무일에는 배차 신청 불가
 		driverScheduleRepository.findByDriver_IdAndWorkDate(driver.getId(), shipment.getPickupAt().toLocalDate())
 				.ifPresent(schedule -> {
@@ -406,6 +414,10 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		List<DispatchApplication> pendingApplications = applicationRepository.findByDriver_IdAndStatus(driver.getId(),
 				DispatchApplicationStatus.PENDING);
 
+		// 고객이 거절한 신청 목록 (같은 운송 요청에는 다시 지원할 수 없음)
+		List<DispatchApplication> rejectedApplications = applicationRepository.findByDriver_IdAndStatus(driver.getId(),
+				DispatchApplicationStatus.REJECTED);
+
 		// 3. REQUESTED 상태의 배송 조회
 		List<Shipment> shipments = shipmentService.getRequestedShipments();
 
@@ -426,6 +438,14 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 			if (alreadyApplied) {
 				blockReasons.add("이미 배차 신청한 운송 요청입니다.");
+			}
+
+			// 고객이 거절한 운송 요청인지 확인
+			boolean rejectedByCustomer = rejectedApplications.stream()
+					.anyMatch(application -> application.getShipment().getId().equals(shipment.getId()));
+
+			if (rejectedByCustomer) {
+				blockReasons.add("고객이 거절한 운송 요청이라 다시 지원할 수 없습니다.");
 			}
 
 			// 승인된 기사인지 확인
@@ -533,7 +553,9 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					.originAddress(shipment.getOriginAddress()).destAddress(shipment.getDestAddress())
 					.cargoName(shipment.getCargoName()).cargoWeightKg(shipment.getCargoWeightKg())
 					.vehicleTypeId(shipment.getVehicleType().getId()).fare(shipment.getFare())
-					.pickupAt(shipment.getPickupAt()).durationMin(shipment.getDurationMin())
+					.pickupAt(shipment.getPickupAt())
+					// 길찾기 실패로 소요시간이 null이면 0 (int 칸에 null을 넣으면 목록 전체가 500)
+					.durationMin(shipment.getDurationMin() != null ? shipment.getDurationMin() : 0)
 					.canApply(blockReasons.isEmpty()).alreadyApplied(alreadyApplied)
 					.blockReasons(blockReasons).warningMessages(warningMessages)
 					.build();

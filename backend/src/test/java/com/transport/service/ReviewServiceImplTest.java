@@ -24,6 +24,7 @@ import com.transport.domain.Member;
 import com.transport.domain.Review;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.RatingStatDTO;
 import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -127,5 +128,43 @@ class ReviewServiceImplTest {
 				() -> reviewService.createReview(SHIPMENT_ID, 999L, 5, null));
 
 		assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+	}
+
+	// ===== 관리자 대시보드 집계 (쿼리 자체는 StatusHistoryReviewStatsTest가 실제 DB로 확인) =====
+
+	@Test
+	@DisplayName("전체 평균 평점은 소수 첫째 자리로 반올림하고 리뷰 수와 함께 준다")
+	void ratingStat() {
+		when(reviewRepository.sumAll()).thenReturn(ratingSum(3L, 14.0 / 3));  // 4.666…
+
+		RatingStatDTO stat = reviewService.getRatingStat();
+
+		assertThat(stat.getReviewCount()).isEqualTo(3);
+		assertThat(stat.getAverageRating()).isEqualTo(4.7);
+	}
+
+	@Test
+	@DisplayName("리뷰가 없으면 0개 · 0.0 (평균이 null이어도 오류 없이)")
+	void ratingStatWithoutReviews() {
+		when(reviewRepository.sumAll()).thenReturn(ratingSum(0L, null));
+
+		RatingStatDTO stat = reviewService.getRatingStat();
+
+		assertThat(stat.getReviewCount()).isZero();
+		assertThat(stat.getAverageRating()).isZero();
+	}
+
+	private ReviewRepository.RatingSum ratingSum(Long count, Double average) {
+		return new ReviewRepository.RatingSum() {
+			@Override
+			public Long getReviewCount() {
+				return count;
+			}
+
+			@Override
+			public Double getAverageRating() {
+				return average;
+			}
+		};
 	}
 }
