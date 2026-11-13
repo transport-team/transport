@@ -33,9 +33,30 @@ const MyPage = () => {
             <dt className="text-gray-500">역할</dt>
             <dd>{ROLE_NAME[member.role]}</dd>
           </dl>
+          {/* 기사 전용 차량 관리 메뉴 */}
+          {member.role === 'DRIVER' && (
+            <Link
+              to="/driver/vehicles"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-blue-300 hover:bg-blue-50"
+            >
+              <span>
+                <span className="block font-semibold">
+                  🚚 내 차량 관리
+                </span>
+                <span className="text-gray-500">
+                  등록 차량 확인 및 운행 상태 관리
+                </span>
+              </span>
+              <span aria-hidden="true" className="text-gray-400">
+                ›
+              </span>
+            </Link>
+          )}
+
           <PhoneForm phone={member.phone} onSaved={setMember} />
           {member.role === 'CUSTOMER' && <DefaultAddressForm />}
           <PasswordForm />
+
           {member.role !== 'ADMIN' && (
             <Link
               to={`${ROLE_HOME[member.role]}/inquiries`}

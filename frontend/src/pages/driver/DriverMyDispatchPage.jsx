@@ -512,8 +512,21 @@ const DriverMyDispatchPage = () => {
 
                                     {/* 신청 기록 정보 */}
                                     <p className="mt-4 border-t border-gray-100 pt-3 text-right text-xs text-gray-500">
-                                        최근 변경: {history.updatedAt
-                                            ? new Date(history.updatedAt).toLocaleString('ko-KR')
+                                        {history.applicationStatus === 'SELECTED' &&
+                                            history.shipmentStatus === 'COMPLETED'
+                                            ? '배송 완료 일시'
+                                            : '최근 변경 일시'}: {' '}
+
+                                        {(history.applicationStatus === 'SELECTED' &&
+                                            history.shipmentStatus === 'COMPLETED'
+                                            ? history.completedAt
+                                            : history.updatedAt)
+                                            ? new Date(
+                                                history.applicationStatus === 'SELECTED' &&
+                                                    history.shipmentStatus === 'COMPLETED'
+                                                    ? history.completedAt
+                                                    : history.updatedAt
+                                            ).toLocaleString('ko-KR')
                                             : '정보 없음'}
                                     </p>
 

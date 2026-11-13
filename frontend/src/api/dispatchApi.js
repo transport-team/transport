@@ -73,3 +73,22 @@ export const getMyDispatchHistoryDetail = async (applicationId) => {
 
   return res.data
 }
+
+// 기사: 월별 휴무일 조회
+export const getDriverOffDays = async (year, month) => {
+  const res = await jwtAxios.get('/api/driver/schedules/off', {
+    params: { year, month },
+  })
+
+  return res.data
+}
+
+// 기사: 휴무일 등록
+export const registerDriverOffDay = async (date) => {
+  await jwtAxios.post('/api/driver/schedules/off', { date })
+}
+
+// 기사: 휴무일 취소
+export const cancelDriverOffDay = async (date) => {
+  await jwtAxios.delete(`/api/driver/schedules/off/${date}`)
+}
