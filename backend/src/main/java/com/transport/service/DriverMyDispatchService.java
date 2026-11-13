@@ -5,6 +5,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import java.time.LocalDateTime;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchApplicationRepository;
 import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
+import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,6 +34,7 @@ public class DriverMyDispatchService {
     private final DriverRepository driverRepository;
     private final DispatchRepository dispatchRepository;
     private final DispatchApplicationRepository applicationRepository;
+    private final ShipmentStatusHistoryRepository statusHistoryRepository;
 
     // 배차 확정 후 배송 완료 전까지의 상태
     private static final Set<ShipmentStatus> ACTIVE_STATUSES = EnumSet.of(
@@ -111,7 +115,6 @@ public class DriverMyDispatchService {
                 .build();
     }
 
-
     // 기사: 본인의 지난 신청 및 배송 내역 조회
     public List<DriverDispatchHistoryResponseDTO> getMyHistory(Long memberId) {
 
@@ -122,6 +125,12 @@ public class DriverMyDispatchService {
                 .stream()
                 .filter(this::isHistory)
                 .map(this::toHistoryResponse)
+                // 배송 완료는 완료일, 나머지는 신청 기록 변경일 기준 최신순
+                .sorted(Comparator.comparing(
+                        (DriverDispatchHistoryResponseDTO history) -> history.getCompletedAt() != null
+                                ? history.getCompletedAt()
+                                : history.getUpdatedAt(),
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
@@ -164,7 +173,7 @@ public class DriverMyDispatchService {
 
         return status == DispatchApplicationStatus.SELECTED
                 && (shipmentStatus == ShipmentStatus.COMPLETED
-                    || shipmentStatus == ShipmentStatus.CANCELED);
+                        || shipmentStatus == ShipmentStatus.CANCELED);
     }
 
     // 신청 기록을 응답 DTO로 변환
@@ -172,6 +181,19 @@ public class DriverMyDispatchService {
             DispatchApplication application) {
 
         Shipment shipment = application.getShipment();
+
+        // 실제 배송 완료 상태로 변경된 시각 조회
+        LocalDateTime completedAt = null;
+
+        if (application.getStatus() == DispatchApplicationStatus.SELECTED
+                && shipment.getStatus() == ShipmentStatus.COMPLETED) {
+
+            completedAt = statusHistoryRepository
+                    .findFirstByShipment_IdAndToStatusOrderByChangedAtDesc(
+                            shipment.getId(), ShipmentStatus.COMPLETED)
+                    .map(history -> history.getChangedAt())
+                    .orElse(null);
+        }
 
         return DriverDispatchHistoryResponseDTO.builder()
                 .applicationId(application.getId())
@@ -187,6 +209,7 @@ public class DriverMyDispatchService {
                 .pickupAt(shipment.getPickupAt())
                 .appliedAt(application.getCreatedAt())
                 .updatedAt(application.getUpdatedAt())
+                .completedAt(completedAt)
                 .build();
     }
 

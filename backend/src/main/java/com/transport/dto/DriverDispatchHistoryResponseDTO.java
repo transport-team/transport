@@ -27,4 +27,5 @@ public class DriverDispatchHistoryResponseDTO {
 
     private LocalDateTime appliedAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime completedAt;
 }
