@@ -288,13 +288,32 @@ const DriverHomePage = () => {
     <section className="grid gap-6">
 
       {/* 페이지 제목 */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          기사 홈
-        </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          운송 요청과 배차 일정을 한눈에 관리할 수 있습니다.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            기사 홈
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            운송 요청과 배차 일정을 한눈에 관리할 수 있습니다.
+          </p>
+        </div>
+
+        {/* 마이페이지 및 월별 정산 이동 */}
+        <div className="flex w-full gap-2 sm:w-auto">
+          <Link
+            to="/driver/settlements"
+            className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl border border-purple-200 bg-white px-3 text-center text-xs font-semibold text-purple-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 sm:w-[138px] sm:flex-none sm:text-sm"
+          >
+            💰 월별 정산
+          </Link>
+
+          <Link
+            to="/driver/me"
+            className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl border border-gray-200 bg-white px-3 text-center text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 sm:w-[138px] sm:flex-none sm:text-sm"
+          >
+            👤 마이페이지
+          </Link>
+        </div>
       </div>
 
       {/* 주요 메뉴 카드 */}
@@ -303,57 +322,50 @@ const DriverHomePage = () => {
         {/* 운송 요청 목록 */}
         <Link
           to="/driver/shipments"
-          className="block rounded-2xl border border-blue-100 bg-white p-6 text-inherit no-underline shadow-sm transition hover:border-blue-300 hover:shadow-md"
+          className="block rounded-2xl border border-blue-100 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-blue-300 hover:shadow-md"
         >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl">
-            🚛
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl">
+              🚛
+            </div>
+
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-gray-900">
+                운송 요청 목록
+              </h2>
+
+              <span className="shrink-0 text-sm font-semibold text-blue-600">
+                <span className="hidden lg:inline">보러가기 </span>→
+              </span>
+            </div>
           </div>
-
-          <h2 className="text-xl font-bold text-gray-900">
-            운송 요청 목록
-          </h2>
-
-          <p className="mt-2 text-sm text-gray-600">
-            새로운 운송 요청을 확인하고 배차를 신청하세요.
-          </p>
-
-          <p className="mt-5 text-sm font-semibold text-blue-600">
-            운송 요청 보러가기 →
-          </p>
         </Link>
 
         {/* 내 배차 관리 */}
         <Link
           to="/driver/dispatches"
-          className="block rounded-2xl border border-green-100 bg-white p-6 text-inherit no-underline shadow-sm transition hover:border-green-300 hover:shadow-md"
+          className="block rounded-2xl border border-green-100 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-green-300 hover:shadow-md"
         >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-2xl">
-            📋
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-2xl">
+              📋
+            </div>
+
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-gray-900">
+                내 배차 관리
+              </h2>
+
+              <span className="shrink-0 text-sm font-semibold text-green-700">
+                <span className="hidden lg:inline">관리하기 </span>→
+              </span>
+            </div>
           </div>
-
-          <h2 className="text-lg font-bold text-gray-900">
-            내 배차 관리
-          </h2>
-
-          <p className="mt-2 text-sm text-gray-600">
-            신청 대기, 배차 확정, 지난 내역을 확인하세요.
-          </p>
-
-          <p className="mt-5 text-sm font-semibold text-green-700">
-            내 배차 관리하기 →
-          </p>
         </Link>
       </div>
 
-      {/* 마이페이지 이동 */}
-      <Link
-        to="/driver/me"
-        className="block rounded-xl border border-gray-200 bg-white p-4 text-center text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
-      >
-        👤 마이페이지 →
-      </Link>
-
       {/* 월간 스케줄 달력 */}
+
       <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
 
         {/* 달력 제목 및 월 이동 */}
