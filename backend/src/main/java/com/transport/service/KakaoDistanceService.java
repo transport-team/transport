@@ -45,19 +45,6 @@ public class KakaoDistanceService implements DistanceService {
 	private final Map<String, CacheEntry<double[]>> geocodeCache = createLruCache(MAX_CACHE_SIZE);
 	private final Map<String, CacheEntry<Route>> routeCache = createLruCache(MAX_CACHE_SIZE);
 
-	private static final int MAX_CACHE_SIZE = 1000;
-	private static final Duration ROUTE_CACHE_TTL = Duration.ofMinutes(30);
-	private static final Duration GEOCODE_CACHE_TTL = Duration.ofHours(24);
-
-	private record CacheEntry<T>(T value, Instant expiresAt) {
-		boolean isExpired() {
-			return Instant.now().isAfter(expiresAt);
-		}
-	}
-
-	private final Map<String, CacheEntry<double[]>> geocodeCache = createLruCache(MAX_CACHE_SIZE);
-	private final Map<String, CacheEntry<Route>> routeCache = createLruCache(MAX_CACHE_SIZE);
-
 	private final RestTemplate restTemplate = new RestTemplate();
 	private final String apiKey;
 
