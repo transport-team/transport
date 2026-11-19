@@ -2,13 +2,13 @@ import { Outlet } from 'react-router-dom'
 import AppHeader from './AppHeader'
 import MenuLink from './MenuLink'
 
-// 기사 메뉴 — 화면을 만들면 to에 경로를 넣는다 (to가 없으면 준비 중)
+// 기사 메뉴 — 화면을 만들면 to에 경로를 넣는다 (to가 없으면 준비 중). 알림은 헤더의 종에서 본다
 const MENUS = [
   { label: '홈', to: '/driver' },
-  { label: '배차' },
+  { label: '운송 요청', to: '/driver/shipments' },
+  { label: '내 배차', to: '/driver/dispatches' },
   { label: '근무 일정' },
   { label: '실적' },
-  { label: '알림' },
 ]
 
 // 기사 레이아웃: 휴대폰 기준, 아래쪽 탭 (본문은 탭에 가리지 않게 아래 여백)
