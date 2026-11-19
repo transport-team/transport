@@ -1,0 +1,201 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { getMyShipments } from '../../api/shipmentApi'
+
+const STATUS_META = {
+  PENDING_PAYMENT: { label: '결제 대기', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  REQUESTED: { label: '배차 대기', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  ASSIGNED: { label: '배차 완료', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  PICKED_UP: { label: '상차 완료', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  IN_TRANSIT: { label: '배송 중', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  DELIVERED: { label: '배송 완료', badge: 'bg-gray-100 text-gray-700 border-gray-200' },
+  CANCELED: { label: '취소됨', badge: 'bg-red-50 text-red-600 border-red-200' },
+}
+
+const FILTER_TABS = [
+  { value: '', label: '전체' },
+  { value: 'PENDING_PAYMENT', label: '결제 대기' },
+  { value: 'REQUESTED', label: '배차 대기' },
+  { value: 'ASSIGNED', label: '배차 완료' },
+  { value: 'IN_TRANSIT', label: '배송 중' },
+  { value: 'DELIVERED', label: '완료' },
+  { value: 'CANCELED', label: '취소' },
+]
+
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  return value.replace('T', ' ').slice(0, 16)
+}
+
+const ShipmentListPage = () => {
+  const [statusFilter, setStatusFilter] = useState('')
+  const [page, setPage] = useState(1)
+  const [fetchState, setFetchState] = useState({
+    resolvedKey: '',
+    content: [],
+    totalPages: 0,
+    totalCount: 0,
+    error: '',
+  })
+
+  const requestKey = `${page}-${statusFilter}`
+  const loading = fetchState.resolvedKey !== requestKey
+
+  useEffect(() => {
+    let active = true
+
+    getMyShipments({ page, size: 10, status: statusFilter })
+      .then((data) => {
+        if (!active) return
+        setFetchState({
+          resolvedKey: requestKey,
+          content: data.content || data.dtoList || [],
+          totalPages: data.totalPages || Math.ceil((data.totalCount || 0) / 10) || 1,
+          totalCount: data.totalCount ?? (data.content?.length || 0),
+          error: '',
+        })
+      })
+      .catch((err) => {
+        if (!active) return
+        setFetchState((prev) => ({
+          ...prev,
+          resolvedKey: requestKey,
+          error: err.response?.data?.message || '배송 목록을 불러오지 못했습니다.',
+        }))
+      })
+
+    return () => { active = false }
+  }, [page, statusFilter, requestKey])
+
+  const handleSelectStatus = (nextStatus) => {
+    setStatusFilter(nextStatus)
+    setPage(1)
+  }
+
+  return (
+    <section className="mx-auto min-h-screen w-full max-w-[640px] bg-gray-50 pb-16">
+      <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link className="text-2xl leading-none text-gray-700" to="/customer" aria-label="고객 홈으로">←</Link>
+            <h1 className="text-lg font-bold text-gray-900">내 배송 내역</h1>
+          </div>
+          <Link
+            to="/customer/shipments/new"
+            className="rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+          >
+            + 새 배송 신청
+          </Link>
+        </div>
+
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => handleSelectStatus(tab.value)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                statusFilter === tab.value
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <div className="space-y-3 px-5 pt-5">
+        {loading && (
+          <div className="rounded-2xl bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+            배송 목록을 불러오는 중입니다...
+          </div>
+        )}
+
+        {!loading && fetchState.error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-600" role="alert">
+            {fetchState.error}
+          </div>
+        )}
+
+        {!loading && !fetchState.error && fetchState.content.length === 0 && (
+          <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
+            <p className="text-base font-bold text-gray-800">조회된 배송 내역이 없습니다.</p>
+            <p className="mt-1 text-xs text-gray-500">새로운 화물 배송을 신청해 보세요.</p>
+            <Link
+              to="/customer/shipments/new"
+              className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
+            >
+              배송 신청하기
+            </Link>
+          </div>
+        )}
+
+        {!loading && !fetchState.error && fetchState.content.map((item) => {
+          const meta = STATUS_META[item.status] || { label: item.status, badge: 'bg-gray-100 text-gray-600 border-gray-200' }
+          return (
+            <Link
+              key={item.id}
+              to={`/customer/shipments/${item.id}`}
+              className="block rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${meta.badge}`}>
+                  {meta.label}
+                </span>
+                <span className="text-xs text-gray-400">상차 {formatDateTime(item.pickupAt)}</span>
+              </div>
+
+              <h2 className="mt-3 truncate text-base font-bold text-gray-900">
+                {item.cargoName || `배송 #${item.id}`}
+              </h2>
+
+              <div className="mt-3 space-y-1.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                  <span className="truncate">{item.originAddress}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                  <span className="truncate">{item.destAddress}</span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                <span className="text-xs text-gray-400">신청일 {formatDateTime(item.createdAt)}</span>
+                <span className="text-sm font-black text-gray-900">{Number(item.fare || 0).toLocaleString()}원</span>
+              </div>
+            </Link>
+          )
+        })}
+
+        {!loading && fetchState.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 disabled:opacity-40"
+            >
+              이전
+            </button>
+            <span className="text-xs font-semibold text-gray-600">
+              {page} / {fetchState.totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(fetchState.totalPages, p + 1))}
+              disabled={page >= fetchState.totalPages}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 disabled:opacity-40"
+            >
+              다음
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+export default ShipmentListPage

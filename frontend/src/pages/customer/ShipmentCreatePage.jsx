@@ -310,7 +310,12 @@ const ShipmentCreatePage = () => {
     try {
       const result = await createShipment(request)
       setShipment(result)
-      await requestTossPayment({ orderId: result.orderId, amount: result.amount, cargoName: request.cargoName })
+      await requestTossPayment({
+        shipmentId: result.shipmentId,
+        orderId: result.orderId,
+        amount: result.amount,
+        cargoName: request.cargoName,
+      })
     } catch (requestError) {
       console.error("토스 결제창 호출 에러 상세:", requestError);
       setError(requestError.response?.data?.message || '배송 신청 중 오류가 발생했습니다.')

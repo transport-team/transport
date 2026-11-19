@@ -23,7 +23,7 @@ const loadTossScript = () => new Promise((resolve, reject) => {
   document.head.appendChild(script)
 })
 
-export const requestTossPayment = async ({ orderId, amount, cargoName }) => {
+export const requestTossPayment = async ({ shipmentId, orderId, amount, cargoName }) => {
   const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY
   if (!clientKey) throw new Error('토스 클라이언트 키가 설정되지 않았습니다.')
 
@@ -31,6 +31,7 @@ export const requestTossPayment = async ({ orderId, amount, cargoName }) => {
   const tossPayments = window.TossPayments(clientKey)
   const payment = tossPayments.payment({ customerKey: `customer-${orderId}` })
   const baseUrl = window.location.origin
+  const failQuery = shipmentId ? `?shipmentId=${shipmentId}` : ''
 
   await payment.requestPayment({
     method: 'CARD',
@@ -38,6 +39,6 @@ export const requestTossPayment = async ({ orderId, amount, cargoName }) => {
     orderId,
     orderName: cargoName || '운송 서비스',
     successUrl: `${baseUrl}/customer/payments/success`,
-    failUrl: `${baseUrl}/customer/payments/fail`,
+    failUrl: `${baseUrl}/customer/payments/fail${failQuery}`,
   })
 }

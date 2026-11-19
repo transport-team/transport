@@ -5,7 +5,7 @@ import AppHeader from './AppHeader'
 const MENUS = [
   { label: '홈', to: '/customer' },
   { label: '배송 신청', to: '/customer/shipments/new' },
-  { label: '내 배송' },
+  { label: '내 배송', to: '/customer/shipments' },
   { label: '문의', to: '/customer/inquiries' },
 ]
 
