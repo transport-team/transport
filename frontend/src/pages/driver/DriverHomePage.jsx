@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   getAvailableShipments,
   getMyAssignedDispatches,
@@ -21,6 +21,18 @@ const getPickupDate = (item) => {
 
 // 기사 홈 — 운송 요청 · 배차 관리 · 월간 일정
 const DriverHomePage = () => {
+  const { hash } = useLocation()
+
+  useEffect(() => {
+    if (hash === '#schedule') {
+      document.getElementById('driver-schedule')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [hash])
   const [currentMonth, setCurrentMonth] = useState(() => {
     const today = new Date()
     return {
@@ -366,7 +378,10 @@ const DriverHomePage = () => {
 
       {/* 월간 스케줄 달력 */}
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+      <div
+        id="driver-schedule"
+        className="scroll-mt-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6"
+      >
 
         {/* 달력 제목 및 월 이동 */}
         <div className="flex flex-wrap items-center justify-between gap-3">
