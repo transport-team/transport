@@ -39,7 +39,6 @@ public class PaymentController {
     
     @Operation(summary = "배송 및 결제 취소(환불)", description = "배차 전(결제 대기/배차 대기) 배송 건을 취소하고, 결제 완료 건은 토스페이먼츠 환불을 처리합니다.")
     @PostMapping("/{shipmentId}/cancel")
-    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<PaymentConfirmResponseDTO> cancelPayment(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable Long shipmentId,
