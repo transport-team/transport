@@ -57,13 +57,13 @@ class KakaoDistanceServiceTest {
 
 		Route route = distanceService.findRoute("서울 중구 세종대로 110", "수원 팔달구 효원로 241");
 
-		// 길찾기 실패 → 보정 거리와 평균 속도 40km/h로 예상 시간 계산
-		assertThat(route.durationMin()).isNull();
+		// 길찾기 실패 → 보정 거리(약 44.1km)와 평균 속도 40km/h로 예상 시간 계산 (ceil(44.1 / 40 * 60) = 67분)
 		assertThat(route.distanceKm()).isCloseTo(44.1, within(0.5));
+		assertThat(route.durationMin()).isEqualTo(67);
 		server.verify();
 	}
 
-    // 길찾기 응답의 예상 시간이 0분이면 대체 거리 계산
+    // 길찾기 응답의 예상 시간이 0분이면 대체 거리 및 예상 시간 계산
     @Test
     void fallbackWhenDurationIsZero() {
             givenAddresses();
@@ -78,23 +78,20 @@ class KakaoDistanceServiceTest {
                             "서울 중구 세종대로 110",
                             "수원 팔달구 효원로 241");
 
-            // 대체 경로는 거리는 계산하지만 예상 시간은 알 수 없으므로 null
-            assertThat(route.durationMin()).isNull();
+            // 대체 경로는 보정 거리와 40km/h 기준 예상 시간(67분)을 반환한다
             assertThat(route.distanceKm()).isCloseTo(44.1, within(0.5));
+            assertThat(route.durationMin()).isEqualTo(67);
 
             server.verify();
     }
 
-    // 출발지와 도착지가 같으면 대체 예상 시간 없이 거리만 반환
+    // 출발지와 도착지가 같아도 최소 1분으로 채운다 (빈 값 없음)
     @Test
     void fallbackDurationAtLeastOneMinute() {
             String addressResponse =
                     "{\"documents\": [{\"x\": \"126.9779\", \"y\": \"37.5663\"}]}";
 
             // 출발지와 도착지가 동일한 좌표
-            server.expect(requestTo(startsWith(GEOCODE_URL)))
-                            .andRespond(withSuccess(addressResponse, MediaType.APPLICATION_JSON));
-
             server.expect(requestTo(startsWith(GEOCODE_URL)))
                             .andRespond(withSuccess(addressResponse, MediaType.APPLICATION_JSON));
 
@@ -106,9 +103,9 @@ class KakaoDistanceServiceTest {
 
             Route route = distanceService.findRoute("서울시청", "서울시청");
 
-            // 계산된 거리가 0km이면 예상 운송 시간은 null
+            // 계산된 거리가 0km여도 예상 운송 시간은 최소 1분
             assertThat(route.distanceKm()).isZero();
-            assertThat(route.durationMin()).isNull();
+            assertThat(route.durationMin()).isEqualTo(1);
 
             server.verify();
     }
