@@ -7,7 +7,7 @@ const MENUS = [
   { label: '홈', to: '/driver' },
   { label: '운송 요청', to: '/driver/shipments' },
   { label: '내 배차', to: '/driver/dispatches' },
-  { label: '근무 일정' },
+  { label: '근무 일정', to: '/driver#schedule' },
   { label: '실적', to: '/driver/settlements' },
 ]
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getAvailableShipments } from '../../api/dispatchApi'
+import { getVehicleTypes } from '../../api/vehicleApi'
 import { Link } from 'react-router-dom'
 
 // 기사: 배차 대기 중인 운송 요청 목록 화면
@@ -10,6 +11,8 @@ const DriverShipmentListPage = () => {
   const [availabilityFilter, setAvailabilityFilter] = useState('all')
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all')
   const [pickupDateFilter, setPickupDateFilter] = useState('')
+  const [vehicleTypes, setVehicleTypes] = useState([])
+  const [vehicleTypeError, setVehicleTypeError] = useState(false)
 
   useEffect(() => {
     const loadShipments = async () => {
@@ -27,16 +30,33 @@ const DriverShipmentListPage = () => {
     loadShipments()
   }, [])
 
-  // 차종 필터 선택지
-  const vehicleTypeIds = [1, 2, 3, 4]
+  // 등록된 차종 목록 조회
+  useEffect(() => {
+    let isActive = true
+
+    getVehicleTypes()
+      .then((data) => {
+        if (!isActive) return
+        setVehicleTypes(Array.isArray(data) ? data : [])
+      })
+      .catch((err) => {
+        if (!isActive) return
+        console.error('차종 목록 조회 실패:', err)
+        setVehicleTypeError(true)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  // 차종 필터 선택지 (DB에 등록된 활성 차종)
+  const activeVehicleTypes = vehicleTypes.filter((type) => type.active)
 
   // 차종별 이름
-  const vehicleTypeNames = {
-    1: '소형·다마스/라보',
-    2: '1톤',
-    3: '2.5톤',
-    4: '5톤',
-  }
+  const vehicleTypeNames = Object.fromEntries(
+    vehicleTypes.map((type) => [type.id, type.name])
+  )
 
   // 신청 가능 여부에 따라 운송 요청 필터링
   const filteredShipments = shipments.filter((shipment) => {
@@ -106,12 +126,17 @@ const DriverShipmentListPage = () => {
             className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm text-gray-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
           >
             <option value="all">전체 차종</option>
-            {vehicleTypeIds.map((typeId) => (
-              <option key={typeId} value={String(typeId)}>
-                차종 {typeId} ({vehicleTypeNames[typeId]})
+            {activeVehicleTypes.map((type) => (
+              <option key={type.id} value={String(type.id)}>
+                차종 {type.id} ({type.name})
               </option>
             ))}
           </select>
+          {vehicleTypeError && (
+            <p className="mt-1 text-xs text-red-600">
+              차종 목록을 불러오지 못했습니다.
+            </p>
+          )}
         </div>
 
         {/* 상차 예정일 필터 */}
