@@ -163,4 +163,39 @@ public class PaymentServiceImpl implements PaymentService {
 
         return PaymentConfirmResponseDTO.from(payment);
     }
+    
+    @Override
+    @Transactional
+    public PaymentConfirmResponseDTO retryPayment(Long shipmentId, Long memberId) {
+        Payment payment = paymentRepository.findByShipmentId(shipmentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+        Shipment shipment = payment.getShipment();
+
+        // 1. 본인 및 고객 권한 확인
+        if (!shipment.getCustomer().getId().equals(memberId)
+                || shipment.getCustomer().getRole() != MemberRole.CUSTOMER) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        // 2. 이미 결제 완료되었거나 취소된 건은 재시도 불가
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new CustomException(ErrorCode.PAYMENT_ALREADY_COMPLETED);
+        }
+        if (payment.getStatus() != PaymentStatus.READY
+                || shipment.getStatus() != ShipmentStatus.PENDING_PAYMENT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_ALLOWED);
+        }
+
+        // 3. 30분 만료 여부 체크 (스케줄러 실행 전이라도 30분이 지났으면 재시도 차단)
+        if (shipment.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(30))) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_ALLOWED);
+        }
+
+        // 4. 새 orderId 발급 및 갱신
+        String newOrderId = "ORD-" + java.util.UUID.randomUUID();
+        payment.renewOrderId(newOrderId);
+
+        return PaymentConfirmResponseDTO.from(payment);
+    }
+    
 }

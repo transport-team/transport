@@ -15,3 +15,8 @@ export const cancelPayment = async (shipmentId, cancelReason) => {
   })
   return response.data
 }
+
+export const retryPayment = async (shipmentId) => {
+  const response = await jwtAxios.post(`/api/payments/${shipmentId}/retry`)
+  return response.data
+}
