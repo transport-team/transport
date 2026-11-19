@@ -101,5 +101,10 @@ public class Shipment extends BaseEntity {
 
         this.status = next;
     }
+    
+    public void cancel(String cancelReason) {
+        changeStatus(ShipmentStatus.CANCELED); // 기존 전이 규칙(canChangeTo) 검증 그대로 활용
+        this.cancelReason = cancelReason;
+    }
 	
 }

@@ -23,4 +23,6 @@ public interface PaymentService {
 
     // 기간 [from, to) 배송의 요청 차종별 결제 완료 건수 · 금액 (결제가 있는 차종만, 차종 id 순)
     List<VehicleTypeStatDTO> getPaidStatsByVehicleType(LocalDateTime from, LocalDateTime to);
+    
+    PaymentConfirmResponseDTO cancelPayment(Long shipmentId, String cancelReason, Long memberId);
 }

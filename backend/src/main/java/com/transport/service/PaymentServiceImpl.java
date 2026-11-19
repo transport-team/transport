@@ -122,4 +122,45 @@ public class PaymentServiceImpl implements PaymentService {
                         .build())
                 .toList();
     }
+
+    @Override
+    @Transactional
+    public PaymentConfirmResponseDTO cancelPayment(Long shipmentId, String cancelReason, Long memberId) {
+        Payment payment = paymentRepository.findByShipmentId(shipmentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+        Shipment shipment = payment.getShipment();
+
+        // 1. 본인 및 권한 확인
+        if (!shipment.getCustomer().getId().equals(memberId)
+                || shipment.getCustomer().getRole() != MemberRole.CUSTOMER) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        // 2. 이미 취소되었거나 취소 불가능한 상태인지 검증
+        ShipmentStatus fromStatus = shipment.getStatus();
+        if (!fromStatus.canChangeTo(ShipmentStatus.CANCELED)) {
+            throw new CustomException(ErrorCode.INVALID_STATUS_CHANGE);
+        }
+
+        // 3. 이미 결제 완료(PAID)된 건이면 토스페이먼츠 환불 API 호출
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            String paymentKey = payment.getPaymentKey();
+            if (paymentKey != null && !paymentKey.startsWith("LOCAL_SKIP_")) {
+                tossPaymentClient.cancelPayment(paymentKey, cancelReason);
+            }
+        }
+
+        // 4. DB 상태 변경 및 타임라인 이력 기록
+        payment.cancel(cancelReason);
+        shipment.cancel(cancelReason);
+        statusHistoryService.record(
+                shipment,
+                fromStatus,
+                ShipmentStatus.CANCELED,
+                shipment.getCustomer(),
+                "고객 취소: " + cancelReason
+        );
+
+        return PaymentConfirmResponseDTO.from(payment);
+    }
 }
