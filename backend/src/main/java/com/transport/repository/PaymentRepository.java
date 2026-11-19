@@ -88,4 +88,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     }
 
 	Optional<Payment> findByShipmentId(Long shipmentId);
+
+    // 고객 취소: 결제와 배송을 함께 잠그고 읽는다 (동시에 두 번 눌러도 한 번만 취소 · 환불)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Payment p join fetch p.shipment where p.shipment.id = :shipmentId")
+    Optional<Payment> findByShipmentIdForUpdate(@Param("shipmentId") Long shipmentId);
 }

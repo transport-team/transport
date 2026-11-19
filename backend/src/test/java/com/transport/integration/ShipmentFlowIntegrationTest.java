@@ -3,6 +3,7 @@ package com.transport.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,6 +64,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 // 신청 → 결제 → 기사 지원 · 고객 선택 → 사진 · 상태 변경 → 완료 → 리뷰 → 관리자 대시보드까지 실제 API로 한 번에 (W · #94)
+// + 고객 취소 · 환불 (배차 전에만, #102 후속)
 // 도메인 4개가 약속한 Service 메서드로 이어지는지, 보안 필터(JWT) · 권한 · 상태 규칙까지 함께 확인한다
 // 바깥 서비스만 가짜: 카카오 길찾기(DistanceService) · 토스 승인(TossPaymentClient). DB는 실제 MariaDB (Docker 필요), 테스트가 끝나면 롤백
 // 사진 파일은 build/it-upload에 저장했다가 끝나면 지운다
@@ -223,6 +225,58 @@ class ShipmentFlowIntegrationTest {
 			assertThat(rank.get("completedCount").asLong()).isEqualTo(1);
 			assertThat(rank.get("averageRating").asDouble()).isEqualTo(5.0);
 		}
+	}
+
+	// 고객 취소(#102 후속): 접수 건은 취소 → 대기 지원 마감 → 마지막에 토스 환불, 배차가 확정된 건은 고객이 취소할 수 없다
+	@Test
+	void customerCancelsOnlyBeforeDispatch() throws Exception {
+		JsonNode before = body(perform(get("/api/admin/dashboard"), admin).andExpect(status().isOk()));
+
+		// 1. 접수(결제 완료) + 기사가 지원해 둔 건 → 고객 취소, 다시 취소하면 409
+		long requested = requestAndPay("cancel-key-1");
+		apply(requested);
+		perform(post("/api/payments/" + requested + "/cancel"), customer, Map.of("cancelReason", "일정 변경"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.paymentStatus").value("CANCELED"))
+				.andExpect(jsonPath("$.shipmentStatus").value("CANCELED"));
+		verify(tossPaymentClient).cancelPayment("cancel-key-1", "일정 변경");
+		JsonNode applicants = body(perform(get("/api/customer/shipments/" + requested + "/applications"), customer)
+				.andExpect(status().isOk()));
+		assertThat(applicants).as("취소된 배송의 대기 지원은 마감").isEmpty();
+		perform(post("/api/payments/" + requested + "/cancel"), customer, Map.of("cancelReason", "다시"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("CANNOT_CANCEL"));
+
+		// 2. 배차가 확정된 건은 고객이 취소할 수 없다 (관리자 몫이라 토스도 부르지 않고 상태도 그대로)
+		long assigned = requestAndPay("cancel-key-2");
+		long applicationId = apply(assigned);
+		perform(post("/api/customer/shipments/" + assigned + "/applications/" + applicationId + "/select"), customer)
+				.andExpect(status().isOk());
+		perform(post("/api/payments/" + assigned + "/cancel"), customer, Map.of("cancelReason", "일정 변경"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("CANNOT_CANCEL"));
+		verify(tossPaymentClient, never()).cancelPayment(eq("cancel-key-2"), anyString());
+		JsonNode assignedDetail = body(perform(get("/api/shipments/" + assigned), customer).andExpect(status().isOk()));
+		assertThat(assignedDetail.get("status").asString()).isEqualTo("ASSIGNED");
+
+		// 3. 대시보드: 오늘 결제 2건 중 환불된 1건은 접수에서 빠진다
+		JsonNode after = body(perform(get("/api/admin/dashboard"), admin).andExpect(status().isOk()));
+		assertThat(after.get("todayReceivedCount").asLong() - before.get("todayReceivedCount").asLong()).isEqualTo(1);
+	}
+
+	// 고객이 신청하고 결제(토스는 가짜)까지 → 접수된 배송 ID
+	private long requestAndPay(String paymentKey) throws Exception {
+		JsonNode created = body(perform(post("/api/shipments"), customer, shipmentRequest()).andExpect(status().isCreated()));
+		perform(post("/api/payments/confirm"), customer, Map.of("orderId", created.get("orderId").asString(),
+				"amount", created.get("amount").asInt(), "paymentKey", paymentKey))
+				.andExpect(status().isOk());
+		return created.get("shipmentId").asLong();
+	}
+
+	// 기사가 내 차량으로 지원 → 지원 ID
+	private long apply(long shipmentId) throws Exception {
+		return body(perform(post("/api/driver/shipments/" + shipmentId + "/applications"), driverMember,
+				Map.of("vehicleId", vehicle.getId())).andExpect(status().isOk())).asLong();
 	}
 
 	private ResultActions changeStatus(long shipmentId, String nextStatus) throws Exception {

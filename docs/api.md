@@ -20,7 +20,7 @@
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
 | 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING |
-| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(취소 기능과 함께 추가 예정) |
+| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(409 — 고객이 취소할 수 없는 상태: 배차 확정 뒤 · 운송 중 · 이미 취소) |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS, REVIEW_NOT_ALLOWED |
 
 ## 팀원 1 — 회원 · 인증 · 운영
@@ -343,6 +343,27 @@
 - 이미 승인된 결제는 `409 PAYMENT_ALREADY_COMPLETED`, 상태·금액 오류는 `400`, Toss 승인 거절은 `502 PAYMENT_FAILED`로 응답한다.
 - 백엔드는 `TOSS_SECRET_KEY` 환경변수를 우선 사용하고, 없으면 `app.toss.secret-key` 설정을 사용한다. 프론트에는 공개 키인 `VITE_TOSS_CLIENT_KEY`만 설정한다.
 
+### 배송 취소 · 환불 (고객, CUS-06)
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| POST | /api/payments/{shipmentId}/cancel | 배차 전(결제 대기 · 접수) 배송 취소, 결제 완료 건은 토스 자동 환불 | CUSTOMER |
+
+```jsonc
+// POST /api/payments/10/cancel
+{ "cancelReason": "일정이 바뀌었어요" }   // 1~500자
+
+// 200 (승인 응답과 같은 모양)
+{ "shipmentId": 10, "orderId": "transport-...", "paymentKey": "tgen_...",
+  "amount": 35000, "paymentStatus": "CANCELED", "shipmentStatus": "CANCELED" }
+```
+
+- 본인 고객만(아니면 403), 배송이 `PENDING_PAYMENT` · `REQUESTED`일 때만 취소할 수 있다. 그 밖은 `409 CANNOT_CANCEL` — 배차 완료 뒤는 "배차가 확정된 배송은 관리자에게 취소를 요청해 주세요.", 운송 중 · 완료는 "운송이 시작된 배송은 취소할 수 없습니다.", 이미 취소는 "이미 취소된 배송입니다."
+- 배차 완료 뒤 취소는 관리자 몫이다 (배차 해제 · 기사 알림과 함께, ADM-02 · #86)
+- 처리 순서: 결제 · 배송 `CANCELED`, 이력("고객 취소: 사유"), 대기 중인 기사 지원 자동 마감(`NOT_SELECTED`)을 먼저 저장하고 토스 환불을 마지막에 부른다. 환불이 실패하면 `502 PAYMENT_FAILED`이고 아무것도 바뀌지 않는다
+- 결제 완료 건만 환불한다. 결제 대기(`READY`) 건과 개발용 결제 건너뛰기(`LOCAL_SKIP_…`) 건은 토스를 부르지 않는다
+- 환불된 결제(`CANCELED`)는 관리자 대시보드 매출 · 접수 건수에서 빠진다
+
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
 | GET | /api/cargo-types | 화물 종류 목록 | 전체 |
@@ -351,10 +372,11 @@
 | POST | /api/shipments | 신청 → 결제대기 + 결제 준비(orderId · amount) | CUSTOMER |
 | POST | /api/payments/confirm | 결제 승인 { paymentKey, orderId, amount } → 접수 | CUSTOMER |
 | POST | /api/shipments/{id}/payment/retry | 재시도 (새 orderId) | CUSTOMER |
-| POST | /api/dev/shipments/{id}/skip-payment | 개발용 결제 건너뛰기 (local 프로필만) | 로그인 |
+| POST | /api/local/payments/skip/{shipmentId} | 개발용 결제 건너뛰기 → PAID · 접수 (local 프로필만, 본인 배송) | CUSTOMER |
 | GET | /api/shipments/my | 내 배송 목록 (page, status, from, to) | CUSTOMER |
 | GET | /api/shipments/{id} | 상세 (본인 · 배정 기사 · 관리자) | 로그인 |
-| PATCH | /api/shipments/{id}/cancel | 취소 { reason } → 자동 환불 | CUSTOMER · ADMIN |
+| POST | /api/payments/{shipmentId}/cancel | 고객 취소 { cancelReason } → 결제 완료 건은 자동 환불 (배차 전만, 위 '배송 취소 · 환불') | CUSTOMER |
+| — | (관리자 취소) | 배차 완료 건 포함 · 배차 해제 · 기사 알림 — ADM-02에서 (#86) | ADMIN |
 | GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
 | GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
 

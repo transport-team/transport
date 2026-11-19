@@ -2,6 +2,7 @@ package com.transport.service;
 
 import java.util.List;
 
+import com.transport.domain.Shipment;
 import com.transport.dto.DispatchApplicantResponseDTO;
 import com.transport.dto.DriverShipmentListResponseDTO;
 
@@ -24,4 +25,8 @@ public interface DispatchApplicationService {
 
     // 기사: 배차 대기 중인 운송 요청 목록 조회
     List<DriverShipmentListResponseDTO> getAvailableShipments(Long memberId);
+
+    // 배송이 취소되면 대기 중인 지원을 모두 자동 마감(NOT_SELECTED)한다
+    // 약속 메서드 (collaboration.md): 팀원 3 결제 취소가 같은 트랜잭션에서 부른다
+    void closePendingApplications(Shipment shipment);
 }
