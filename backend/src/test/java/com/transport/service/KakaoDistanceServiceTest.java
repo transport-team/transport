@@ -91,10 +91,7 @@ class KakaoDistanceServiceTest {
             String addressResponse =
                     "{\"documents\": [{\"x\": \"126.9779\", \"y\": \"37.5663\"}]}";
 
-            // 출발지와 도착지가 동일한 좌표
-            server.expect(requestTo(startsWith(GEOCODE_URL)))
-                            .andRespond(withSuccess(addressResponse, MediaType.APPLICATION_JSON));
-
+            // 출발지와 도착지가 같은 주소 → 두 번째는 주소 캐시(#108)에서 꺼내서 주소 검색은 1번만 나간다
             server.expect(requestTo(startsWith(GEOCODE_URL)))
                             .andRespond(withSuccess(addressResponse, MediaType.APPLICATION_JSON));
 
