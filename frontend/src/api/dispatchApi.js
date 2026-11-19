@@ -92,3 +92,39 @@ export const registerDriverOffDay = async (date) => {
 export const cancelDriverOffDay = async (date) => {
   await jwtAxios.delete(`/api/driver/schedules/off/${date}`)
 }
+
+// 기사: 월별 정산 요약 조회
+export const getDriverMonthlySettlement = async (month) => {
+  const res = await jwtAxios.get('/api/driver/settlements/monthly', {
+    params: { month },
+  })
+
+  return res.data
+}
+
+// 기사: 월별 배송 완료 운임 상세 내역 조회
+export const getDriverMonthlySettlementItems = async (month) => {
+  const res = await jwtAxios.get('/api/driver/settlements/monthly/items', {
+    params: { month },
+  })
+
+  return res.data
+}
+
+// 기사: 기간별 정산 요약 조회
+export const getDriverSettlementRange = async (from, to) => {
+  const res = await jwtAxios.get('/api/driver/settlements/range', {
+    params: { from, to },
+  })
+
+  return res.data
+}
+
+// 기사: 기간별 운임 상세 내역 조회
+export const getDriverSettlementRangeItems = async (from, to) => {
+  const res = await jwtAxios.get('/api/driver/settlements/range/items', {
+    params: { from, to },
+  })
+
+  return res.data
+}
