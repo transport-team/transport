@@ -3,6 +3,8 @@ package com.transport.repository;
 import com.transport.domain.Payment;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.PaymentStatus;
+import com.transport.domain.enums.ShipmentStatus;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -48,6 +50,16 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<VehicleTypePaidSum> sumGroupByVehicleType(@Param("status") PaymentStatus status,
             @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
+    // Shipment와 Payment를 한 번에 패치 조인해서 N+1 문제 없이 만료 건을 가져옴.
+    @Query("select p from Payment p join fetch p.shipment s " +
+           "where p.status = :paymentStatus " +
+           "and s.status = :shipmentStatus " +
+           "and s.createdAt <= :cutoff")
+    List<Payment> findExpiredPendingPayments(
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("shipmentStatus") ShipmentStatus shipmentStatus,
+            @Param("cutoff") LocalDateTime cutoff);
+    
     // 기간 합계 결과
     interface PaidSum {
         Long getPaidCount();

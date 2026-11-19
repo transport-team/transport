@@ -25,4 +25,6 @@ public interface PaymentService {
     List<VehicleTypeStatDTO> getPaidStatsByVehicleType(LocalDateTime from, LocalDateTime to);
     
     PaymentConfirmResponseDTO cancelPayment(Long shipmentId, String cancelReason, Long memberId);
+    
+    PaymentConfirmResponseDTO retryPayment(Long shipmentId, Long memberId);
 }
