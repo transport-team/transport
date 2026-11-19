@@ -6,10 +6,10 @@
 
 | 담당 | 이름 | 도메인 | 공통 책임 |
 |---|---|---|---|
-| 팀원 1 (팀장) | | 공통 · 인증 · 운영 | 일정 관리, 배포 |
-| 팀원 2 | | 기사 · 차량 · 배차 · 정산 | Git · ERD · 시드 데이터 관리 |
-| 팀원 3 | | 배송 접수 · 운임 · 결제 | API 문서(Swagger) 관리 |
-| 팀원 4 | | 배송 진행 · 실시간 · 리뷰 | UI 통일 관리 |
+| 팀원 1 (팀장) | 이민현 | 공통 · 인증 · 운영 | 일정 관리, 배포 |
+| 팀원 2 | 박서현 | 기사 · 차량 · 배차 · 정산 | Git · ERD · 시드 데이터 관리 |
+| 팀원 3 | 이시은 | 배송 접수 · 운임 · 결제 | API 문서(Swagger) 관리 |
+| 팀원 4 | 남궁현석 | 배송 진행 · 실시간 · 리뷰 | UI 통일 관리 |
 
 ## 폴더 구조
 
@@ -82,6 +82,19 @@ DB 자체는 공유하지 않는다. 각자 로컬에 같은 DB를 만든다.
 4. push → PR(develop 대상) → 짝 리뷰어 1명 승인 → Squash merge → 브랜치 삭제
 
 자세한 규칙: [docs/collaboration.md](docs/collaboration.md) · 일정: [docs/roadmap.md](docs/roadmap.md)
+
+## 테스트
+
+```bash
+# 백엔드 (Docker의 MariaDB가 켜져 있어야 한다 — 실제 DB로 확인하는 테스트는 끝나면 롤백)
+cd backend && ./gradlew test        # Windows 명령 프롬프트는 gradlew.bat test
+
+# 프론트
+cd frontend && npm run lint && npm run build
+```
+
+- PR을 올리면 GitHub Actions(CI)가 같은 검사(백엔드 테스트 · 프론트 lint · 빌드)를 돌린다. 실패하면 병합 전에 고친다
+- 전체 흐름은 `ShipmentFlowIntegrationTest`가 확인한다: 신청 → 결제 → 배차 → 완료 → 리뷰 → 관리자 대시보드 (카카오 길찾기 · 토스 승인만 가짜)
 
 ## 테스트 계정 (data.sql, 비밀번호 모두 1234)
 
