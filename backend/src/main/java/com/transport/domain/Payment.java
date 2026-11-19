@@ -46,13 +46,17 @@ public class Payment extends BaseEntity {
 
 	private String cancelReason;
 	
-	// Payment.java 내부
 	public void updatePaymentKey(String paymentKey) { this.paymentKey = paymentKey; }
 	public void updateStatus(PaymentStatus status) { this.status = status; }
 	public void updatePaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+	
 	public void cancel(String cancelReason) {
 	    this.status = PaymentStatus.CANCELED;
 	    this.canceledAt = LocalDateTime.now();
 	    this.cancelReason = cancelReason;
+	}
+	
+	public void renewOrderId(String newOrderId) {
+	    this.orderId = newOrderId;
 	}
 }

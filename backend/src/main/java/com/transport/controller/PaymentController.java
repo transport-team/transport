@@ -48,4 +48,12 @@ public class PaymentController {
         );
     }
     
+    @Operation(summary = "결제 재시도 (주문번호 재발급)", description = "결제 대기(PENDING_PAYMENT) 상태인 배송 건의 주문번호(orderId)를 새로 발급합니다.")
+    @PostMapping("/{shipmentId}/retry")
+    public ResponseEntity<PaymentConfirmResponseDTO> retryPayment(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @PathVariable Long shipmentId) {
+        return ResponseEntity.ok(paymentService.retryPayment(shipmentId, loginMember.getId()));
+    }
+    
 }
