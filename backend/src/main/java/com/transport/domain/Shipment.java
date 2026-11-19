@@ -87,7 +87,7 @@ public class Shipment extends BaseEntity {
 	private int fare;  // 운임 = 결제 금액 (서버 FareCalculator로만 계산)
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
+	@Column(nullable = false, columnDefinition = "VARCHAR(30)")
 	private ShipmentStatus status;
 
 	@Version

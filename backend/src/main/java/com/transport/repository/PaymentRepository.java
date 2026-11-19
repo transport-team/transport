@@ -1,6 +1,7 @@
 package com.transport.repository;
 
 import com.transport.domain.Payment;
+import com.transport.domain.Shipment;
 import com.transport.domain.enums.PaymentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -73,4 +74,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
         Long getRevenue();
     }
+
+	Optional<Payment> findByShipmentId(Long shipmentId);
 }
