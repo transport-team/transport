@@ -8,3 +8,10 @@ export const confirmPayment = async ({ paymentKey, orderId, amount }) => {
   })
   return response.data
 }
+
+export const cancelPayment = async (shipmentId, cancelReason) => {
+  const response = await jwtAxios.post(`/api/payments/${shipmentId}/cancel`, {
+    cancelReason,
+  })
+  return response.data
+}

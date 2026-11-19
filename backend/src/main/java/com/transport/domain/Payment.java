@@ -50,4 +50,9 @@ public class Payment extends BaseEntity {
 	public void updatePaymentKey(String paymentKey) { this.paymentKey = paymentKey; }
 	public void updateStatus(PaymentStatus status) { this.status = status; }
 	public void updatePaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+	public void cancel(String cancelReason) {
+	    this.status = PaymentStatus.CANCELED;
+	    this.canceledAt = LocalDateTime.now();
+	    this.cancelReason = cancelReason;
+	}
 }
