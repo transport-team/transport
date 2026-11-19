@@ -25,4 +25,16 @@ public class CargoType extends BaseEntity {
 	private String handlingNote;  // 기사에게 보여줄 취급 안내
 
 	private boolean active;
+	
+	public void update(String name, int extraFee, String handlingNote, boolean active) {
+		this.name = name;
+		this.extraFee = extraFee;
+		this.handlingNote = handlingNote;
+		this.active = active;
+	}
+
+	public void changeActive(boolean active) {
+		this.active = active;
+	}
+	
 }
