@@ -8,6 +8,7 @@ import { getShipment, changeShipmentStatus, uploadShipmentImages } from '../../a
 import StatusBadge from '../../components/common/StatusBadge'
 import useLocationShare from '../../hooks/useLocationShare'
 import Button from '../../components/common/Button'
+import Loading from '../../components/common/Loading'
 
 // 팀원 3 상세 API 머지 전까지 쓰는 임시 데이터 (api.md의 GET /api/shipments/{id} 예시 필드 기준)
 const USE_MOCK_DATA = true
@@ -136,13 +137,20 @@ const DriverDispatchProcessPage = () => {
         }
     }
 
-    if (loading) return <p className="p-6 text-gray-500">불러오는 중...</p>
+    if (loading) return <Loading size="lg" text="배송 정보를 불러오는 중..." />
 
     if (loadError) {
         return (
             <section className="grid gap-4 p-4">
                 <Link to="/driver" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 홈으로</Link>
-                <p className="rounded-2xl bg-white p-6 text-gray-600 shadow-sm">{loadError}</p>
+                <div className="flex flex-col items-center gap-4 rounded-2xl bg-white p-8 text-center shadow-sm">
+                    <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div>
+                        <p className="text-base font-semibold text-gray-900">배송 정보를 찾을 수 없어요</p>
+                        <p className="mt-1 text-sm text-gray-500">{loadError}</p>
+                    </div>
+                    <Button variant="outline" onClick={() => window.location.reload()}>새로고침</Button>
+                </div>
             </section>
         )
     }

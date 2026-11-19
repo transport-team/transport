@@ -6,6 +6,7 @@
 // 좌표 순서 주의: 카카오맵은 (경도 lng, 위도 lat) 순서다. API는 lat, lng로 응답.
 import { useEffect, useRef, useState } from 'react'
 import jwtAxios from '../../util/jwtUtil'
+import Loading from '../common/Loading'
 
 // 카카오 SDK 로드 (index.html에 스크립트가 없으면 동적으로 로드)
 const loadKakaoSdk = () =>
@@ -108,7 +109,13 @@ const LiveTrackingMap = ({ shipmentId, status, sseLocation }) => {
 
     return (
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div ref={mapRef} className="h-64 w-full" />
+            {!loaded ? (
+                <div className="h-64 flex items-center justify-center">
+                    <Loading size="md" text="지도를 불러오는 중..." />
+                </div>
+            ) : (
+                <div ref={mapRef} className="h-64 w-full" />
+            )}
             {error && <p className="p-3 text-sm text-amber-700">{error}</p>}
             {!error && lastLoc && (
                 <p className="border-t border-gray-100 p-3 text-xs text-gray-500">

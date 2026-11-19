@@ -14,8 +14,6 @@ import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
-import com.transport.repository.DriverRepository;
-import com.transport.repository.DispatchRepository;
 import com.transport.repository.ReviewRepository;
 import com.transport.repository.ShipmentRepository;
 
@@ -31,8 +29,8 @@ public class ReviewServiceImpl implements ReviewService {
 
 	private final ReviewRepository reviewRepository;
 	private final ShipmentRepository shipmentRepository;
-	private final DriverRepository driverRepository;
-	private final DispatchRepository dispatchRepository;
+	private final DriverService driverService;                  // DriverRepository 직접 사용 제거
+	private final DispatchService dispatchService;              // DispatchRepository 직접 사용 제거
 
 	@Override
 	public ReviewResponseDTO createReview(Long shipmentId, Long memberId, int rating, String content) {
@@ -57,10 +55,12 @@ public class ReviewServiceImpl implements ReviewService {
 		}
 
 		// 5. driver_id는 배정 기사로 설정 (요청에서 받지 않는다 — 위변조 방지)
-		Long driverId = dispatchRepository.findByShipmentIdAndActiveTrue(shipmentId)
-				.map(d -> d.getDriver().getId())
-				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "배정 기사를 찾을 수 없습니다."));
-		Driver driver = driverRepository.findById(driverId)
+		// DispatchService.getActiveDriver는 기사의 member.id를 반환 — DriverService로 Driver 조회
+		Long driverMemberId = dispatchService.getActiveDriver(shipmentId);
+		if (driverMemberId == null) {
+			throw new CustomException(ErrorCode.NOT_FOUND, "배정 기사를 찾을 수 없습니다.");
+		}
+		Driver driver = driverService.findByMemberId(driverMemberId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "배정 기사를 찾을 수 없습니다."));
 
 		// 4번 검사와 저장 사이에 같은 요청이 동시에 들어오면(두 탭 · 다시 시도) DB 유니크 키(shipment_id)가 막는다
@@ -78,7 +78,7 @@ public class ReviewServiceImpl implements ReviewService {
 			throw new CustomException(ErrorCode.REVIEW_EXISTS);
 		}
 
-		log.info("리뷰 저장: shipmentId={}, driverId={}, rating={}", shipmentId, driverId, rating);
+		log.info("리뷰 저장: shipmentId={}, driverId={}, rating={}", shipmentId, driver.getId(), rating);
 		return ReviewResponseDTO.from(saved);
 	}
 
@@ -95,6 +95,7 @@ public class ReviewServiceImpl implements ReviewService {
 	public List<ReviewResponseDTO> getDriverReviews(Long driverId) {
 		return reviewRepository.findByDriverIdWithCustomer(driverId).stream()
 				.map(ReviewResponseDTO::from)
+				.map(ReviewResponseDTO::withMaskedName)
 				.toList();
 	}
 

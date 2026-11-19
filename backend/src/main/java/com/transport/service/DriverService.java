@@ -27,6 +27,9 @@ public interface DriverService {
 
 	Optional<Driver> findById(Long id);
 
+	// 회원 ID로 기사 조회 (위치 전송 등에서 사용 — 팀원 4)
+	Optional<Driver> findByMemberId(Long memberId);
+
 	default DriverDTO entityToDTO(Driver driver) {
 		Member member = driver.getMember();
 		return DriverDTO.builder()

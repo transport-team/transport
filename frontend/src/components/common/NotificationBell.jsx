@@ -6,6 +6,14 @@
 import { useEffect, useRef, useState } from 'react'
 import useNotification from '../../hooks/useNotification'
 
+// 알림 타입별 색상 매핑
+const TYPE_STYLES = {
+    DISPATCHED: { toast: 'border-primary bg-primary-light', icon: '📦', badge: 'bg-primary' },
+    STATUS_CHANGED: { toast: 'border-info bg-info-light', icon: '🔄', badge: 'bg-info' },
+    INQUIRY_ANSWERED: { toast: 'border-success bg-success-light', icon: '💬', badge: 'bg-success' },
+    REVIEW_REQUEST: { toast: 'border-warning bg-warning-light', icon: '⭐', badge: 'bg-warning' },
+}
+
 const NotificationBell = ({ onNavigate }) => {
     const { unreadCount, notifications, pageData, toast, loadMore, markRead } = useNotification()
     const [open, setOpen] = useState(false)
@@ -88,12 +96,18 @@ const NotificationBell = ({ onNavigate }) => {
             )}
 
             {/* 새 알림 토스트 (헤더 오른쪽 아래) */}
-            {toast && (
-                <div className="fixed top-16 right-4 z-[100] w-80 max-w-[90vw] rounded-xl border border-blue-100 bg-white p-4 shadow-lg">
-                    <p className="text-sm font-semibold text-gray-900">🔔 새 알림</p>
-                    <p className="mt-1 text-sm text-gray-700">{toast.message}</p>
-                </div>
-            )}
+            {toast && (() => {
+                const style = TYPE_STYLES[toast.type] || TYPE_STYLES.DISPATCHED
+                return (
+                    <div className={`fixed top-16 right-4 z-[100] w-80 max-w-[90vw] rounded-xl ${style.toast} p-4 shadow-lg`}>
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg">{style.icon}</span>
+                            <p className="text-sm font-semibold text-gray-900">새 알림</p>
+                        </div>
+                        <p className="mt-1 text-sm text-gray-700">{toast.message}</p>
+                    </div>
+                )
+            })()}
         </div>
     )
 }

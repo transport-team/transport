@@ -27,8 +27,6 @@ import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
-import com.transport.repository.DispatchRepository;
-import com.transport.repository.DriverRepository;
 import com.transport.repository.ReviewRepository;
 import com.transport.repository.ShipmentRepository;
 
@@ -38,6 +36,7 @@ class ReviewServiceImplTest {
 
 	private static final Long SHIPMENT_ID = 1L;
 	private static final Long CUSTOMER_ID = 100L;
+	private static final Long DRIVER_MEMBER_ID = 200L;  // 기사의 회원 ID
 
 	@Mock
 	ReviewRepository reviewRepository;
@@ -46,10 +45,10 @@ class ReviewServiceImplTest {
 	ShipmentRepository shipmentRepository;
 
 	@Mock
-	DriverRepository driverRepository;
+	DriverService driverService;
 
 	@Mock
-	DispatchRepository dispatchRepository;
+	DispatchService dispatchService;
 
 	@InjectMocks
 	ReviewServiceImpl reviewService;
@@ -61,9 +60,8 @@ class ReviewServiceImplTest {
 		Shipment shipment = Shipment.builder().id(SHIPMENT_ID).status(status).customer(customer).build();
 		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
 		lenient().when(reviewRepository.existsByShipmentId(SHIPMENT_ID)).thenReturn(false);
-		lenient().when(dispatchRepository.findByShipmentIdAndActiveTrue(SHIPMENT_ID))
-				.thenReturn(Optional.of(Dispatch.builder().shipment(shipment).driver(driver).active(true).build()));
-		lenient().when(driverRepository.findById(1L)).thenReturn(Optional.of(driver));
+		lenient().when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(DRIVER_MEMBER_ID);
+		lenient().when(driverService.findByMemberId(DRIVER_MEMBER_ID)).thenReturn(Optional.of(driver));
 		return shipment;
 	}
 

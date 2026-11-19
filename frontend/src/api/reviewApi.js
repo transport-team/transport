@@ -14,3 +14,10 @@ export const getShipmentReview = async (shipmentId) => {
 
     return res.status === 204 ? null : res.data
 }
+
+// 기사 리뷰 목록 + 평균 평점 (8-2) — 팀원 2가 배차 정렬에 씀
+// 반환: { reviews: ReviewResponseDTO[], averageRating: number }
+export const getDriverReviews = async (driverId) => {
+    const res = await jwtAxios.get(`/api/drivers/${driverId}/reviews`)
+    return res.data
+}

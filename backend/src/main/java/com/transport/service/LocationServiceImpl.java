@@ -16,7 +16,6 @@ import com.transport.dto.LocationResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchRepository;
-import com.transport.repository.DriverRepository;
 import com.transport.repository.LocationLogRepository;
 import com.transport.repository.ShipmentRepository;
 
@@ -35,7 +34,7 @@ public class LocationServiceImpl implements LocationService {
 	private final LocationLogRepository locationLogRepository;
 	private final ShipmentRepository shipmentRepository;
 	private final DispatchRepository dispatchRepository;
-	private final DriverRepository driverRepository;
+	private final DriverService driverService;                  // DriverRepository 직접 사용 제거
 	private final NotificationServiceImpl notificationService; // SSE emitter 저장소 재사용 (getEmitter)
 	private final DispatchService dispatchService;             // 배정 기사 회원 ID (약속된 getActiveDriver)
 
@@ -46,8 +45,8 @@ public class LocationServiceImpl implements LocationService {
 		Shipment shipment = shipmentRepository.findById(shipmentId)
 				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
 
-		// 2. 로그인 기사의 Driver 엔티티
-		Driver driver = driverRepository.findByMemberId(memberId)
+		// 2. 로그인 기사의 Driver 엔티티 (DriverService 위임)
+		Driver driver = driverService.findByMemberId(memberId)
 				.orElseThrow(() -> new CustomException(ErrorCode.FORBIDDEN, "기사만 위치를 전송할 수 있습니다."));
 
 		// 3. 배정 기사인지 (dispatch의 driver는 Driver — member.id가 아니라 driver.id와 비교)
@@ -79,11 +78,11 @@ public class LocationServiceImpl implements LocationService {
 		if (emitter != null) {
 			try {
 				emitter.send(SseEmitter.event()
-						.name("location")
-						.data("{\"shipmentId\":" + shipmentId
-								+ ",\"lat\":" + response.getLat()
-								+ ",\"lng\":" + response.getLng()
-								+ ",\"recordedAt\":\"" + response.getRecordedAt() + "\"}"));
+					.name("location")
+					.data("{\"shipmentId\":" + shipmentId
+						+ "\"lat\":" + response.getLat()
+						+ "\"lng\":" + response.getLng()
+						+ "\"recordedAt\":\"" + response.getRecordedAt() + "\"}"));
 			} catch (IOException e) {
 				// 전송 실패는 무시 — 저장은 유지 (다음 위치가 30초 뒤에 온다)
 				log.warn("위치 SSE 전송 실패(저장은 유지): shipmentId={}", shipmentId);

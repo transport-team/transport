@@ -85,4 +85,11 @@ public class DriverServiceImpl implements DriverService {
 	public Optional<Driver> findById(Long id) {
 		return driverRepository.findById(id);
 	}
+
+	// 회원 ID로 기사 조회 (위치 전송 등에서 사용 — 팀원 4)
+	@Override
+	@Transactional(readOnly = true)
+	public Optional<Driver> findByMemberId(Long memberId) {
+		return driverRepository.findByMemberId(memberId);
+	}
 }

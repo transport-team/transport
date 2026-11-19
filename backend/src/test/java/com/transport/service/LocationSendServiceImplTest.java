@@ -24,7 +24,6 @@ import com.transport.dto.LocationResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchRepository;
-import com.transport.repository.DriverRepository;
 import com.transport.repository.LocationLogRepository;
 import com.transport.repository.ShipmentRepository;
 
@@ -49,7 +48,7 @@ class LocationSendServiceImplTest {
 	DispatchRepository dispatchRepository;
 
 	@Mock
-	DriverRepository driverRepository;
+	DriverService driverService;
 
 	@Mock
 	NotificationServiceImpl notificationService;
@@ -58,7 +57,7 @@ class LocationSendServiceImplTest {
 	LocationServiceImpl locationService;
 
 	private void givenDriver(Long driverId) {
-		when(driverRepository.findByMemberId(DRIVER_MEMBER_ID))
+		when(driverService.findByMemberId(DRIVER_MEMBER_ID))
 				.thenReturn(Optional.of(Driver.builder().id(driverId).build()));
 	}
 
@@ -74,7 +73,7 @@ class LocationSendServiceImplTest {
 	private void givenActiveDriver(Long driverId) {
 		when(dispatchRepository.findByShipmentIdAndActiveTrue(SHIPMENT_ID))
 				.thenReturn(java.util.Optional.of(
-						com.transport.domain.Dispatch.builder().driver(Driver.builder().id(driverId).build()).build()));
+					com.transport.domain.Dispatch.builder().driver(Driver.builder().id(driverId).build()).build()));
 	}
 
 	@Test
