@@ -8,7 +8,7 @@ const MENUS = [
   { label: '운송 요청', to: '/driver/shipments' },
   { label: '내 배차', to: '/driver/dispatches' },
   { label: '근무 일정' },
-  { label: '실적' },
+  { label: '실적', to: '/driver/settlements' },
 ]
 
 // 기사 레이아웃: 휴대폰 기준, 아래쪽 탭 (본문은 탭에 가리지 않게 아래 여백)
