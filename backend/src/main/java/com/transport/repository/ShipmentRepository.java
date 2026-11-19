@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
+	@EntityGraph(attributePaths = {"vehicleType", "cargoType"})
     @Query("""
             select s from Shipment s
             where s.customer.id = :customerId
