@@ -56,8 +56,8 @@ public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember logi
 
 ## Git
 
-- `main`: 발표 · 배포용. 직접 push 금지. 주차 완료 기준을 통과한 develop만 팀원 2가 병합
-- `develop`: 통합 브랜치(기본 브랜치). PR로만 병합. 빌드가 깨지면 최우선으로 고친다
+- `main`: 발표 · 배포용. 직접 push 금지. MVP가 화면으로 끝까지 될 때 한 번, 배포 직전에 한 번 팀원 2가 develop을 병합 (2026-11-19)
+- `develop`: 통합 브랜치(기본 브랜치). PR로만 병합 — 승인 1개와 CI(`백엔드 테스트` · `프론트 빌드 · lint`) 통과가 있어야 병합된다 (GitHub 규칙 `protect-main-develop`, main도 같음). 빌드가 깨지면 최우선으로 고친다
 - 작업 브랜치: `feature/{도메인}-{기능}` (예: feature/dispatch-candidate), `fix/...`
 - 하루 1번 이상 `git pull origin develop`으로 충돌을 작게 유지
 - 커밋: `feat: 배차 후보 조회 API (#12)` · `fix:` · `refactor:` · `docs:` · `test:` · `chore:`
