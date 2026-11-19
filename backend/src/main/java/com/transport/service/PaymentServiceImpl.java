@@ -36,6 +36,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final TossPaymentClient tossPaymentClient;
     private final StatusHistoryService statusHistoryService;
+    private final DispatchApplicationService dispatchApplicationService;  // 팀원 2 (취소 때 대기 지원 마감)
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -123,10 +124,14 @@ public class PaymentServiceImpl implements PaymentService {
                 .toList();
     }
 
+    // 고객 취소 (CUS-06): 배차 전(결제 대기 · 접수)에만. 배차가 확정된 뒤 취소는 관리자 몫이다
+    // (status.md — 배차 해제 · 기사 알림이 같이 필요, #86)
+    // 순서: DB(결제 · 배송 · 이력 · 대기 지원 마감)를 먼저 저장하고 토스 환불은 마지막 — 환불이 실패하면 예외로 전부 롤백된다
     @Override
     @Transactional
     public PaymentConfirmResponseDTO cancelPayment(Long shipmentId, String cancelReason, Long memberId) {
-        Payment payment = paymentRepository.findByShipmentId(shipmentId)
+        // 동시에 두 번 눌러도 한 번만 취소 · 환불되게 결제 · 배송을 잠그고 읽는다 (승인과 같은 방식)
+        Payment payment = paymentRepository.findByShipmentIdForUpdate(shipmentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
         Shipment shipment = payment.getShipment();
 
@@ -136,21 +141,14 @@ public class PaymentServiceImpl implements PaymentService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        // 2. 이미 취소되었거나 취소 불가능한 상태인지 검증
+        // 2. 고객은 결제 대기 · 접수일 때만 취소할 수 있다
         ShipmentStatus fromStatus = shipment.getStatus();
-        if (!fromStatus.canChangeTo(ShipmentStatus.CANCELED)) {
-            throw new CustomException(ErrorCode.INVALID_STATUS_CHANGE);
+        if (fromStatus != ShipmentStatus.PENDING_PAYMENT && fromStatus != ShipmentStatus.REQUESTED) {
+            throw new CustomException(ErrorCode.CANNOT_CANCEL, cannotCancelMessage(fromStatus));
         }
 
-        // 3. 이미 결제 완료(PAID)된 건이면 토스페이먼츠 환불 API 호출
-        if (payment.getStatus() == PaymentStatus.PAID) {
-            String paymentKey = payment.getPaymentKey();
-            if (paymentKey != null && !paymentKey.startsWith("LOCAL_SKIP_")) {
-                tossPaymentClient.cancelPayment(paymentKey, cancelReason);
-            }
-        }
-
-        // 4. DB 상태 변경 및 타임라인 이력 기록
+        // 3. DB 먼저: 결제 · 배송 취소, 이력, 대기 중인 기사 지원 마감 → flush로 저장 오류를 환불 전에 확인
+        boolean paid = payment.getStatus() == PaymentStatus.PAID;
         payment.cancel(cancelReason);
         shipment.cancel(cancelReason);
         statusHistoryService.record(
@@ -160,7 +158,24 @@ public class PaymentServiceImpl implements PaymentService {
                 shipment.getCustomer(),
                 "고객 취소: " + cancelReason
         );
+        dispatchApplicationService.closePendingApplications(shipment);  // 팀원 2 약속 메서드
+        entityManager.flush();
+
+        // 4. 결제 완료 건만 토스 환불 (개발용 결제 건너뛰기 건은 토스에 없으니 뺀다)
+        String paymentKey = payment.getPaymentKey();
+        if (paid && paymentKey != null && !paymentKey.startsWith("LOCAL_SKIP_")) {
+            tossPaymentClient.cancelPayment(paymentKey, cancelReason);
+        }
 
         return PaymentConfirmResponseDTO.from(payment);
+    }
+
+    // 고객이 취소할 수 없는 상태별 안내
+    private static String cannotCancelMessage(ShipmentStatus status) {
+        return switch (status) {
+            case ASSIGNED -> "배차가 확정된 배송은 관리자에게 취소를 요청해 주세요.";
+            case CANCELED -> "이미 취소된 배송입니다.";
+            default -> "운송이 시작된 배송은 취소할 수 없습니다.";
+        };
     }
 }

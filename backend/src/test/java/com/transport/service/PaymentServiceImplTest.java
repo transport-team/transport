@@ -1,11 +1,14 @@
 package com.transport.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
@@ -15,6 +18,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,6 +35,8 @@ import com.transport.domain.enums.MemberRole;
 import com.transport.domain.enums.PaymentStatus;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.PaymentApproveRequestDTO;
+import com.transport.exception.CustomException;
+import com.transport.exception.ErrorCode;
 import com.transport.repository.PaymentRepository;
 
 import jakarta.persistence.EntityManager;
@@ -47,6 +55,9 @@ class PaymentServiceImplTest {
 
     @Mock
     private EntityManager entityManager;
+
+    @Mock
+    private DispatchApplicationService dispatchApplicationService;
 
     @InjectMocks
     private PaymentServiceImpl paymentService;
@@ -74,6 +85,114 @@ class PaymentServiceImplTest {
 
         verify(tossPaymentClient).confirm(paymentKey, orderId, amount);
         verify(tossPaymentClient).cancelPayment(eq(paymentKey), anyString());
+    }
+
+    // ===== 고객 취소 (#102 후속) =====
+
+    @Test
+    @DisplayName("접수(결제 완료) 건 취소: 결제 · 배송 · 이력 · 대기 지원 마감을 먼저 저장(flush)하고 토스 환불은 마지막")
+    void cancelPayment_savesFirstThenRefunds() {
+        Payment payment = paidPayment(ShipmentStatus.REQUESTED, "toss-key");
+        Shipment shipment = payment.getShipment();
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+
+        paymentService.cancelPayment(1L, "단순 변심", 10L);
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.CANCELED);
+        InOrder order = inOrder(statusHistoryService, dispatchApplicationService, entityManager, tossPaymentClient);
+        order.verify(statusHistoryService).record(shipment, ShipmentStatus.REQUESTED, ShipmentStatus.CANCELED,
+                shipment.getCustomer(), "고객 취소: 단순 변심");
+        order.verify(dispatchApplicationService).closePendingApplications(shipment);
+        order.verify(entityManager).flush();
+        order.verify(tossPaymentClient).cancelPayment("toss-key", "단순 변심");
+    }
+
+    @Test
+    @DisplayName("토스 환불이 실패하면 예외가 그대로 나가 트랜잭션이 롤백된다 (DB는 환불 전에 flush)")
+    void cancelPayment_refundFailurePropagates() {
+        Payment payment = paidPayment(ShipmentStatus.REQUESTED, "toss-key");
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        doThrow(new CustomException(ErrorCode.PAYMENT_FAILED, "토스 결제 취소에 실패했습니다."))
+                .when(tossPaymentClient).cancelPayment("toss-key", "단순 변심");
+
+        assertThatThrownBy(() -> paymentService.cancelPayment(1L, "단순 변심", 10L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.PAYMENT_FAILED);
+        verify(entityManager).flush();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ShipmentStatus.class, names = {"ASSIGNED", "PICKED_UP", "IN_TRANSIT", "ARRIVED", "COMPLETED", "CANCELED"})
+    @DisplayName("배차가 확정된 뒤 · 이미 취소된 배송은 고객이 취소할 수 없고 아무것도 바뀌지 않는다 (409 CANNOT_CANCEL)")
+    void cancelPayment_onlyBeforeDispatch(ShipmentStatus status) {
+        Payment payment = paidPayment(status, "toss-key");
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() -> paymentService.cancelPayment(1L, "단순 변심", 10L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.CANNOT_CANCEL);
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PAID);
+        verifyNoInteractions(tossPaymentClient, statusHistoryService, dispatchApplicationService);
+    }
+
+    @Test
+    @DisplayName("배차가 확정된 배송은 관리자에게 취소를 요청하라고 안내한다")
+    void cancelPayment_assignedMessage() {
+        when(paymentRepository.findByShipmentIdForUpdate(1L))
+                .thenReturn(Optional.of(paidPayment(ShipmentStatus.ASSIGNED, "toss-key")));
+
+        assertThatThrownBy(() -> paymentService.cancelPayment(1L, "단순 변심", 10L))
+                .hasMessage("배차가 확정된 배송은 관리자에게 취소를 요청해 주세요.");
+    }
+
+    @Test
+    @DisplayName("결제 대기 건과 개발용 결제 건너뛰기 건은 토스를 부르지 않는다")
+    void cancelPayment_noRefundCallWithoutTossPayment() {
+        Payment ready = pendingPayment("order-2", 10000);
+        Payment skipped = paidPayment(ShipmentStatus.REQUESTED, "LOCAL_SKIP_order-3");
+        when(paymentRepository.findByShipmentIdForUpdate(2L)).thenReturn(Optional.of(ready));
+        when(paymentRepository.findByShipmentIdForUpdate(3L)).thenReturn(Optional.of(skipped));
+
+        paymentService.cancelPayment(2L, "결제 안 함", 10L);
+        paymentService.cancelPayment(3L, "점검", 10L);
+
+        assertThat(ready.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+        assertThat(skipped.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+        verifyNoInteractions(tossPaymentClient);
+    }
+
+    @Test
+    @DisplayName("다른 고객의 배송은 취소할 수 없다 (403)")
+    void cancelPayment_otherCustomer() {
+        when(paymentRepository.findByShipmentIdForUpdate(1L))
+                .thenReturn(Optional.of(paidPayment(ShipmentStatus.REQUESTED, "toss-key")));
+
+        assertThatThrownBy(() -> paymentService.cancelPayment(1L, "단순 변심", 99L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FORBIDDEN);
+        verifyNoInteractions(tossPaymentClient, statusHistoryService, dispatchApplicationService);
+    }
+
+    // 결제 완료 건 (고객 10번)
+    private Payment paidPayment(ShipmentStatus shipmentStatus, String paymentKey) {
+        Member customer = Member.builder()
+                .id(10L)
+                .role(MemberRole.CUSTOMER)
+                .build();
+        Shipment shipment = Shipment.builder()
+                .customer(customer)
+                .fare(10000)
+                .status(shipmentStatus)
+                .pickupAt(LocalDateTime.now().plusDays(1))
+                .build();
+        return Payment.builder()
+                .shipment(shipment)
+                .orderId("order-1")
+                .paymentKey(paymentKey)
+                .amount(10000)
+                .status(PaymentStatus.PAID)
+                .build();
     }
 
     private Payment pendingPayment(String orderId, int amount) {

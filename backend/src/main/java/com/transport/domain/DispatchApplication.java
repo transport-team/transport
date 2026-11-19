@@ -49,7 +49,7 @@ public class DispatchApplication extends BaseEntity {
         this.status = DispatchApplicationStatus.REJECTED;
     }
 
-    // 다른 기사가 선택되어 자동 마감
+    // 자동 마감: 다른 기사가 선택됐거나 배송이 취소됨
     public void notSelect() {
         this.status = DispatchApplicationStatus.NOT_SELECTED;
     }

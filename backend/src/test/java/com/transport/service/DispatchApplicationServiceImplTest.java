@@ -92,6 +92,27 @@ class DispatchApplicationServiceImplTest {
         verify(applicationRepository).findById(3L);
     }
 
+    // 배송이 취소되면 대기 중인 지원을 모두 자동 마감 (팀원 3 결제 취소가 부르는 약속 메서드)
+    @Test
+    void closePendingApplicationsWhenShipmentCanceled() {
+        Shipment shipment = createShipment(ShipmentStatus.CANCELED);
+        DispatchApplication first = createApplication(shipment, DispatchApplicationStatus.PENDING);
+        DispatchApplication second = DispatchApplication.builder()
+                .id(4L)
+                .shipment(shipment)
+                .status(DispatchApplicationStatus.PENDING)
+                .build();
+
+        when(applicationRepository.findByShipmentAndStatusOrderByCreatedAtAsc(shipment, DispatchApplicationStatus.PENDING))
+                .thenReturn(List.of(first, second));
+
+        dispatchApplicationService.closePendingApplications(shipment);
+
+        assertThat(List.of(first, second))
+                .extracting(DispatchApplication::getStatus)
+                .containsOnly(DispatchApplicationStatus.NOT_SELECTED);
+    }
+
     // 다른 고객의 배송에 들어온 지원은 거절할 수 없음
     @Test
     void cannotRejectAnotherCustomersApplication() {

@@ -562,6 +562,14 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		}).toList();
 	}
 
+	// 배송이 취소되면 대기 중인 지원을 모두 자동 마감 — 고객 지원자 목록에서 빠지고, 기사 지난 내역에는 '미선정'으로 남는다
+	@Override
+	@Transactional
+	public void closePendingApplications(Shipment shipment) {
+		applicationRepository.findByShipmentAndStatusOrderByCreatedAtAsc(shipment, DispatchApplicationStatus.PENDING)
+				.forEach(DispatchApplication::notSelect);
+	}
+
 	private boolean isInvalidDuration(Shipment shipment) {
 		return shipment.getDurationMin() == null || shipment.getDurationMin() <= 0;
 	}
