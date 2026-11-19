@@ -7,6 +7,15 @@ export const createShipment = async (shipmentRequest) => {
     return res.data
 }
 
+// 내 배송 목록 조회 (고객) — params: { page, size, status, from, to }
+export const getMyShipments = async (params = {}) => {
+    const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([, value]) => value !== '' && value !== null && value !== undefined),
+    )
+    const res = await jwtAxios.get('/api/shipments/my', { params: cleanParams })
+    return res.data
+}
+
 // ===== 기사 배송 처리 (팀원 4 — 5-3, 5-4) =====
 
 // 배송 상세 조회 (본인 고객 · 배정 기사 · 관리자)

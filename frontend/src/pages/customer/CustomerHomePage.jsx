@@ -25,11 +25,14 @@ const CustomerHomePage = () => (
         <h2 className="mt-3 font-semibold text-emerald-900">새 배송 신청</h2>
         <p className="mt-1 text-sm text-emerald-700">배송 정보를 입력하고 운임을 확인하세요.</p>
       </Link>
-      <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
+      <Link
+        to="/customer/shipments"
+        className="rounded-xl border border-blue-100 bg-blue-50 p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
+      >
         <span className="text-2xl" aria-hidden="true">🚚</span>
         <h2 className="mt-3 font-semibold text-blue-900">배송 현황</h2>
-        <p className="mt-1 text-sm text-blue-700">내 배송 메뉴에서 진행 상황을 확인하세요.</p>
-      </div>
+        <p className="mt-1 text-sm text-blue-700">내 배송 목록과 진행 상황을 확인하세요.</p>
+      </Link>
       <Link
         to="/customer/me"
         className="rounded-xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
