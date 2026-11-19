@@ -1,6 +1,9 @@
 package com.transport.repository;
 
 import com.transport.domain.Payment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.PaymentStatus;
 import com.transport.domain.enums.ShipmentStatus;
@@ -93,4 +96,26 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p join fetch p.shipment where p.shipment.id = :shipmentId")
     Optional<Payment> findByShipmentIdForUpdate(@Param("shipmentId") Long shipmentId);
+    
+ // 관리자 결제 내역 조회: shipment 및 shipment.customer를 한 번에 로딩 (N+1 방지)
+    @EntityGraph(attributePaths = {"shipment", "shipment.customer"})
+    @Query("""
+            select p from Payment p
+            where (:status is null or p.status = :status)
+              and (:from is null or p.createdAt >= :from)
+              and (:to is null or p.createdAt < :to)
+              and (:keyword is null or :keyword = ''
+                   or str(p.shipment.id) = :keyword
+                   or lower(p.orderId) like lower(concat('%', :keyword, '%'))
+                   or lower(p.shipment.customer.name) like lower(concat('%', :keyword, '%'))
+                   or lower(p.shipment.customer.email) like lower(concat('%', :keyword, '%'))
+                   or lower(p.shipment.cargoName) like lower(concat('%', :keyword, '%')))
+            """)
+    Page<Payment> searchAdminPayments(
+            @Param("status") PaymentStatus status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("keyword") String keyword,
+            Pageable pageable);
+    
 }

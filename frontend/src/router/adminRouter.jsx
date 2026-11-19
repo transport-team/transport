@@ -10,19 +10,23 @@ const NoticeManage = lazy(() => import('../pages/admin/NoticeManagePage'))
 const FaqManage = lazy(() => import('../pages/admin/FaqManagePage'))
 const InquiryManage = lazy(() => import('../pages/admin/InquiryManagePage'))
 const VehicleEditPage = lazy(() => import('../pages/admin/VehicleEditPage'))
-
-// 차량 관리 페이지
 const VehicleListPage = lazy(() => import('../pages/admin/VehicleListPage'))
-// 차량 등록 페이지
 const VehicleRegisterPage = lazy(() => import('../pages/admin/VehicleRegisterPage'))
-// 차량 등록 신청함 페이지
 const VehicleRequestListPage = lazy(() => import('../pages/admin/VehicleRequestListPage'))
+
+// 팀원 3 관리자 화면
+const ShipmentManagePage = lazy(() => import('../pages/admin/ShipmentManagePage'))
+const PaymentManagePage = lazy(() => import('../pages/admin/PaymentManagePage'))
+const CargoTypeManagePage = lazy(() => import('../pages/admin/CargoTypeManagePage'))
 
 // 관리자 화면 경로 (/admin/...) — 공통 파일: 화면을 추가할 때 PR로 경로를 더한다
 const adminRouter = () => [
   { path: '', element: <Suspense fallback={Loading}><AdminHome /></Suspense> },
   { path: 'me', element: <Suspense fallback={Loading}><MyPage /></Suspense> },
-  { path: 'vehicles', element: <Suspense fallback={Loading}><VehicleListPage /></Suspense> }, // 차량 관리 경로
+  { path: 'shipments', element: <Suspense fallback={Loading}><ShipmentManagePage /></Suspense> },
+  { path: 'payments', element: <Suspense fallback={Loading}><PaymentManagePage /></Suspense> },
+  { path: 'cargo-types', element: <Suspense fallback={Loading}><CargoTypeManagePage /></Suspense> },
+  { path: 'vehicles', element: <Suspense fallback={Loading}><VehicleListPage /></Suspense> },
   { path: 'vehicles/new', element: <Suspense fallback={Loading}><VehicleRegisterPage /></Suspense> },
   { path: 'vehicles/:id/edit', element: <Suspense fallback={Loading}><VehicleEditPage /></Suspense> },
   { path: 'members', element: <Suspense fallback={Loading}><MemberList /></Suspense> },
