@@ -25,4 +25,7 @@ public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
     // 배송 ID로 현재 활성화된 배차 조회 (최근 배차 우선)
     Optional<Dispatch> findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(Long shipmentId);
 
+    // 기사별 전체 배차 이력 조회 (정산 대상 확인용)
+    List<Dispatch> findByDriver_IdOrderByAssignedAtDesc(Long driverId);
+
 }
