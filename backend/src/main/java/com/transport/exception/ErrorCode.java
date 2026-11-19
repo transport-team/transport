@@ -52,6 +52,8 @@ public enum ErrorCode {
 	PAYMENT_FAILED(HttpStatus.BAD_GATEWAY, "결제 승인에 실패했습니다."),
 	SHIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 배송 건을 찾을 수 없습니다."),
 	CANNOT_CANCEL(HttpStatus.CONFLICT, "취소할 수 없는 배송입니다."),
+	CARGO_TYPE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 화물 유형을 찾을 수 없습니다."),
+	DUPLICATE_CARGO_TYPE_NAME(HttpStatus.CONFLICT, "이미 등록된 화물 유형 이름입니다."),
 
 	// 진행 · 실시간 · 리뷰 (팀원 4)
 	INVALID_STATUS_CHANGE(HttpStatus.BAD_REQUEST, "허용되지 않는 상태 변경입니다."),

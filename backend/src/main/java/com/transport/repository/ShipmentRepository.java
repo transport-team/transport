@@ -4,6 +4,7 @@ package com.transport.repository;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.ShipmentStatus;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
+	@EntityGraph(attributePaths = {"vehicleType", "cargoType"})
     @Query("""
             select s from Shipment s
             where s.customer.id = :customerId
@@ -44,4 +46,28 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
 
         Long getShipmentCount();
     }
+    
+ // 관리자 배송 통합 검색: customer, vehicleType, cargoType을 EntityGraph로 한 번에 조회 (N+1 방지)
+    @EntityGraph(attributePaths = {"customer", "vehicleType", "cargoType"})
+    @Query("""
+            select s from Shipment s
+            where (:status is null or s.status = :status)
+              and (:from is null or s.createdAt >= :from)
+              and (:to is null or s.createdAt < :to)
+              and (:keyword is null or :keyword = ''
+                   or str(s.id) = :keyword
+                   or lower(s.cargoName) like lower(concat('%', :keyword, '%'))
+                   or lower(s.originAddress) like lower(concat('%', :keyword, '%'))
+                   or lower(s.destAddress) like lower(concat('%', :keyword, '%'))
+                   or lower(s.customer.name) like lower(concat('%', :keyword, '%'))
+                   or lower(s.customer.email) like lower(concat('%', :keyword, '%'))
+                   or lower(s.receiverName) like lower(concat('%', :keyword, '%')))
+            """)
+    Page<Shipment> searchAdminShipments(
+            @Param("status") ShipmentStatus status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("keyword") String keyword,
+            Pageable pageable);
+    
 }

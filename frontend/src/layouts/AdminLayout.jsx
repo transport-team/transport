@@ -7,9 +7,11 @@ import { getPendingVehicleRequests } from '../api/vehicleApi'
 // 관리자 메뉴 — 화면을 만들면 to에 경로를 넣는다 (to가 없으면 준비 중)
 const MENUS = [
   { label: '대시보드', to: '/admin' },
-  { label: '배송 관리' },
+  { label: '배송 관리', to: '/admin/shipments' },
+  { label: '결제 내역', to: '/admin/payments' },
+  { label: '화물 종류', to: '/admin/cargo-types' },
   { label: '배차' },
-  { label: '기사 관리' },
+  { label: '기사 관리', to: '/admin/drivers' },
   { label: '차량 · 차종', to: '/admin/vehicles' },
   { label: '차량 등록 신청함', to: '/admin/vehicle-requests' },
   { label: '정산' },
