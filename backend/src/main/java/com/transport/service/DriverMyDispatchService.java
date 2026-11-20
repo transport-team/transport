@@ -201,6 +201,7 @@ public class DriverMyDispatchService {
                 .applicationStatus(application.getStatus().name())
                 .shipmentStatus(shipment.getStatus().name())
                 .cargoName(shipment.getCargoName())
+                .memo(shipment.getMemo())
                 .cargoWeightKg(shipment.getCargoWeightKg())
                 .vehicleTypeId(shipment.getVehicleType().getId())
                 .fare(shipment.getFare())

@@ -553,7 +553,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 			// 5. 목록 DTO 생성
 			return DriverShipmentListResponseDTO.builder().shipmentId(shipment.getId())
 					.originAddress(shipment.getOriginAddress()).destAddress(shipment.getDestAddress())
-					.cargoName(shipment.getCargoName()).cargoWeightKg(shipment.getCargoWeightKg())
+					.cargoName(shipment.getCargoName()).memo(shipment.getMemo()).cargoWeightKg(shipment.getCargoWeightKg())
 					.vehicleTypeId(shipment.getVehicleType().getId()).fare(shipment.getFare())
 					.pickupAt(shipment.getPickupAt())
 					// 길찾기 실패로 소요시간이 null이면 0 (int 칸에 null을 넣으면 목록 전체가 500)
