@@ -11,6 +11,8 @@ public class DispatchApplicantResponseDTO {
 
     private Long driverId;       // 기사 ID
 
+    private String driverName;   // 기사 이름 (고객 화면 표시)
+
     private String licenseType;  // 면허 종류
 
     private int careerYears;     // 운전 경력
@@ -20,5 +22,7 @@ public class DispatchApplicantResponseDTO {
     private String plateNo;      // 차량번호
 
     private Long vehicleTypeId;  // 차종 ID
+
+    private String vehicleTypeName; // 차종명
 
 }

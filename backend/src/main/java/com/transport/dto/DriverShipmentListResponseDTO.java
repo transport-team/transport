@@ -18,6 +18,8 @@ public class DriverShipmentListResponseDTO {
 
 	private String cargoName;      // 화물 이름
 
+	private String memo;           // 고객 요청사항
+
 	private int cargoWeightKg;     // 화물 무게
 
 	private Long vehicleTypeId;    // 요청 차종 ID

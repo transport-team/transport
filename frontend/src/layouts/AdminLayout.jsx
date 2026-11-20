@@ -11,7 +11,7 @@ const MENUS = [
   { label: '결제 내역', to: '/admin/payments' },
   { label: '화물 종류', to: '/admin/cargo-types' },
   { label: '배차' },
-  { label: '기사 관리' },
+  { label: '기사 관리', to: '/admin/drivers' },
   { label: '차량 · 차종', to: '/admin/vehicles' },
   { label: '차량 등록 신청함', to: '/admin/vehicle-requests' },
   { label: '정산' },

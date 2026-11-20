@@ -97,7 +97,13 @@ const DashboardSummary = ({ dashboard }) => {
       <section aria-labelledby="todo-title">
         <h2 id="todo-title" className="text-base font-semibold">처리할 일</h2>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
-          <StatCard label="기사 승인 대기" value={dashboard.pendingDriverCount} unit="명" note="기사 관리 화면은 준비 중이에요" />
+          <StatCard
+            label="기사 승인 대기"
+            value={dashboard.pendingDriverCount}
+            unit="명"
+            note="눌러서 기사 관리로"
+            to="/admin/drivers?status=PENDING"
+          />
           <StatCard
             label="차량 등록 신청"
             value={dashboard.pendingVehicleRequestCount}

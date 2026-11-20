@@ -9,6 +9,7 @@ import { getMyAssignedDispatch } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import useLocationShare from '../../hooks/useLocationShare'
 import Button from '../../components/common/Button'
+import { DriverRouteCard, DriverCargoCard, DriverMemoCard } from '../../components/driver/DriverDetailCards'
 
 // 팀원 3 상세 API 머지 전까지 쓰는 임시 데이터 (api.md의 GET /api/shipments/{id} 예시 필드 기준)
 const USE_MOCK_DATA = false
@@ -189,61 +190,78 @@ const DriverDispatchProcessPage = () => {
     if (loadError) {
         return (
             <section className="grid gap-4 p-4">
-                <Link to="/driver/dispatches?tab=assigned" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 배차 확정 목록으로</Link>
+                <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800">← 배차 확정 목록으로</Link>
                 <p className="rounded-2xl bg-white p-6 text-gray-600 shadow-sm">{loadError}</p>
             </section>
         )
     }
 
     return (
-        <section className="mx-auto grid max-w-md gap-4 p-4">
-            <Link to="/driver/dispatches?tab=assigned" className="w-fit text-sm text-gray-500 hover:text-blue-600">← 배차 확정 목록으로</Link>
+        <section className="mx-auto min-h-screen w-full max-w-[640px] space-y-4 bg-gray-50 px-5 pb-24 pt-5">
+            <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800">← 배차 확정 목록으로</Link>
 
             {/* 제목 + 상태 배지 */}
             <div className="flex items-center justify-between gap-3">
-                <h1 className="text-xl font-bold text-gray-900">배송 처리</h1>
+                <h1 className="text-lg font-bold text-gray-900">배송 처리 #{shipment.shipmentId}</h1>
                 <StatusBadge status={shipment.status} />
             </div>
 
             {/* 화물 정보 */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p className="text-lg font-bold text-gray-900">{shipment.cargoName}</p>
-                <p className="mt-1 text-sm text-gray-500">{shipment.cargoWeightKg}kg · {shipment.fare?.toLocaleString('ko-KR')}원</p>
-                {shipment.memo && (
-                    <p className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">요청사항: {shipment.memo}</p>
-                )}
-            </div>
+            <DriverCargoCard
+                cargoName={shipment.cargoName}
+                cargoWeightKg={shipment.cargoWeightKg}
+                vehicleTypeLabel={shipment.vehicleTypeId != null ? `차종 ${shipment.vehicleTypeId}` : undefined}
+                fare={shipment.fare}
+            />
 
             {/* 경로 */}
-            <div className="grid gap-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div>
-                    <p className="text-xs font-medium text-gray-500">출발지</p>
-                    <p className="text-sm font-semibold text-gray-900">{shipment.originAddress} {shipment.originDetail}</p>
-                </div>
-                <div className="text-blue-500">↓</div>
-                <div>
-                    <p className="text-xs font-medium text-gray-500">도착지</p>
-                    <p className="text-sm font-semibold text-gray-900">{shipment.destAddress} {shipment.destDetail}</p>
-                </div>
-            </div>
+            <DriverRouteCard
+                originAddress={shipment.originAddress}
+                originDetail={shipment.originDetail}
+                destAddress={shipment.destAddress}
+                destDetail={shipment.destDetail}
+                pickupAt={shipment.pickupAt}
+                durationMin={shipment.durationMin}
+            />
+
+            {/* 고객 요청사항 */}
+            <DriverMemoCard memo={shipment.memo} />
 
             {/* 수령인 — 전화 걸기 (tel:) */}
-            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div>
-                    <p className="text-xs font-medium text-gray-500">수령인</p>
-                    <p className="text-sm font-semibold text-gray-900">{shipment.receiverName}</p>
+            <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <p className="text-xs font-semibold text-emerald-600">
+                    CONTACTS
+                </p>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+                        <div>
+                            <p className="text-xs text-gray-500">수령인</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                {shipment.receiverName || '정보 없음'}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p className="text-xs text-gray-500">연락처</p>
+                            <p className="mt-1 text-sm text-gray-700">
+                                {shipment.receiverPhone || '연락처 없음'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <a
+                        href={`tel:${shipment.receiverPhone}`}
+                        className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                    >
+                        📞 전화 걸기
+                    </a>
                 </div>
-                <a
-                    href={`tel:${shipment.receiverPhone}`}
-                    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
-                >
-                    📞 전화 걸기
-                </a>
             </div>
 
             {/* 사진 업로드 (5-4) — 필요한 단계에서만 노출 */}
             {step?.photoType && (
-                <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="grid gap-3 rounded-2xl bg-white p-5 shadow-sm">
                     <p className="text-sm font-bold text-gray-800">
                         {step.photoLabel} 업로드 <span className="text-red-500">(필수)</span>
                     </p>
@@ -254,7 +272,7 @@ const DriverDispatchProcessPage = () => {
                         capture="environment"
                         multiple
                         onChange={handleSelectFiles}
-                        className="w-full text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 file:transition-colors file:hover:bg-blue-200"
+                        className="w-full text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-emerald-700 file:transition-colors file:hover:bg-emerald-100"
                     />
                     {/* 업로드 전 미리보기 */}
                     {photos.length > 0 && (
@@ -281,7 +299,7 @@ const DriverDispatchProcessPage = () => {
                         </div>
                     )}
 
-                    <Button onClick={handleUpload} loading={uploading} disabled={photos.length === 0} size="sm">
+                    <Button onClick={handleUpload} loading={uploading} disabled={photos.length === 0} size="sm" className="!bg-emerald-600 hover:!bg-emerald-700">
                         {photos.length > 0 ? `${photos.length}장 업로드` : '사진을 선택해 주세요'}
                     </Button>
 
@@ -309,7 +327,7 @@ const DriverDispatchProcessPage = () => {
 
             {/* 다음 단계 버튼 (현재 상태에 맞는 버튼 하나) */}
             {step ? (
-                <Button onClick={handleNextStep} loading={changing} size="lg">
+                <Button onClick={handleNextStep} loading={changing} size="lg" className="w-full !rounded-xl !bg-emerald-600 hover:!bg-emerald-700">
                     {step.label}
                 </Button>
             ) : (

@@ -6,6 +6,10 @@ import { getCookie } from '../util/cookieUtil'
 import { API_SERVER_HOST } from '../api/apiClient'
 import { getMyNotifications, markNotificationRead } from '../api/notificationApi'
 
+// 기사 위치(운송 중 30초마다)를 화면에 넘기는 window 이벤트 이름 — 고객 배송 상세가 받는다
+// detail: { shipmentId, lat, lng, recordedAt } (서버 LocationServiceImpl의 SSE 'location' 이벤트 그대로)
+export const SHIPMENT_LOCATION_EVENT = 'shipment-location'
+
 const useNotification = () => {
     const member = getCookie('member')
     const memberId = member?.memberId // 로그인 쿠키의 키는 memberId (slices/loginSlice와 같다)
@@ -98,6 +102,16 @@ const useNotification = () => {
                         setNotifications((prev) => [{ ...payload, isRead: false }, ...prev])
                     } catch (parseErr) {
                         console.error('알림 파싱 실패:', parseErr)
+                    }
+                })
+
+                // 기사 위치: 같은 SSE 연결로 오는 'location' 이벤트를 화면에 넘긴다
+                // (위치용 SSE를 따로 열면 서버가 회원당 연결 1개만 두어서 이 알림 연결이 끊긴다)
+                es.addEventListener('location', (e) => {
+                    try {
+                        window.dispatchEvent(new CustomEvent(SHIPMENT_LOCATION_EVENT, { detail: JSON.parse(e.data) }))
+                    } catch (parseErr) {
+                        console.error('위치 파싱 실패:', parseErr)
                     }
                 })
 

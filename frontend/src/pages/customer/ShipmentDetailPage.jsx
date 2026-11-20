@@ -3,6 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { cancelPayment, retryPayment } from '../../api/paymentApi'
 import { getShipment } from '../../api/shipmentApi'
 import { requestTossPayment } from '../../util/tossPayments'
+import Timeline from '../../components/tracking/Timeline'
+import LiveTrackingMap from '../../components/tracking/LiveTrackingMap'
+import ReviewSection from '../../components/review/ReviewSection'
+import { SHIPMENT_LOCATION_EVENT } from '../../hooks/useNotification'
 
 const STATUS_META = {
   PENDING_PAYMENT: { label: '결제 대기', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -10,9 +14,13 @@ const STATUS_META = {
   ASSIGNED: { label: '배차 완료', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
   PICKED_UP: { label: '상차 완료', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
   IN_TRANSIT: { label: '배송 중', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  DELIVERED: { label: '배송 완료', badge: 'bg-gray-100 text-gray-700 border-gray-200' },
+  ARRIVED: { label: '도착', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  COMPLETED: { label: '배송 완료', badge: 'bg-gray-100 text-gray-700 border-gray-200' },
   CANCELED: { label: '취소됨', badge: 'bg-red-50 text-red-600 border-red-200' },
 }
+
+// 배차 뒤부터 도착까지 지도를 보여 준다 (기사 위치는 운송 중에만 — LiveTrackingMap이 처리)
+const TRACKING_STATUSES = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED']
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -31,6 +39,7 @@ const ShipmentDetailPage = () => {
   const [actionError, setActionError] = useState('')
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
+  const [liveLocation, setLiveLocation] = useState(null)  // SSE로 받은 이 배송의 최신 기사 위치
 
   const requestKey = `${id}-${refreshCount}`
   const loading = fetchState.resolvedKey !== requestKey
@@ -54,6 +63,15 @@ const ShipmentDetailPage = () => {
 
     return () => { active = false }
   }, [id, requestKey])
+
+  // 기사 위치 실시간: 알림 SSE 연결(useNotification)이 넘겨주는 위치 중 이 배송 것만 받는다
+  useEffect(() => {
+    const handleLocation = (e) => {
+      if (String(e.detail?.shipmentId) === String(id)) setLiveLocation(e.detail)
+    }
+    window.addEventListener(SHIPMENT_LOCATION_EVENT, handleLocation)
+    return () => window.removeEventListener(SHIPMENT_LOCATION_EVENT, handleLocation)
+  }, [id])
 
   const { shipment, error } = fetchState
 
@@ -135,6 +153,15 @@ const ShipmentDetailPage = () => {
       </header>
 
       <div className="space-y-4 px-5 pt-5">
+        {shipment.status === 'REQUESTED' && (
+          <Link
+            to={`/customer/dispatch-requests?shipmentId=${shipment.id}`}
+            className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-bold text-emerald-800 hover:bg-emerald-100"
+          >
+            <span>지원한 기사 확인 및 배차 확정</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
         {actionError && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-600" role="alert">
             {actionError}
@@ -174,6 +201,19 @@ const ShipmentDetailPage = () => {
             <strong className="text-gray-900">{formatDateTime(shipment.pickupAt)}</strong>
           </div>
         </div>
+
+        {TRACKING_STATUSES.includes(shipment.status) && (
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold text-emerald-600">LIVE TRACKING</p>
+            <div className="mt-3">
+              <LiveTrackingMap
+                shipmentId={shipment.id}
+                status={shipment.status}
+                sseLocation={liveLocation?.shipmentId === shipment.id ? liveLocation : null}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold text-emerald-600">CARGO & FARE</p>
@@ -216,22 +256,16 @@ const ShipmentDetailPage = () => {
           )}
         </div>
 
-        {Array.isArray(shipment.history) && shipment.history.length > 0 && (
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold text-emerald-600">STATUS TIMELINE</p>
-            <ol className="mt-4 space-y-3 border-l-2 border-emerald-200 pl-4">
-              {shipment.history.map((entry, idx) => (
-                <li key={entry.id || idx} className="relative text-xs">
-                  <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-emerald-600" />
-                  <p className="font-bold text-gray-900">
-                    {STATUS_META[entry.toStatus]?.label || entry.toStatus}
-                  </p>
-                  {entry.memo && <p className="mt-0.5 text-gray-600">{entry.memo}</p>}
-                  <p className="mt-0.5 text-[11px] text-gray-400">{formatDateTime(entry.createdAt)}</p>
-                </li>
-              ))}
-            </ol>
+        <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold text-emerald-600">STATUS TIMELINE</p>
+          <div className="mt-4">
+            <Timeline history={shipment.history || []} />
           </div>
+        </div>
+
+        {/* 배송 완료면 리뷰 쓰기 · 보기 (이 화면은 본인 고객만 열 수 있어서 isMine) */}
+        {shipment.status === 'COMPLETED' && (
+          <ReviewSection shipmentId={shipment.id} status={shipment.status} isMine />
         )}
       </div>
 
