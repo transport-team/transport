@@ -76,4 +76,40 @@ class DispatchServiceImplTest {
 
         assertThat(result).isNull();
     }
+
+    @Test
+    @DisplayName("활성 배차를 해제하면 기록은 남고 해제 시각이 기록된다")
+    void releaseDispatch_success() {
+        Dispatch dispatch = Dispatch.builder()
+                .id(1L)
+                .active(true)
+                .assignedAt(LocalDateTime.now())
+                .build();
+
+        when(dispatchRepository
+                .findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(10L))
+                .thenReturn(Optional.of(dispatch));
+
+        dispatchService.releaseDispatch(10L);
+
+        assertThat(dispatch.isActive()).isFalse();
+        assertThat(dispatch.getReleasedAt()).isNotNull();
+
+        LocalDateTime releasedAt = dispatch.getReleasedAt();
+        dispatchService.releaseDispatch(10L);
+        assertThat(dispatch.getReleasedAt()).isEqualTo(releasedAt);
+    }
+
+    @Test
+    @DisplayName("활성 배차가 없는 배송은 안전하게 해제 요청을 무시한다")
+    void releaseDispatch_notFound() {
+        when(dispatchRepository
+                .findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(10L))
+                .thenReturn(Optional.empty());
+
+        dispatchService.releaseDispatch(10L);
+
+        verify(dispatchRepository)
+                .findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(10L);
+    }
 }
