@@ -16,7 +16,7 @@ import com.transport.domain.Payment;
 import com.transport.domain.Shipment;
 import com.transport.domain.VehicleType;
 import com.transport.domain.enums.PaymentStatus;
-import com.transport.domain.enums.ShipmentStatus; 
+import com.transport.domain.enums.ShipmentStatus;
 import com.transport.domain.enums.MemberRole;
 import com.transport.dto.PageRequestDTO;
 import com.transport.dto.PageResponseDTO;
@@ -39,7 +39,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ShipmentServiceImpl implements ShipmentService {
-	
+
     private final FareService fareService;
     private final ShipmentRepository shipmentRepository;
     private final PaymentRepository paymentRepository;
@@ -53,7 +53,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     @Override
     @Transactional
     public ShipmentResponseDTO createShipment(Long memberId, ShipmentRequestDTO requestDTO) {
-        
+
         // 1. 운임 계산 (누락되었던 cargoTypeId, pickupAt 추가)
         FareCalculateRequestDTO fareRequest = FareCalculateRequestDTO.builder()
                 .originAddress(requestDTO.getOriginAddress())
@@ -61,7 +61,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .vehicleTypeId(requestDTO.getVehicleTypeId())
                 .cargoTypeId(requestDTO.getCargoTypeId()) // 필수 추가
                 .cargoWeightKg(requestDTO.getCargoWeightKg())
-                .pickupAt(requestDTO.getPickupAt())       // 필수 추가
+                .pickupAt(requestDTO.getPickupAt()) // 필수 추가
                 .build();
 
         FareCalculateResponseDTO fareResponse = fareService.calculateFare(fareRequest);
@@ -74,7 +74,7 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         VehicleType vehicleType = vehicleTypeService.findById(requestDTO.getVehicleTypeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-        
+
         CargoType cargoType = cargoTypeRepository.findById(requestDTO.getCargoTypeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
@@ -101,8 +101,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .destLng(fareResponse.getDestLng())
                 .distanceKm(fareResponse.getDistanceKm())
                 .durationMin(durationMin)
-                .fare(fareResponse.getTotalFare())      
-                .status(ShipmentStatus.PENDING_PAYMENT)         
+                .fare(fareResponse.getTotalFare())
+                .status(ShipmentStatus.PENDING_PAYMENT)
                 .build();
 
         shipmentRepository.save(shipment);
@@ -137,7 +137,8 @@ public class ShipmentServiceImpl implements ShipmentService {
         LocalDateTime toDateTime = to == null ? null : to.plusDays(1).atStartOfDay();
         var result = shipmentRepository.findMyShipments(
                 memberId, status, fromDateTime, toDateTime,
-                pageRequestDTO.getPageable(org.springframework.data.domain.Sort.by("createdAt").descending()));
+                pageRequestDTO.getPageable(
+                        org.springframework.data.domain.Sort.by("createdAt").descending()));
 
         return PageResponseDTO.<ShipmentListResponseDTO>withAll()
                 .dtoList(result.getContent().stream().map(ShipmentListResponseDTO::from).toList())
@@ -160,12 +161,12 @@ public class ShipmentServiceImpl implements ShipmentService {
         var history = statusHistoryService.getHistory(shipmentId).stream()
                 .map(com.transport.dto.ShipmentStatusHistoryResponseDTO::from)
                 .toList();
-        
-     // 이미 정의된 findByShipmentId를 호출하여 리뷰 엔티티를 DTO로 변환
+
+        // 이미 정의된 findByShipmentId를 호출하여 리뷰 엔티티를 DTO로 변환
         var review = reviewRepository.findByShipmentId(shipmentId)
                 .map(com.transport.dto.ReviewResponseDTO::from)
-                .orElse(null); 
-        
+                .orElse(null);
+
         return ShipmentDetailResponseDTO.from(shipment, assignedDriverMemberId, history, review);
     }
 
@@ -174,7 +175,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     public Map<ShipmentStatus, Long> countByStatus() {
         Map<ShipmentStatus, Long> counts = new EnumMap<>(ShipmentStatus.class);
         for (ShipmentStatus status : ShipmentStatus.values()) {
-            counts.put(status, 0L);  // 배송이 없는 상태도 0으로
+            counts.put(status, 0L); // 배송이 없는 상태도 0으로
         }
         shipmentRepository.countGroupByStatus()
                 .forEach(row -> counts.put(row.getStatus(), row.getShipmentCount()));
@@ -191,7 +192,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     // 기사: 배차 대기 중인 운송 요청 목록 조회
     @Override
     public List<Shipment> getRequestedShipments() {
-        return shipmentRepository.findByStatusOrderByPickupAtAsc(ShipmentStatus.REQUESTED);
+        return shipmentRepository.findByStatusOrderByCreatedAtDescIdDesc(ShipmentStatus.REQUESTED);
     }
 
 }

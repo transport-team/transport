@@ -17,6 +17,7 @@ public class DriverDispatchHistoryResponseDTO {
     private String shipmentStatus;
 
     private String cargoName;
+    private String memo;
     private int cargoWeightKg;
     private Long vehicleTypeId;
     private int fare;
