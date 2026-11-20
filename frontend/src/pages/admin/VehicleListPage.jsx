@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getVehicleList } from '../../api/vehicleApi'
+import Pagination from '../../components/common/Pagination'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 const VehicleListPage = () => {
@@ -158,27 +159,7 @@ const VehicleListPage = () => {
                 )}
             </div>
 
-            <div className="flex items-center justify-center gap-4">
-                <button
-                    type="button"
-                    disabled={page <= 1}
-                    onClick={() => movePage(page - 1)}
-                    className="rounded border px-4 py-2 disabled:opacity-40"
-                >
-                    이전
-                </button>
-
-                <span>{page} / {totalPage}</span>
-
-                <button
-                    type="button"
-                    disabled={page >= totalPage}
-                    onClick={() => movePage(page + 1)}
-                    className="rounded border px-4 py-2 disabled:opacity-40"
-                >
-                    다음
-                </button>
-            </div>
+            <Pagination page={page} totalPages={totalPage} onMove={movePage} />
         </section>
     )
 }

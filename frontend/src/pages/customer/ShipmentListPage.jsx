@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Pagination from '../../components/common/Pagination'
 import { Link } from 'react-router-dom'
 import { getMyShipments } from '../../api/shipmentApi'
 
@@ -171,27 +172,7 @@ const ShipmentListPage = () => {
         })}
 
         {!loading && fetchState.totalPages > 1 && (
-          <div className="flex items-center justify-center gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 disabled:opacity-40"
-            >
-              이전
-            </button>
-            <span className="text-xs font-semibold text-gray-600">
-              {page} / {fetchState.totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(fetchState.totalPages, p + 1))}
-              disabled={page >= fetchState.totalPages}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 disabled:opacity-40"
-            >
-              다음
-            </button>
-          </div>
+          <Pagination page={page} totalPages={fetchState.totalPages} onMove={setPage} />
         )}
       </div>
     </section>

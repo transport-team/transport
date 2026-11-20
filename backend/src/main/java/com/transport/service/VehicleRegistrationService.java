@@ -12,6 +12,9 @@ public interface VehicleRegistrationService {
     // 로그인한 기사의 차량 등록 신청
     Long apply(Long memberId, VehicleRegistrationRequestDTO requestDTO);
 
+    // 관리자: 완료 건을 포함한 전체 차량 등록 신청 조회
+    List<VehicleRegistrationResponseDTO> getAllRequests();
+
     // 관리자: 승인 대기 중인 차량 등록 신청 목록 조회
     List<VehicleRegistrationResponseDTO> getPendingRequests();
 
