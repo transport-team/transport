@@ -153,6 +153,15 @@ const ShipmentDetailPage = () => {
       </header>
 
       <div className="space-y-4 px-5 pt-5">
+        {shipment.status === 'REQUESTED' && (
+          <Link
+            to={`/customer/dispatch-requests?shipmentId=${shipment.id}`}
+            className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-bold text-emerald-800 hover:bg-emerald-100"
+          >
+            <span>지원한 기사 확인 및 배차 확정</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
         {actionError && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-600" role="alert">
             {actionError}

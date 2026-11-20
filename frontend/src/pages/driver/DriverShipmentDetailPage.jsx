@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { getAvailableShipments, applyDispatch, cancelDispatch } from '../../api/dispatchApi'
 import { getMyVehicles } from '../../api/vehicleApi'
@@ -23,6 +23,8 @@ const DriverShipmentDetailPage = () => {
     const [selectedVehicleId, setSelectedVehicleId] = useState('')
     const [vehiclesLoading, setVehiclesLoading] = useState(true)
     const [vehicleError, setVehicleError] = useState('')
+    const [vehicleDropdownOpen, setVehicleDropdownOpen] = useState(false)
+    const vehicleDropdownRef = useRef(null)
 
     // 배차 신청 처리 상태
     const [applying, setApplying] = useState(false)
@@ -80,6 +82,17 @@ const DriverShipmentDetailPage = () => {
         loadMyVehicles()
     }, [])
 
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (!vehicleDropdownRef.current?.contains(event.target)) {
+                setVehicleDropdownOpen(false)
+            }
+        }
+
+        document.addEventListener('pointerdown', handleOutsideClick)
+        return () => document.removeEventListener('pointerdown', handleOutsideClick)
+    }, [])
+
     // 요청 차종과 일치하고 운행 가능한 차량만 선택
     const availableVehicles = shipment
         ? myVehicles.filter(
@@ -88,6 +101,10 @@ const DriverShipmentDetailPage = () => {
                 vehicle.status === 'AVAILABLE'
         )
         : []
+
+    const selectedVehicle = myVehicles.find(
+        (vehicle) => String(vehicle.vehicleId) === String(selectedVehicleId)
+    )
 
     // 기사 배차 신청
     const handleApplyDispatch = async () => {
@@ -365,22 +382,78 @@ const DriverShipmentDetailPage = () => {
                                     배차에 사용할 내 차량
                                 </label>
 
-                                <select
-                                    value={selectedVehicleId}
-                                    onChange={(e) => setSelectedVehicleId(e.target.value)}
-                                    disabled={!shipment.canApply || vehiclesLoading || availableVehicles.length === 0}
-                                    className="mb-4 h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                <div
+                                    ref={vehicleDropdownRef}
+                                    className="relative mb-4"
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Escape') setVehicleDropdownOpen(false)
+                                    }}
+                                    onBlur={(event) => {
+                                        if (!event.currentTarget.contains(event.relatedTarget)) {
+                                            setVehicleDropdownOpen(false)
+                                        }
+                                    }}
                                 >
-                                    <option value="">
-                                        {vehiclesLoading ? '차량 불러오는 중...' : '차량을 선택해 주세요'}
-                                    </option>
+                                    <button
+                                        type="button"
+                                        aria-expanded={vehicleDropdownOpen}
+                                        aria-controls="driver-vehicle-options"
+                                        disabled={vehiclesLoading || myVehicles.length === 0}
+                                        onClick={() => setVehicleDropdownOpen((prev) => !prev)}
+                                        className="flex h-12 w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 text-left text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <span className="truncate">
+                                            {vehiclesLoading
+                                                ? '차량 불러오는 중...'
+                                                : selectedVehicle
+                                                    ? `${selectedVehicle.plateNo} (차종 ${selectedVehicle.vehicleTypeId})`
+                                                    : '차량을 선택해 주세요'}
+                                        </span>
+                                        <span aria-hidden="true" className="ml-3 text-xs text-gray-500">▼</span>
+                                    </button>
 
-                                    {availableVehicles.map((vehicle) => (
-                                        <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
-                                            {vehicle.plateNo} (차종 {vehicle.vehicleTypeId})
-                                        </option>
-                                    ))}
-                                </select>
+                                    {vehicleDropdownOpen && (
+                                        <div
+                                            id="driver-vehicle-options"
+                                            role="group"
+                                            aria-label="보유 차량 목록"
+                                            className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
+                                        >
+                                            {myVehicles.map((vehicle) => {
+                                                const isTypeMismatch = Number(vehicle.vehicleTypeId) !== Number(shipment.vehicleTypeId)
+                                                const isMaintenance = vehicle.status === 'MAINTENANCE'
+                                                const isAvailable = vehicle.status === 'AVAILABLE'
+                                                const cannotSelect = !isAvailable || isTypeMismatch
+
+                                                return (
+                                                    <button
+                                                        type="button"
+                                                        key={vehicle.vehicleId}
+                                                        disabled={cannotSelect}
+                                                        onClick={() => {
+                                                            setSelectedVehicleId(String(vehicle.vehicleId))
+                                                            setVehicleDropdownOpen(false)
+                                                        }}
+                                                        className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 text-left text-sm enabled:hover:bg-gray-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <span className={cannotSelect ? 'text-gray-500' : 'text-gray-800'}>
+                                                            {cannotSelect ? '🚫 ' : ''}{vehicle.plateNo} (차종 {vehicle.vehicleTypeId})
+                                                        </span>
+                                                        {isTypeMismatch && (
+                                                            <span className="font-medium text-red-600">차종 불일치</span>
+                                                        )}
+                                                        {isMaintenance && (
+                                                            <span className="font-medium text-red-600">정비중</span>
+                                                        )}
+                                                        {!isAvailable && !isMaintenance && (
+                                                            <span className="font-medium text-red-600">운행 불가</span>
+                                                        )}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
 
                                 {vehicleError && (
                                     <p className="mb-3 text-sm text-red-600">

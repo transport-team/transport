@@ -202,10 +202,15 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		return applicationRepository
 				.findByShipmentAndStatusOrderByCreatedAtAsc(shipment, DispatchApplicationStatus.PENDING).stream()
 				.map(application -> DispatchApplicantResponseDTO.builder().applicationId(application.getId())
-						.driverId(application.getDriver().getId()).licenseType(application.getDriver().getLicenseType())
+						.driverId(application.getDriver().getId())
+						.driverName(application.getDriver().getMember().getName())
+						.licenseType(application.getDriver().getLicenseType())
 						.careerYears(application.getDriver().getCareerYears())
-						.vehicleId(application.getVehicle().getId()).plateNo(application.getVehicle().getPlateNo())
-						.vehicleTypeId(application.getVehicle().getVehicleType().getId()).build())
+						.vehicleId(application.getVehicle().getId())
+						.plateNo(application.getVehicle().getPlateNo())
+						.vehicleTypeId(application.getVehicle().getVehicleType().getId())
+						.vehicleTypeName(application.getVehicle().getVehicleType().getName())
+						.build())
 				.toList();
 	}
 
@@ -445,7 +450,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					.anyMatch(application -> application.getShipment().getId().equals(shipment.getId()));
 
 			if (rejectedByCustomer) {
-				blockReasons.add("고객이 거절한 운송 요청이라 다시 지원할 수 없습니다.");
+				blockReasons.add("고객이 거절한 운송 요청에는 다시 지원할 수 없습니다.");
 			}
 
 			// 승인된 기사인지 확인
@@ -470,7 +475,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 			// 기사 근무 일정 확인 (상차 예정일 기준)
 			driverScheduleRepository.findByDriver_IdAndWorkDate(driver.getId(), shipment.getPickupAt().toLocalDate())
-					.ifPresentOrElse(schedule -> {
+					.ifPresent(schedule -> {
 
 						// 휴무일이면 배차 신청 불가
 						if ("OFF".equals(schedule.getStatus().name())) {
@@ -498,9 +503,6 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 							warningMessages.add("등록된 근무시간 정보가 부족합니다.");
 						}
 
-					}, () -> {
-						// 해당 날짜에 근무 일정이 없는 경우
-						warningMessages.add("상차 예정일의 근무 일정이 등록되지 않았습니다.");
 					});
 
 			// 새 운송 요청의 예상 시작 및 종료 시간

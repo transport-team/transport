@@ -6,6 +6,7 @@ const MENUS = [
   { label: '홈', to: '/customer' },
   { label: '배송 신청', to: '/customer/shipments/new' },
   { label: '내 배송', to: '/customer/shipments' },
+  { label: '배차 요청', to: '/customer/dispatch-requests' },
   { label: '문의', to: '/customer/inquiries' },
 ]
 

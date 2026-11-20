@@ -58,6 +58,15 @@ export const selectDispatchApplicant = async (shipmentId, applicationId) => {
   return res.data
 }
 
+// 고객: 지원 기사 거절
+export const rejectDispatchApplicant = async (shipmentId, applicationId) => {
+  await jwtAxios.post(
+    `/api/customer/shipments/${shipmentId}/applications/${applicationId}/reject`
+  )
+
+  return true
+}
+
 // 기사: 본인의 지난 배차 신청 및 배송 내역 조회
 export const getMyDispatchHistory = async () => {
   const res = await jwtAxios.get('/api/driver/dispatches/history')
