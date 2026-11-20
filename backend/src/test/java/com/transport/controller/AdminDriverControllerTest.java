@@ -29,6 +29,7 @@ import com.transport.dto.DriverDTO;
 import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageRequestDTO;
 import com.transport.dto.PageResponseDTO;
+import com.transport.service.AdminDriverVehicleService;
 import com.transport.service.DriverService;
 import com.transport.util.JWTUtil;
 
@@ -47,6 +48,9 @@ class AdminDriverControllerTest {
 
 	@MockitoBean
 	private DriverService driverService;
+
+	@MockitoBean
+	private AdminDriverVehicleService adminDriverVehicleService;
 
 	@Test
 	void listForAdmin() throws Exception {

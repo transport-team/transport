@@ -11,6 +11,11 @@ export const searchAdminShipments = async (params = {}) => {
   return res.data
 }
 
+// 관리자 배차만 해제 (결제·배송 주문 취소 아님)
+export const cancelAdminShipmentDispatch = async (shipmentId, reason) => {
+  await jwtAxios.post(`/api/admin/shipments/${shipmentId}/dispatch/cancel`, { reason })
+}
+
 // ADM-03: 관리자 결제 내역 검색
 export const searchAdminPayments = async (params = {}) => {
   const res = await jwtAxios.get('/api/admin/payments', { params: cleanParams(params) })

@@ -12,6 +12,12 @@ export const patchDriverStatus = async (driverId, status) => {
   return res.data
 }
 
+// 관리자: 기사별 차량번호 · 차종 · 등록일 확인
+export const getAdminDriverVehicles = async (driverId) => {
+  const res = await jwtAxios.get(`/api/admin/drivers/${driverId}/vehicles`)
+  return res.data
+}
+
 // 기사 리뷰 목록 + 평균 평점 (팀원 4 API, driverId는 driver.id) → { reviews, averageRating }
 export const getDriverReviews = async (driverId) => {
   const res = await jwtAxios.get(`/api/drivers/${driverId}/reviews`)

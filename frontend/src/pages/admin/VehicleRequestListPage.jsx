@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import {
-    getPendingVehicleRequests,
+    getAllVehicleRequests,
     approveVehicleRequest,
     rejectVehicleRequest,
 } from '../../api/vehicleApi'
 import { useOutletContext } from 'react-router-dom'
+
+const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
+const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절' }
+const RESULT_STYLE = {
+    APPROVED: 'border-emerald-200 bg-emerald-100 text-emerald-800',
+    REJECTED: 'border-red-200 bg-red-100 text-red-700',
+}
 
 // 관리자 차량 등록 신청함
 const VehicleRequestListPage = () => {
@@ -16,17 +23,27 @@ const VehicleRequestListPage = () => {
     const [rejectionReason, setRejectionReason] = useState('')
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const [filters, setFilters] = useState({ progress: '', result: '', date: '' })
 
-    // 승인 대기 신청 목록 조회
-    // 상태는 then 안에서 바꾼다 (effect에서 불러도 react-hooks/set-state-in-effect에 걸리지 않게, 오류는 그대로 위로 전달)
+    // 전체 등록 신청 목록 조회 (처리 완료 건도 남겨두고 신청일 최신순 정렬)
     const loadRequests = () =>
-        getPendingVehicleRequests().then((data) => setRequests(Array.isArray(data) ? data : []))
+        getAllVehicleRequests().then((data) => setRequests(Array.isArray(data) ? data : []))
 
     useEffect(() => {
         loadRequests()
             .catch(() => setError('차량 등록 신청 목록을 불러오지 못했습니다.'))
             .finally(() => setLoading(false))
     }, [])
+
+    const visibleRequests = useMemo(() => requests.filter((request) => {
+        const processed = request.status !== 'PENDING'
+        const created = request.createdAt?.slice(0, 10) || ''
+        if (filters.progress === 'PENDING' && processed) return false
+        if (filters.progress === 'PROCESSED' && !processed) return false
+        if (filters.result && request.status !== filters.result) return false
+        if (filters.date && created !== filters.date) return false
+        return true
+    }), [requests, filters])
 
     // 관리자 승인
     const handleApprove = async (requestId) => {
@@ -74,120 +91,130 @@ const VehicleRequestListPage = () => {
     }
 
     return (
-        <section className="grid gap-5">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                    차량 등록 신청함
-                </h1>
-                <p className="mt-2 text-sm text-gray-600">
-                    기사가 신청한 차량 정보를 검토하고 승인하거나 거절할 수 있습니다.
-                </p>
+        <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h1 className="text-xl font-bold text-gray-900">차량 등록 신청함</h1>
+                    <p className="mt-1 text-xs text-gray-500">처리 완료된 신청도 이력으로 유지합니다.</p>
+                </div>
+                <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
+                    조회 <strong className="text-emerald-700">{visibleRequests.length}</strong>건
+                </span>
             </div>
 
-            {message && (
-                <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
-                    {message}
-                </p>
-            )}
-
-            {error && (
-                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                    {error}
-                </p>
-            )}
-
-            {loading ? (
-                <p className="text-gray-500">신청 목록을 불러오는 중...</p>
-            ) : requests.length === 0 ? (
-                <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-                    승인 대기 중인 차량 등록 신청이 없습니다.
+            {/* 신청일 및 처리 상태 필터 */}
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:grid-cols-4">
+                <label className="text-xs text-gray-600">
+                    처리 상태
+                    <select value={filters.progress} onChange={(e) => setFilters((p) => ({ ...p, progress: e.target.value }))}
+                        className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
+                        <option value="">전체</option>
+                        <option value="PENDING">처리 전</option>
+                        <option value="PROCESSED">처리 완료</option>
+                    </select>
+                </label>
+                <label className="text-xs text-gray-600">
+                    처리 결과
+                    <select value={filters.result} onChange={(e) => setFilters((p) => ({ ...p, result: e.target.value }))}
+                        className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
+                        <option value="">전체</option>
+                        <option value="APPROVED">승인</option>
+                        <option value="REJECTED">거절</option>
+                    </select>
+                </label>
+                <label className="text-xs text-gray-600">
+                    신청일
+                    <input type="date" value={filters.date} onChange={(e) => setFilters((p) => ({ ...p, date: e.target.value }))}
+                        className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm" />
+                </label>
+                <div className="flex items-end">
+                    <button type="button" onClick={() => setFilters({ progress: '', result: '', date: '' })}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                        필터 초기화
+                    </button>
                 </div>
-            ) : (
-                <div className="grid gap-4">
-                    {requests.map((request) => (
-                        <div
-                            key={request.id}
-                            className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
-                        >
-                            <div className="mb-4 flex items-center justify-between gap-3">
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900">
-                                        차량 등록 신청
-                                    </h2>
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        접수번호 #{request.id}
-                                    </p>
-                                </div>
-                                <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
-                                    승인 대기
-                                </span>
-                            </div>
+            </div>
 
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-700">
-                                <p><strong>기사:</strong> {request.driverName}</p>
-                                <p><strong>차량번호:</strong> {request.plateNo}</p>
-                                <p><strong>차종:</strong> {request.vehicleTypeName}</p>
-                                <p>
-                                    <strong>신청일:</strong>{' '}
-                                    {request.createdAt
-                                        ? new Date(request.createdAt).toLocaleString('ko-KR')
-                                        : '-'}
-                                </p>
-                            </div>
+            {message && <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</p>}
+            {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</p>}
 
-                            <div className="mt-5 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => handleApprove(request.id)}
-                                    disabled={processingId !== null}
-                                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                    승인
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setError('')
-                                        setRejectId(rejectId === request.id ? null : request.id)
-                                        setRejectionReason('')
-                                    }}
-                                    disabled={processingId !== null}
-                                    className="flex-1 rounded-lg border border-red-300 px-4 py-2 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                                >
-                                    거절
-                                </button>
-                            </div>
-
-                            {rejectId === request.id && (
-                                <div className="mt-4 grid gap-3 border-t border-gray-200 pt-4">
-                                    <label className="text-sm font-medium text-gray-700">
-                                        거절 사유
-                                    </label>
-
-                                    <textarea
-                                        value={rejectionReason}
-                                        onChange={(e) => setRejectionReason(e.target.value)}
-                                        maxLength={300}
-                                        rows={3}
-                                        placeholder="거절 사유를 입력해 주세요."
-                                        className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-500"
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={() => handleReject(request.id)}
-                                        disabled={processingId !== null}
-                                        className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                                    >
-                                        거절 확정
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                {loading ? (
+                    <p className="p-10 text-center text-sm text-gray-500">신청 목록을 불러오는 중...</p>
+                ) : visibleRequests.length === 0 ? (
+                    <p className="p-10 text-center text-sm text-gray-500">조건에 맞는 차량 등록 신청이 없습니다.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[760px] text-left text-xs">
+                            <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
+                                <tr>
+                                    <th className="px-4 py-3 font-semibold">신청번호</th>
+                                    <th className="px-4 py-3 font-semibold">기사</th>
+                                    <th className="px-4 py-3 font-semibold">차량번호 · 차종</th>
+                                    <th className="px-4 py-3 font-semibold">신청일</th>
+                                    <th className="px-4 py-3 font-semibold">승인/거절일</th>
+                                    <th className="px-4 py-3 text-right font-semibold">처리</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {visibleRequests.map((request) => {
+                                    const processed = request.status !== 'PENDING'
+                                    return (
+                                        <Fragment key={request.id}>
+                                            <tr className={processed ? 'bg-gray-100/90 text-gray-500' : 'bg-white text-gray-900'}>
+                                                <td className="px-4 py-3 font-semibold">#{request.id}</td>
+                                                <td className="px-4 py-3">{request.driverName}</td>
+                                                <td className="px-4 py-3">
+                                                    <p className="font-semibold">{request.plateNo}</p>
+                                                    <p className="mt-1 text-[11px]">{request.vehicleTypeName}</p>
+                                                </td>
+                                                <td className="whitespace-nowrap px-4 py-3">{formatDateTime(request.createdAt)}</td>
+                                                <td className="whitespace-nowrap px-4 py-3">{formatDateTime(request.reviewedAt)}</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    {processed ? (
+                                                        <span className={`inline-block min-w-14 rounded-lg border px-2.5 py-1 text-center text-xs font-semibold ${RESULT_STYLE[request.status] || 'border-gray-300 bg-gray-200 text-gray-600'}`} title={request.rejectionReason || undefined}>
+                                                            {STATUS_LABEL[request.status] || request.status}
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex justify-end gap-1.5">
+                                                            <button type="button" disabled={processingId !== null}
+                                                                onClick={() => handleApprove(request.id)}
+                                                                className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                                                                승인
+                                                            </button>
+                                                            <button type="button" disabled={processingId !== null}
+                                                                onClick={() => { setRejectId(rejectId === request.id ? null : request.id); setRejectionReason(''); setError('') }}
+                                                                className="rounded-lg border border-red-200 bg-white px-3 py-1.5 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                                                                거절
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                            {rejectId === request.id && !processed && (
+                                                <tr className="bg-red-50/50">
+                                                    <td colSpan={6} className="px-4 py-3">
+                                                        <label htmlFor={`reject-reason-${request.id}`} className="block text-xs font-semibold text-gray-700">거절 사유</label>
+                                                        <textarea id={`reject-reason-${request.id}`} value={rejectionReason}
+                                                            onChange={(e) => setRejectionReason(e.target.value)} maxLength={300} rows={2}
+                                                            placeholder="거절 사유를 입력해 주세요."
+                                                            className="mt-2 w-full rounded-lg border border-gray-200 p-2 text-sm focus:border-red-400 focus:outline-none" />
+                                                        <div className="mt-2 flex justify-end gap-2">
+                                                            <button type="button" onClick={() => setRejectId(null)} className="rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100">닫기</button>
+                                                            <button type="button" disabled={processingId !== null} onClick={() => handleReject(request.id)}
+                                                                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50">거절 확정</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Fragment>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </section>
     )
 }

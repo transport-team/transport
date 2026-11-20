@@ -2,6 +2,9 @@ package com.transport.controller;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import java.util.List;
+import com.transport.dto.AdminDriverVehicleResponseDTO;
+import com.transport.service.AdminDriverVehicleService;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +28,13 @@ import lombok.RequiredArgsConstructor;
 public class AdminDriverController {
 
 	private final DriverService driverService;
+    private final AdminDriverVehicleService adminDriverVehicleService;
+
+    // 기사별 보유 차량 정보 (조회 전용)
+    @GetMapping("/{id}/vehicles")
+    public List<AdminDriverVehicleResponseDTO> vehicles(@PathVariable Long id) {
+        return adminDriverVehicleService.getDriverVehicles(id);
+    }
 
 	@GetMapping
 	public PageResponseDTO<DriverDTO> list(@Valid DriverSearchDTO driverSearchDTO) {
