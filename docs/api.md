@@ -406,8 +406,10 @@
 | GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트 — 알림 본문은 목록 한 건과 같은 모양) | 로그인 |
 | GET · PATCH | /api/notifications, /{id}/read | 알림 목록 (한 건: id · type · message · shipmentId · isRead · createdAt) · 읽음 | 로그인 |
 | POST | /api/shipments/{id}/review | 리뷰 { rating 1~5, content 500자 이하 } — 본인 배송 · 배송완료 · 1회 (이미 있으면 409 `REVIEW_EXISTS`) | CUSTOMER |
-| GET | /api/shipments/{id}/review | 배송의 리뷰 (아직 없으면 204) | 로그인 |
-| GET | /api/drivers/{id}/reviews | 기사 리뷰 목록(최신순) · 평균 평점(리뷰가 없으면 0.0) | 로그인 |
+| GET | /api/shipments/{id}/review | 배송의 리뷰 (아직 없으면 204) · 고객 이름은 가림 | 로그인 |
+| GET | /api/drivers/{id}/reviews | 기사 리뷰 목록(최신순) · 평균 평점(리뷰가 없으면 0.0) · 고객 이름은 가림 | 로그인 |
+
+- 리뷰 응답의 `customerName`은 처음 · 마지막 글자만 남기고 가린다: 김민수 → `김*수`, 남궁현석 → `남**석`, 이민 → `이*`, 한 글자 → `*` (11-19 결정 4). 리뷰 작성 응답 · 배송 상세의 `review`도 같다 (모두 `ReviewResponseDTO.from` → `MaskingUtil.maskName`). 관리자에게도 가린 이름을 준다
 
 ## 결제 흐름
 
