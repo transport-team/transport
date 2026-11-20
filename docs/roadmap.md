@@ -122,7 +122,7 @@
 - [ ] ShipmentImage, CustomFileUtil, FileStorage 인터페이스(로컬 / S3) — 로컬은 됨, S3 구현은 배포(Y) 때
 - [x] PICKUP · RECEIPT 필수 검사, `<input accept="image/*" capture="environment">`
 - [x] (8주차) Review: 완료 건 1회, 평균 평점 메서드 제공
-- [ ] 리뷰 목록의 고객 이름 가리기(예: 김*수), 열람은 지금처럼 로그인 사용자 (11-19 회의)
+- [x] 리뷰 목록의 고객 이름 가리기(예: 김*수), 열람은 지금처럼 로그인 사용자 (11-19 회의) — 서버 응답에서 가림(`MaskingUtil`), 배송 리뷰 · 배송 상세 · 관리자 화면도 같이
 
 ### R. 실시간 알림 · 위치 — 팀원 4
 - [x] SseEmitter 관리 · heartbeat, event-source-polyfill
