@@ -4,6 +4,7 @@ package com.transport.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.transport.domain.Dispatch;
 import com.transport.repository.DispatchRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -28,5 +29,14 @@ public class DispatchServiceImpl implements DispatchService {
 
                 // 활성 배차가 없으면 null 반환
                 .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void releaseDispatch(Long shipmentId) {
+        // 활성 배차가 없으면 이미 해제된 것으로 처리
+        dispatchRepository
+                .findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(shipmentId)
+                .ifPresent(Dispatch::release);
     }
 }

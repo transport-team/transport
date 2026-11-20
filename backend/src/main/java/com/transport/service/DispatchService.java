@@ -11,4 +11,7 @@ public interface DispatchService {
 	 * @return 기사의 member.id (배정 없으면 null)
 	 */
 	Long getActiveDriver(Long shipmentId);
+
+	// 배송의 현재 활성 배차 해제 (활성 배차가 없으면 아무 작업도 하지 않음)
+	void releaseDispatch(Long shipmentId);
 }
