@@ -583,7 +583,7 @@ class DispatchApplicationServiceImplTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).isCanApply()).isFalse();
         assertThat(result.get(0).isAlreadyApplied()).isFalse();
-        assertThat(result.get(0).getBlockReasons()).contains("고객이 거절한 운송 요청이라 다시 지원할 수 없습니다.");
+        assertThat(result.get(0).getBlockReasons()).contains("고객이 거절한 운송 요청에는 다시 지원할 수 없습니다.");
         assertThat(result.get(1).isCanApply()).isFalse();
         assertThat(result.get(1).getDurationMin()).isZero();
         assertThat(result.get(1).getBlockReasons()).contains("예상 운송 시간이 올바르지 않아 배차 신청할 수 없습니다.");

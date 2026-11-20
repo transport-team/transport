@@ -6,6 +6,7 @@ const CustomerHome = lazy(() => import('../pages/customer/CustomerHomePage'))
 const ShipmentCreate = lazy(() => import('../pages/customer/ShipmentCreatePage'))
 const ShipmentList = lazy(() => import('../pages/customer/ShipmentListPage'))
 const ShipmentDetail = lazy(() => import('../pages/customer/ShipmentDetailPage'))
+const CustomerDispatchRequests = lazy(() => import('../pages/customer/CustomerDispatchRequestsPage'))
 const MyPage = lazy(() => import('../pages/MyPage'))
 const Inquiry = lazy(() => import('../pages/InquiryPage'))
 const PaymentSuccess = lazy(() => import('../pages/customer/PaymentSuccessPage'))
@@ -17,6 +18,7 @@ const customerRouter = () => [
   { path: 'shipments', element: <Suspense fallback={Loading}><ShipmentList /></Suspense> },
   { path: 'shipments/new', element: <Suspense fallback={Loading}><ShipmentCreate /></Suspense> },
   { path: 'shipments/:id', element: <Suspense fallback={Loading}><ShipmentDetail /></Suspense> },
+  { path: 'dispatch-requests', element: <Suspense fallback={Loading}><CustomerDispatchRequests /></Suspense> },
   { path: 'me', element: <Suspense fallback={Loading}><MyPage /></Suspense> },
   { path: 'inquiries', element: <Suspense fallback={Loading}><Inquiry /></Suspense> },
   { path: 'payments/success', element: <Suspense fallback={Loading}><PaymentSuccess /></Suspense> },
