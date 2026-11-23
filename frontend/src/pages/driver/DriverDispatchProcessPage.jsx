@@ -6,7 +6,8 @@ import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery
 // API: 상태 변경 PATCH /{id}/status · 사진 업로드 POST /{id}/images (PHOTO_REQUIRED는 사람 말로 안내)
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { changeShipmentStatus, uploadShipmentImages } from '../../api/shipmentApi'
+import { changeShipmentStatus, getShipment, uploadShipmentImages } from '../../api/shipmentApi'
+import RouteMap from '../../components/tracking/RouteMap'
 import { getMyAssignedDispatch } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import useLocationShare from '../../hooks/useLocationShare'
@@ -96,6 +97,23 @@ const DriverDispatchProcessPage = () => {
             }
         }
         load()
+    }, [shipmentId])
+
+    // 경로 지도 좌표 (DRV-03): 배차 상세에는 좌표가 없어 배송 상세 API(배정 기사도 조회 가능)로 받는다.
+    // 실패해도 화면은 그대로 — 지도 없이 주소 글자만 보인다
+    const [route, setRoute] = useState(null)
+    useEffect(() => {
+        let active = true
+        getShipment(shipmentId)
+            .then((detail) => {
+                if (!active) return
+                setRoute({
+                    origin: { lat: detail.originLat, lng: detail.originLng, label: detail.originAddress },
+                    dest: { lat: detail.destLat, lng: detail.destLng, label: detail.destAddress },
+                })
+            })
+            .catch(() => {})
+        return () => { active = false }
     }, [shipmentId])
 
     // 파일 선택 → 기존 사진에 새 사진 추가
@@ -191,7 +209,8 @@ const DriverDispatchProcessPage = () => {
                 fare={shipment.fare}
             />
 
-            {/* 경로 */}
+            {/* 경로: 지도(좌표가 있을 때) + 주소 */}
+            {route && <RouteMap origin={route.origin} dest={route.dest} />}
             <DriverRouteCard
                 originAddress={shipment.originAddress}
                 originDetail={shipment.originDetail}
