@@ -2,9 +2,11 @@ package com.transport.service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,8 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
         return applicationRepository.countPendingByCustomer(memberId, ShipmentStatus.REQUESTED, DispatchApplicationStatus.PENDING).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
     }
+	// 끝난 배송: 완료돼도 배차(active)는 남겨 두므로 시간 겹침 검사에서는 뺀다 (11-19 결정 34, #86)
+	private static final Set<ShipmentStatus> FINISHED_STATUSES = EnumSet.of(ShipmentStatus.COMPLETED, ShipmentStatus.CANCELED);
 
 	// 기사: 운송 요청에 지원
 	@Override
@@ -129,8 +133,8 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		LocalDateTime requestedStart = shipment.getPickupAt();
 		LocalDateTime requestedEnd = requestedStart.plusMinutes(durationOrZero(shipment));
 
-		// 이미 확정된 배차와 운송 시간이 겹치는지 확인
-		boolean hasOverlappingDispatch = dispatchRepository.findByDriver_IdAndActiveTrue(driver.getId()).stream()
+		// 이미 확정된 배차와 운송 시간이 겹치는지 확인 (끝난 배송의 배차는 빼고)
+		boolean hasOverlappingDispatch = findOngoingDispatches(driver.getId()).stream()
 				.anyMatch(dispatch -> {
 
 					Shipment assignedShipment = dispatch.getShipment();
@@ -270,8 +274,8 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		LocalDateTime requestedStart = shipment.getPickupAt();
 		LocalDateTime requestedEnd = requestedStart.plusMinutes(durationOrZero(shipment));
 
-		boolean hasOverlappingDispatch = dispatchRepository
-				.findByDriver_IdAndActiveTrue(selectedApplication.getDriver().getId()).stream().anyMatch(dispatch -> {
+		boolean hasOverlappingDispatch = findOngoingDispatches(selectedApplication.getDriver().getId()).stream()
+				.anyMatch(dispatch -> {
 
 					Shipment assignedShipment = dispatch.getShipment();
 
@@ -420,8 +424,8 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		// 2. 기사 소유 차량 목록 조회
 		List<Vehicle> vehicles = vehicleRepository.findByDriver_Id(driver.getId());
 
-		// 기사가 이미 확정받은 배차 목록 조회
-		List<Dispatch> activeDispatches = dispatchRepository.findByDriver_IdAndActiveTrue(driver.getId());
+		// 기사가 이미 확정받은 배차 중 아직 끝나지 않은 배송의 배차 (시간 겹침 검사용)
+		List<Dispatch> activeDispatches = findOngoingDispatches(driver.getId());
 
 		// 기사가 아직 확정받지 않은 배차 신청 목록 조회
 		List<DispatchApplication> pendingApplications = applicationRepository.findByDriver_IdAndStatus(driver.getId(),
@@ -586,5 +590,12 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 
 	private long durationOrZero(Shipment shipment) {
 		return shipment.getDurationMin() == null ? 0L : shipment.getDurationMin();
+	}
+
+	// 시간 겹침 검사 대상: 기사의 활성 배차 중 아직 끝나지 않은(완료 · 취소가 아닌) 배송의 배차
+	private List<Dispatch> findOngoingDispatches(Long driverId) {
+		return dispatchRepository.findByDriver_IdAndActiveTrue(driverId).stream()
+				.filter(dispatch -> !FINISHED_STATUSES.contains(dispatch.getShipment().getStatus()))
+				.toList();
 	}
 }

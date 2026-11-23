@@ -25,6 +25,9 @@ public interface PaymentService {
     List<VehicleTypeStatDTO> getPaidStatsByVehicleType(LocalDateTime from, LocalDateTime to);
     
     PaymentConfirmResponseDTO cancelPayment(Long shipmentId, String cancelReason, Long memberId);
-    
+
+    // 관리자 취소 (ADM-02): 결제 대기 · 접수 · 배차 완료 배송 — 결제된 건은 토스 환불, 배차된 건은 배차 해제 · 기사 알림
+    PaymentConfirmResponseDTO cancelByAdmin(Long shipmentId, String cancelReason, Long adminMemberId);
+
     PaymentConfirmResponseDTO retryPayment(Long shipmentId, Long memberId);
 }
