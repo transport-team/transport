@@ -3,6 +3,8 @@ package com.transport.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.transport.domain.Dispatch;
 import com.transport.domain.DispatchApplication;
@@ -11,6 +13,20 @@ import com.transport.domain.Shipment;
 import com.transport.domain.enums.DispatchApplicationStatus;
 
 public interface DispatchApplicationRepository extends JpaRepository<DispatchApplication, Long> {
+
+        // 로그인 고객의 배차 대기 배송별 지원자 수 (거절/취소된 신청은 제외)
+        @Query("select a.shipment.id, count(a.id) from DispatchApplication a "
+                + "where a.shipment.customer.id = :customerId "
+                + "and a.shipment.status = :shipmentStatus "
+                + "and a.status = :applicationStatus "
+                + "group by a.shipment.id")
+        List<Object[]> countPendingByCustomer(
+                @Param("customerId") Long customerId,
+                @Param("shipmentStatus") com.transport.domain.enums.ShipmentStatus shipmentStatus,
+                @Param("applicationStatus") DispatchApplicationStatus applicationStatus);
+
+        boolean existsByVehicle_IdAndStatus(Long vehicleId, DispatchApplicationStatus status);
+
 
         // 동일 기사가 해당 배송에 이미 승인 대기 중인 지원을 했는지 확인
         boolean existsByShipmentAndDriverAndStatus(

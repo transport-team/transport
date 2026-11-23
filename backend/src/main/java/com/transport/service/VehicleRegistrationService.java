@@ -12,6 +12,10 @@ public interface VehicleRegistrationService {
     // 로그인한 기사의 차량 등록 신청
     Long apply(Long memberId, VehicleRegistrationRequestDTO requestDTO);
 
+    // 기사 본인의 등록 신청 조회 및 처리 전 신청 철회
+    List<VehicleRegistrationResponseDTO> getMyRequests(Long memberId);
+    void withdrawRequest(Long memberId, Long requestId);
+
     // 관리자: 완료 건을 포함한 전체 차량 등록 신청 조회
     List<VehicleRegistrationResponseDTO> getAllRequests();
 

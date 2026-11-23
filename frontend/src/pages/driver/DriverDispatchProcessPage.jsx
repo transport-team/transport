@@ -1,3 +1,4 @@
+import ShipmentProgress from '../../components/tracking/ShipmentProgress'
 // 기사 배송 처리 화면 (팀원 4 — 5-3 + 5-4)
 // 경로: /driver/dispatches/:shipmentId (배차 지원용 상세와 역할이 다르다 — 팀원2 화면은 /driver/shipments/:id)
 // 데이터: GET /api/shipments/{id} (팀원 3 미구현 → USE_MOCK_DATA로 임시 개발, 머지되면 false만 바꾼다)
@@ -205,6 +206,8 @@ const DriverDispatchProcessPage = () => {
                 <h1 className="text-lg font-bold text-gray-900">배송 처리 #{shipment.shipmentId}</h1>
                 <StatusBadge status={shipment.status} />
             </div>
+
+            <ShipmentProgress status={shipment.status} />
 
             {/* 화물 정보 */}
             <DriverCargoCard

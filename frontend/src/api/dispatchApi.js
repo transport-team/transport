@@ -137,3 +137,8 @@ export const getDriverSettlementRangeItems = async (from, to) => {
 
   return res.data
 }
+// 고객 소유 배송별 아직 처리되지 않은 기사 지원 수
+export const getDispatchApplicantCounts = async () => {
+  const res = await jwtAxios.get('/api/customer/shipments/application-counts')
+  return res.data
+}

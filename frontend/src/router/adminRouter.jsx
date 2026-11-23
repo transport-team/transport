@@ -14,6 +14,7 @@ const VehicleEditPage = lazy(() => import('../pages/admin/VehicleEditPage'))
 const VehicleListPage = lazy(() => import('../pages/admin/VehicleListPage'))
 const VehicleRegisterPage = lazy(() => import('../pages/admin/VehicleRegisterPage'))
 const VehicleRequestListPage = lazy(() => import('../pages/admin/VehicleRequestListPage'))
+const VehicleDeletionRequestListPage = lazy(() => import('../pages/admin/VehicleDeletionRequestListPage'))
 
 // 팀원 3 관리자 화면
 const ShipmentManagePage = lazy(() => import('../pages/admin/ShipmentManagePage'))
@@ -39,6 +40,7 @@ const adminRouter = () => [
   { path: 'faqs', element: <Suspense fallback={Loading}><FaqManage /></Suspense> },
   { path: 'inquiries', element: <Suspense fallback={Loading}><InquiryManage /></Suspense> },
   { path: 'vehicle-requests', element: <Suspense fallback={Loading}><VehicleRequestListPage /></Suspense> },
+  { path: 'vehicle-deletion-requests', element: <Suspense fallback={Loading}><VehicleDeletionRequestListPage /></Suspense> },
 ]
 
 export default adminRouter

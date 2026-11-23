@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
@@ -47,6 +49,11 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 	// 배차 확정 알림 서비스
 	private final NotificationService notificationService;
 
+    @Override
+    public Map<Long, Long> getPendingApplicantCounts(Long memberId) {
+        return applicationRepository.countPendingByCustomer(memberId, ShipmentStatus.REQUESTED, DispatchApplicationStatus.PENDING).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+    }
 	// 끝난 배송: 완료돼도 배차(active)는 남겨 두므로 시간 겹침 검사에서는 뺀다 (11-19 결정 34, #86)
 	private static final Set<ShipmentStatus> FINISHED_STATUSES = EnumSet.of(ShipmentStatus.COMPLETED, ShipmentStatus.CANCELED);
 

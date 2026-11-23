@@ -14,3 +14,9 @@ export const getShipmentReview = async (shipmentId) => {
 
     return res.status === 204 ? null : res.data
 }
+
+// 고객: 지원한 기사에 작성된 공개 리뷰 조회
+export const getDriverReviews = async (driverId) => {
+  const res = await jwtAxios.get(`/api/drivers/${driverId}/reviews`)
+  return res.data
+}
