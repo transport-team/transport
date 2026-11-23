@@ -35,6 +35,18 @@ export const changeShipmentStatus = async (shipmentId, nextStatus, memo = '') =>
     return true
 }
 
+// 본인 고객 · 배정 기사 · 관리자만 배송 사진 목록 조회
+export const getShipmentImages = async (shipmentId) => {
+    const res = await jwtAxios.get(`/api/shipments/${shipmentId}/images`)
+    return res.data
+}
+
+// 고객 수령 확정: 기사 배송 완료(DELIVERED) 후에만 가능
+export const confirmShipmentReceipt = async (shipmentId) => {
+    await jwtAxios.post(`/api/shipments/${shipmentId}/confirm-receipt`)
+    return true
+}
+
 // 배송 사진 업로드 (배정 기사만) — multipart: files(여러 장), type = PICKUP | RECEIPT | ETC
 // 응답: [{ id, type, fileName, url }]
 export const uploadShipmentImages = async (shipmentId, files, type) => {

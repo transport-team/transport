@@ -8,7 +8,8 @@ export const SHIPMENT_STATUS = {
   PICKED_UP: { label: '상차 완료', badge: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
   IN_TRANSIT: { label: '운송 중', badge: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
   ARRIVED: { label: '도착', badge: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
-  COMPLETED: { label: '배송 완료', badge: 'border-gray-200 bg-gray-100 text-gray-700' },
+  DELIVERED: { label: '수령 확인 대기', badge: 'border-amber-200 bg-amber-50 text-amber-700' },
+  COMPLETED: { label: '운송 완료', badge: 'border-gray-200 bg-gray-100 text-gray-700' },
   CANCELED: { label: '취소됨', badge: 'border-red-200 bg-red-50 text-red-700' },
 }
 

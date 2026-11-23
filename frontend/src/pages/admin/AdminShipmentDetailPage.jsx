@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getShipment } from '../../api/shipmentApi'
+import ShipmentProgress from '../../components/tracking/ShipmentProgress'
+import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
 import { cancelAdminShipment, cancelAdminShipmentDispatch } from '../../api/adminTransportApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
@@ -132,6 +134,8 @@ const AdminShipmentDetailPage = () => {
         </div>
       ) : (
         <>
+          <ShipmentProgress status={shipment.status} />
+
           {/* 관리자 배차 취소: 배차 완료일 때 활성화, 그 외 상태도 사유를 안내한다 */}
           <div className="rounded-2xl border border-red-100 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -153,7 +157,7 @@ const AdminShipmentDetailPage = () => {
             </div>
             {!canCancelDispatch && (
               <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                현재 상태: {status?.label || shipment.status}. 배차 완료 후 상차 전인 배송만 배차 취소할 수 있습니다.
+                현재 상태: {shipmentStatusLabel(shipment.status)}. 배차 완료 후 상차 전인 배송만 배차 취소할 수 있습니다.
               </p>
             )}
             {canCancelDispatch && showCancelForm && (
@@ -210,7 +214,7 @@ const AdminShipmentDetailPage = () => {
             </div>
             {!canCancelShipment && (
               <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                현재 상태: {status?.label || shipment.status}. 상차 전(결제 대기 · 배차 대기 · 배차 완료) 배송만 취소할 수 있습니다.
+                현재 상태: {shipmentStatusLabel(shipment.status)}. 상차 전(결제 대기 · 배차 대기 · 배차 완료) 배송만 취소할 수 있습니다.
               </p>
             )}
             {canCancelShipment && showShipmentCancel && (
@@ -305,6 +309,8 @@ const AdminShipmentDetailPage = () => {
             <h2 className="text-sm font-bold text-emerald-700">CUSTOMER REQUEST</h2>
             <p className="mt-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-800">{shipment.memo?.trim() || '요청사항 없음'}</p>
           </div>
+
+          <ShipmentPhotoGallery shipmentId={shipment.id} />
 
           {/* 상태 변경 이력 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">

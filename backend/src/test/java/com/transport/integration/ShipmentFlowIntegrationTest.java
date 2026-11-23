@@ -192,10 +192,33 @@ class ShipmentFlowIntegrationTest {
 		perform(get("/api/shipments/" + shipmentId + "/locations/latest"), customer).andExpect(status().isNoContent());
 		perform(post("/api/shipments/" + shipmentId + "/locations"), driverMember, Map.of("lat", 37.30, "lng", 127.01))
 				.andExpect(status().is4xxClientError());
-		changeStatus(shipmentId, "COMPLETED").andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("PHOTO_REQUIRED"));
-		uploadPhoto(shipmentId, "RECEIPT");
-		changeStatus(shipmentId, "COMPLETED").andExpect(status().isNoContent());
+		changeStatus(shipmentId, "DELIVERED").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PHOTO_REQUIRED"));
+        uploadPhoto(shipmentId, "RECEIPT");
+        // 사진 목록은 고객·관리자만 볼 수 있고 제3자는 조회할 수 없다.
+        perform(get("/api/shipments/" + shipmentId + "/images"), customer)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("PICKUP"));
+        perform(get("/api/shipments/" + shipmentId + "/images"), admin)
+                .andExpect(status().isOk());
+        perform(get("/api/shipments/" + shipmentId + "/images"), otherCustomer)
+                .andExpect(status().isForbidden());
+        changeStatus(shipmentId, "DELIVERED").andExpect(status().isNoContent());
+        // 기사 완료만으로 최종 운송 완료 처리되면 안 된다.
+        perform(get("/api/shipments/" + shipmentId), customer).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DELIVERED"));
+        JsonNode beforeConfirmation = body(perform(get("/api/admin/dashboard"), admin)
+                .andExpect(status().isOk()));
+        assertThat(beforeConfirmation.get("todayCompletedCount").asLong()
+                - before.get("todayCompletedCount").asLong()).isZero();
+        perform(post("/api/shipments/" + shipmentId + "/confirm-receipt"), driverMember)
+                .andExpect(status().isForbidden());
+        perform(post("/api/shipments/" + shipmentId + "/confirm-receipt"), otherCustomer)
+                .andExpect(status().isForbidden());
+        perform(post("/api/shipments/" + shipmentId + "/confirm-receipt"), customer)
+                .andExpect(status().isNoContent());
+        perform(post("/api/shipments/" + shipmentId + "/confirm-receipt"), customer)
+                .andExpect(status().is4xxClientError());
 
 		// 8. 고객: 배송 상세(완료) · 이력. 다른 고객은 볼 수 없다
 		JsonNode detail = body(perform(get("/api/shipments/" + shipmentId), customer).andExpect(status().isOk()));
@@ -205,7 +228,7 @@ class ShipmentFlowIntegrationTest {
 		JsonNode history = body(perform(get("/api/shipments/" + shipmentId + "/history"), customer).andExpect(status().isOk()));
 		List<String> statuses = new ArrayList<>();
 		history.forEach(row -> statuses.add(row.get("toStatus").asString()));
-		assertThat(statuses).containsExactly("REQUESTED", "ASSIGNED", "PICKED_UP", "IN_TRANSIT", "ARRIVED", "COMPLETED");
+		assertThat(statuses).containsExactly("REQUESTED", "ASSIGNED", "PICKED_UP", "IN_TRANSIT", "ARRIVED", "DELIVERED", "COMPLETED");
 
 		// 9. 고객: 리뷰는 한 번만
 		perform(post("/api/shipments/" + shipmentId + "/review"), customer, Map.of("rating", 5, "content", "흐름 확인"))

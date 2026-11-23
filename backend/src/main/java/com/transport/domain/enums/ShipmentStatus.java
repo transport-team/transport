@@ -11,7 +11,8 @@ public enum ShipmentStatus {
         PICKED_UP,         // 상차완료
         IN_TRANSIT,        // 운송중
         ARRIVED,           // 도착
-        COMPLETED,         // 배송완료
+        DELIVERED,         // 기사 배송 완료 · 고객 수령 확인 대기
+        COMPLETED,         // 고객 수령 확정 · 최종 운송 완료
         CANCELED;          // 취소
 
         // 상태별로 변경 가능한 다음 상태
@@ -21,7 +22,8 @@ public enum ShipmentStatus {
                 ASSIGNED, Set.of(PICKED_UP, REQUESTED, CANCELED),
                 PICKED_UP, Set.of(IN_TRANSIT),
                 IN_TRANSIT, Set.of(ARRIVED),
-                ARRIVED, Set.of(COMPLETED)
+                ARRIVED, Set.of(DELIVERED),
+                DELIVERED, Set.of(COMPLETED)
         );
 
         // 현재 상태에서 다음 상태로 변경할 수 있는지 확인

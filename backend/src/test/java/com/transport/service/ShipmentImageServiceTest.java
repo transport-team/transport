@@ -24,10 +24,13 @@ import com.transport.domain.Member;
 import com.transport.domain.Shipment;
 import com.transport.domain.ShipmentImage;
 import com.transport.domain.enums.ShipmentImageType;
+import com.transport.domain.enums.ShipmentStatus;
+import com.transport.domain.enums.MemberRole;
 import com.transport.dto.ShipmentImageResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.ShipmentImageRepository;
+import com.transport.repository.ShipmentRepository;
 import com.transport.storage.FileStorage;
 import com.transport.util.CustomFileUtil;
 
@@ -37,6 +40,9 @@ class ShipmentImageServiceTest {
 
 	@Mock
 	ShipmentService shipmentService;  // 배송 = 팀원 3 약속 메서드 (#94 저장소 직접 사용 정리)
+
+	@Mock
+	ShipmentRepository shipmentRepository;
 
 	@Mock
 	ShipmentImageRepository shipmentImageRepository;
@@ -60,7 +66,7 @@ class ShipmentImageServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		shipment = Shipment.builder().id(SHIPMENT_ID).build();
+		shipment = Shipment.builder().id(SHIPMENT_ID).status(ShipmentStatus.ASSIGNED).build();
 	}
 
 	private MockMultipartFile imageFile(String name) {
@@ -90,6 +96,72 @@ class ShipmentImageServiceTest {
 		verify(fileStorage, org.mockito.Mockito.times(2)).save(any(), eq("PICKUP"));
 		verify(shipmentImageRepository, org.mockito.Mockito.times(2)).save(any(ShipmentImage.class));
 	}
+
+    @Test
+    @DisplayName("상차 단계를 벗어나면 업로드 금지: 저장된 사진은 조회만 가능")
+    void upload_pickupAfterPickupIsRejected() {
+        shipment = Shipment.builder().id(SHIPMENT_ID).status(ShipmentStatus.PICKED_UP).build();
+        when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
+        when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(DRIVER_MEMBER_ID);
+
+        assertThatThrownBy(() -> shipmentImageService.upload(
+                SHIPMENT_ID, List.of(imageFile("late.jpg")), ShipmentImageType.PICKUP, DRIVER_MEMBER_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.INVALID_STATUS_CHANGE));
+        verify(fileStorage, never()).save(any(), anyString());
+    }
+
+    @Test
+    @DisplayName("고객 확인 대기/완료 상태에서 인수증 추가 금지")
+    void upload_receiptAfterDeliveredIsRejected() {
+        shipment = Shipment.builder().id(SHIPMENT_ID).status(ShipmentStatus.DELIVERED).build();
+        when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
+        when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(DRIVER_MEMBER_ID);
+
+        assertThatThrownBy(() -> shipmentImageService.upload(
+                SHIPMENT_ID, List.of(imageFile("late.jpg")), ShipmentImageType.RECEIPT, DRIVER_MEMBER_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.INVALID_STATUS_CHANGE));
+        verify(fileStorage, never()).save(any(), anyString());
+    }
+
+    @Test
+    @DisplayName("지난 배차 기사는 배차 해제 후에도 본인이 올린 사진만 조회할 수 있다")
+    void getImages_formerUploaderOnlySeesOwnPhotos() {
+        when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.of(shipment));
+        ShipmentImage myImage = ShipmentImage.builder().id(1L)
+                .uploadedBy(Member.builder().id(DRIVER_MEMBER_ID).build())
+                .type(ShipmentImageType.PICKUP).fileName("my-pickup.jpg").build();
+        ShipmentImage otherImage = ShipmentImage.builder().id(2L)
+                .uploadedBy(Member.builder().id(999L).build())
+                .type(ShipmentImageType.RECEIPT).fileName("another-driver.jpg").build();
+        when(shipmentImageRepository.findByShipmentIdOrderByTypeAscCreatedAtAsc(SHIPMENT_ID))
+                .thenReturn(List.of(myImage, otherImage));
+
+        List<ShipmentImageResponseDTO> result = shipmentImageService.getImages(
+                SHIPMENT_ID, DRIVER_MEMBER_ID, MemberRole.DRIVER);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getFileName()).isEqualTo("my-pickup.jpg");
+    }
+
+    @Test
+    @DisplayName("관련 없는 기사는 지난 사진을 볼 수 없다")
+    void getImages_otherDriverIsForbidden() {
+        when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.of(shipment));
+        when(shipmentImageRepository.findByShipmentIdOrderByTypeAscCreatedAtAsc(SHIPMENT_ID))
+                .thenReturn(List.of(ShipmentImage.builder().id(3L)
+                        .uploadedBy(Member.builder().id(999L).build())
+                        .type(ShipmentImageType.PICKUP).fileName("secret.jpg").build()));
+
+        assertThatThrownBy(() -> shipmentImageService.getImages(
+                SHIPMENT_ID, DRIVER_MEMBER_ID, MemberRole.DRIVER))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.FORBIDDEN));
+    }
 
 	@Test
 	@DisplayName("실패 — 배송이 없으면 SHIPMENT_NOT_FOUND")

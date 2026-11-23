@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.transport.domain.enums.ShipmentImageType;
+import com.transport.domain.enums.MemberRole;
 import com.transport.dto.ShipmentImageResponseDTO;
 
 // 배송 사진 서비스 (팀원 4 — 5-1, docs/collaboration.md)
@@ -19,4 +20,7 @@ public interface ShipmentImageService {
 	 * @return 저장된 사진 목록
 	 */
 	List<ShipmentImageResponseDTO> upload(Long shipmentId, List<MultipartFile> files, ShipmentImageType type, Long memberId);
+
+    /** 관리자, 배송 신청 고객, 배정 기사에게만 사진 목록 공개. */
+    List<ShipmentImageResponseDTO> getImages(Long shipmentId, Long memberId, MemberRole role);
 }

@@ -41,7 +41,8 @@ public class DriverMyDispatchServiceImpl implements DriverMyDispatchService {
             ShipmentStatus.ASSIGNED,
             ShipmentStatus.PICKED_UP,
             ShipmentStatus.IN_TRANSIT,
-            ShipmentStatus.ARRIVED);
+            ShipmentStatus.ARRIVED,
+            ShipmentStatus.DELIVERED);
 
     // 기사: 본인의 진행 중인 확정 배차 목록 조회
     public List<DriverAssignedDispatchResponseDTO> getMyDispatches(Long memberId) {

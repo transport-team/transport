@@ -221,7 +221,7 @@ class StatusServiceTest {
 		when(shipmentImageRepository.existsReceiptImage(1L)).thenReturn(false); // 인수증 없음
 
 		CustomException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
-				() -> statusService.changeStatus(1L, ShipmentStatus.COMPLETED, "", 10L),
+				() -> statusService.changeStatus(1L, ShipmentStatus.DELIVERED, "", 10L),
 				CustomException.class);
 
 		org.assertj.core.api.Assertions.assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.PHOTO_REQUIRED);

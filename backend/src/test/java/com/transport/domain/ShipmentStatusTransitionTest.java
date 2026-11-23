@@ -56,6 +56,17 @@ class ShipmentStatusTransitionTest {
                 .isEqualTo(ShipmentStatus.REQUESTED);
     }
 
+    @Test
+    void deliveredRequiresCustomerConfirmation() {
+        Shipment shipment = Shipment.builder().status(ShipmentStatus.ARRIVED).build();
+        assertThatThrownBy(() -> shipment.changeStatus(ShipmentStatus.COMPLETED))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_STATUS_CHANGE);
+        shipment.changeStatus(ShipmentStatus.DELIVERED);
+        shipment.changeStatus(ShipmentStatus.COMPLETED);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
+    }
+
     // 배송 완료 후에는 상태를 변경할 수 없음
     @Test
     void completedCannotChangeStatus() {

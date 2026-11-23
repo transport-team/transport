@@ -37,6 +37,15 @@ public class ShipmentStatusController {
 		return ResponseEntity.noContent().build();
 	}
 
+    /** 고객 본인의 배송만 수령 확정 (기사 배송 완료 및 사진 업로드 후). */
+    @PostMapping("/{id}/confirm-receipt")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<Void> confirmReceipt(
+            @PathVariable Long id, @AuthenticationPrincipal LoginMember loginMember) {
+        statusService.confirmReceipt(id, loginMember.getId());
+        return ResponseEntity.noContent().build();
+    }
+
 	/**
 	 * 배송 상태 이력 조회 (본인 고객 · 배정 기사 · 관리자만 — 검사는 서비스에서)
 	 * @param id 배송 ID

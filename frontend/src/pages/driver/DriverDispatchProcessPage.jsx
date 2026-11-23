@@ -1,4 +1,5 @@
 import ShipmentProgress from '../../components/tracking/ShipmentProgress'
+import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
 // 기사 배송 처리 화면 (팀원 4 — 5-3 + 5-4)
 // 경로: /driver/dispatches/:shipmentId (배차 지원용 상세와 역할이 다르다 — 팀원2 화면은 /driver/shipments/:id)
 // 데이터: GET /api/shipments/{id} (팀원 3 미구현 → USE_MOCK_DATA로 임시 개발, 머지되면 false만 바꾼다)
@@ -35,7 +36,7 @@ const NEXT_STEP = {
     ASSIGNED: { next: 'PICKED_UP', label: '상차 완료 처리', photoType: 'PICKUP', photoLabel: '상차 사진' },
     PICKED_UP: { next: 'IN_TRANSIT', label: '운송 시작' },
     IN_TRANSIT: { next: 'ARRIVED', label: '도착 처리' },
-    ARRIVED: { next: 'COMPLETED', label: '배송 완료 처리', photoType: 'RECEIPT', photoLabel: '인수증 사진' },
+    ARRIVED: { next: 'DELIVERED', label: '배송 완료 등록 · 고객 수령 확인 요청', photoType: 'RECEIPT', photoLabel: '인수증 사진' },
 }
 
 // PHOTO_REQUIRED 등 에러 코드 → 사람이 읽는 문장 (UI 점검표: 에러 코드 그대로 X)
@@ -328,6 +329,9 @@ const DriverDispatchProcessPage = () => {
                 </div>
             )}
 
+            {/* 이미 서버에 저장된 사진: 새로고침 후에도 조회 가능, 읽기 전용 */}
+            <ShipmentPhotoGallery shipmentId={shipmentId} refreshKey={uploadedCount} />
+
             {/* 다음 단계 버튼 (현재 상태에 맞는 버튼 하나) */}
             {step ? (
                 <Button onClick={handleNextStep} loading={changing} size="lg" className="w-full !rounded-xl !bg-emerald-600 hover:!bg-emerald-700">
@@ -335,7 +339,9 @@ const DriverDispatchProcessPage = () => {
                 </Button>
             ) : (
                 <p className="rounded-2xl bg-gray-100 p-4 text-center text-sm text-gray-600">
-                    이 배송은 처리할 단계가 없어요. (완료 · 취소됨)
+                    {shipment.status === 'DELIVERED'
+                        ? '배송 완료를 등록했어요. 고객 수령 확정을 기다리는 중입니다.'
+                        : '이 배송은 처리할 단계가 없어요. (완료 · 취소됨)'}
                 </p>
             )}
 
