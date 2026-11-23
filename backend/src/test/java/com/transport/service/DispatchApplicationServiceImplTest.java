@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 
 import java.time.LocalDateTime;
@@ -90,6 +91,13 @@ class DispatchApplicationServiceImplTest {
 
         verify(shipmentService).getShipment(2L);
         verify(applicationRepository).findById(3L);
+
+        // 거절된 기사에게 알림 (#119 본문의 '거절 알림' — 11-23 팀장 결정으로 추가)
+        verify(notificationService).send(
+                eq(application.getDriver().getMember()),
+                eq(NotificationType.APPLICATION_REJECTED),
+                eq("배송 2번 운송 요청 지원이 고객에게 거절되었어요."),
+                eq(shipment));
     }
 
     // 배송이 취소되면 대기 중인 지원을 모두 자동 마감 (팀원 3 결제 취소가 부르는 약속 메서드)
@@ -148,6 +156,7 @@ class DispatchApplicationServiceImplTest {
 
         assertThat(application.getStatus())
                 .isEqualTo(DispatchApplicationStatus.REJECTED);
+        verifyNoInteractions(notificationService);  // 거절에 실패하면 알림도 없다
     }
 
     // 다른 배송에 들어온 신청은 거절할 수 없음
@@ -675,13 +684,18 @@ class DispatchApplicationServiceImplTest {
                 .build();
     }
 
-    // 테스트용 배차 신청 생성
+    // 테스트용 배차 신청 생성 (지원한 기사 · 회원 포함 — 거절 알림을 받는 사람)
     private DispatchApplication createApplication(
             Shipment shipment, DispatchApplicationStatus status) {
+
+        Member driverMember = Member.builder()
+                .id(50L)
+                .build();
 
         return DispatchApplication.builder()
                 .id(3L)
                 .shipment(shipment)
+                .driver(Driver.builder().id(5L).member(driverMember).build())
                 .status(status)
                 .build();
     }

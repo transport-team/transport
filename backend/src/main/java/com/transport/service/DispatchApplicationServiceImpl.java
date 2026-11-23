@@ -402,8 +402,13 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					ErrorCode.DISPATCH_APPLICATION_NOT_PENDING);
 		}
 
-		// 6. 지원 거절
+		// 6. 지원 거절 → 그 기사에게 알림 (커밋 뒤 SSE로 전송)
 		application.reject();
+		notificationService.send(
+				application.getDriver().getMember(),
+				NotificationType.APPLICATION_REJECTED,
+				"배송 " + shipmentId + "번 운송 요청 지원이 고객에게 거절되었어요.",
+				shipment);
 	}
 
 	// 기사: 배차 대기 중인 운송 요청 목록 조회
