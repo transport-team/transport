@@ -17,6 +17,7 @@ const VehicleRequestListPage = lazy(() => import('../pages/admin/VehicleRequestL
 
 // 팀원 3 관리자 화면
 const ShipmentManagePage = lazy(() => import('../pages/admin/ShipmentManagePage'))
+const AdminShipmentDetailPage = lazy(() => import('../pages/admin/AdminShipmentDetailPage'))
 const PaymentManagePage = lazy(() => import('../pages/admin/PaymentManagePage'))
 const CargoTypeManagePage = lazy(() => import('../pages/admin/CargoTypeManagePage'))
 
@@ -25,6 +26,7 @@ const adminRouter = () => [
   { path: '', element: <Suspense fallback={Loading}><AdminHome /></Suspense> },
   { path: 'me', element: <Suspense fallback={Loading}><MyPage /></Suspense> },
   { path: 'shipments', element: <Suspense fallback={Loading}><ShipmentManagePage /></Suspense> },
+  { path: 'shipments/:id', element: <Suspense fallback={Loading}><AdminShipmentDetailPage /></Suspense> },
   { path: 'payments', element: <Suspense fallback={Loading}><PaymentManagePage /></Suspense> },
   { path: 'cargo-types', element: <Suspense fallback={Loading}><CargoTypeManagePage /></Suspense> },
   { path: 'vehicles', element: <Suspense fallback={Loading}><VehicleListPage /></Suspense> },

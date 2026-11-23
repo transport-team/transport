@@ -20,7 +20,7 @@
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
 | 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING |
-| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(409 — 고객이 취소할 수 없는 상태: 배차 확정 뒤 · 운송 중 · 이미 취소) |
+| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(409 — 취소할 수 없는 상태: 고객은 배차 확정 뒤, 관리자는 상차 뒤, 이미 취소) |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS, REVIEW_NOT_ALLOWED |
 
 ## 팀원 1 — 회원 · 인증 · 운영
@@ -256,10 +256,11 @@
 | GET · POST | /api/admin/vehicles | 차량 목록 조회 · 차량 등록 | ADMIN |
 | PUT · DELETE | /api/admin/vehicles/{id} | 차량 수정 · 비활성화 | ADMIN |
 | GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
+| GET | /api/admin/drivers/{id}/vehicles | 기사 보유 차량 (조회 전용, #124) | ADMIN |
+| GET | /api/admin/vehicle-requests, /all | 차량 등록 신청 — 승인 대기 목록 · 전체(처리 완료 포함, 신청일 최신순 #124) | ADMIN |
+| PATCH | /api/admin/vehicle-requests/{requestId}/approve · /reject | 차량 등록 신청 승인 · 거절 | ADMIN |
 | GET · POST · DELETE | /api/driver/schedules(/{id}) | 내 근무 일정 (month) | DRIVER |
-| GET | /api/admin/dispatches/candidates | 배차 후보 (shipmentId) | ADMIN |
-| POST | /api/admin/dispatches | 배차 { shipmentId, driverId, vehicleId } | ADMIN |
-| PATCH | /api/admin/dispatches/{id}/release | 배차 해제 | ADMIN |
+| POST | /api/admin/shipments/{id}/dispatch/cancel | 배차 취소(재배차) { reason 180자 이하 } — 배차 완료(ASSIGNED)만, 접수(REQUESTED)로 되돌리고 배차 해제 · 이력 · 기사 · 고객 알림 (#124). 관리자 후보 추천 · 직접 배정은 하지 않는다(11-06 결정) | ADMIN |
 | GET | /api/driver/dispatches | 내 배차 (tab = today · upcoming · done) | DRIVER |
 | GET | /api/driver/stats | 내 실적 · 평점 (month) | DRIVER |
 | POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
@@ -270,6 +271,8 @@
 | GET | /api/customer/shipments/{shipmentId}/applications | 고객의 배송별 기사 지원 목록 조회 | CUSTOMER |
 | POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/select | 고객이 지원 기사 선택 및 배차 확정 | CUSTOMER |
 | POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/reject | 고객이 개별 기사 지원 거절 | CUSTOMER |
+
+- 배송이 완료돼도 배차(`active`)는 남겨 두고, 취소 · 재배차 때만 해제한다(`releasedAt`). 그래서 기사 지원 · 고객 선택 · 운송 요청 목록의 시간 겹침 검사와 차량 '정비 중' 검사는 **완료 · 취소된 배송의 배차를 빼고** 센다 (11-19 결정 34, #86)
 
 ### 관리자 차량 관리 API 예시
 
@@ -359,10 +362,15 @@
 ```
 
 - 본인 고객만(아니면 403), 배송이 `PENDING_PAYMENT` · `REQUESTED`일 때만 취소할 수 있다. 그 밖은 `409 CANNOT_CANCEL` — 배차 완료 뒤는 "배차가 확정된 배송은 관리자에게 취소를 요청해 주세요.", 운송 중 · 완료는 "운송이 시작된 배송은 취소할 수 없습니다.", 이미 취소는 "이미 취소된 배송입니다."
-- 배차 완료 뒤 취소는 관리자 몫이다 (배차 해제 · 기사 알림과 함께, ADM-02 · #86)
+- 배차 완료 뒤 취소는 관리자 몫이다 (배차 해제 · 기사 알림과 함께, ADM-02 · #86) → 아래 '관리자 취소'
 - 처리 순서: 결제 · 배송 `CANCELED`, 이력("고객 취소: 사유"), 대기 중인 기사 지원 자동 마감(`NOT_SELECTED`)을 먼저 저장하고 토스 환불을 마지막에 부른다. 환불이 실패하면 `502 PAYMENT_FAILED`이고 아무것도 바뀌지 않는다
 - 결제 완료 건만 환불한다. 결제 대기(`READY`) 건과 개발용 결제 건너뛰기(`LOCAL_SKIP_…`) 건은 토스를 부르지 않는다
 - 환불된 결제(`CANCELED`)는 관리자 대시보드 매출 · 접수 건수에서 빠진다
+
+**관리자 취소** `POST /api/admin/shipments/{id}/cancel` { cancelReason 500자 이하 } (ADMIN, ADM-02 · 11-19 결정 34) — 응답은 고객 취소와 같은 모양
+- 결제 대기 · 접수 · **배차 완료**일 때만. 상차 뒤(운송 중 · 도착 · 완료)와 이미 취소는 `409 CANNOT_CANCEL`
+- 처리 순서는 고객 취소와 같다: 결제 · 배송 `CANCELED`, 이력("관리자 취소: 사유", 처리자 = 관리자), 대기 지원 자동 마감, 배차된 건은 **배차 해제**(`DispatchService.releaseDispatch`)를 먼저 저장하고, 고객 · 배정 기사에게 알림(`STATUS_CHANGED`) 뒤 토스 환불을 마지막에 부른다. 환불이 실패하면 `502 PAYMENT_FAILED`이고 아무것도 바뀌지 않는다(알림도 안 나감)
+- 배차만 풀고 다시 배차 대기로 돌리는 것은 `POST /api/admin/shipments/{id}/dispatch/cancel` (팀원 2 칸)
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
@@ -376,7 +384,7 @@
 | GET | /api/shipments/my | 내 배송 목록 (page, status, from, to) | CUSTOMER |
 | GET | /api/shipments/{id} | 상세 (본인 · 배정 기사 · 관리자) | 로그인 |
 | POST | /api/payments/{shipmentId}/cancel | 고객 취소 { cancelReason } → 결제 완료 건은 자동 환불 (배차 전만, 위 '배송 취소 · 환불') | CUSTOMER |
-| — | (관리자 취소) | 배차 완료 건 포함 · 배차 해제 · 기사 알림 — ADM-02에서 (#86) | ADMIN |
+| POST | /api/admin/shipments/{id}/cancel | 관리자 취소 { cancelReason } — 상차 전(배차 완료 포함), 결제 건은 자동 환불 · 배차 해제 · 고객 · 기사 알림 (위 '관리자 취소') | ADMIN |
 | GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
 | GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
 
@@ -406,8 +414,10 @@
 | GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트 — 알림 본문은 목록 한 건과 같은 모양) | 로그인 |
 | GET · PATCH | /api/notifications, /{id}/read | 알림 목록 (한 건: id · type · message · shipmentId · isRead · createdAt) · 읽음 | 로그인 |
 | POST | /api/shipments/{id}/review | 리뷰 { rating 1~5, content 500자 이하 } — 본인 배송 · 배송완료 · 1회 (이미 있으면 409 `REVIEW_EXISTS`) | CUSTOMER |
-| GET | /api/shipments/{id}/review | 배송의 리뷰 (아직 없으면 204) | 로그인 |
-| GET | /api/drivers/{id}/reviews | 기사 리뷰 목록(최신순) · 평균 평점(리뷰가 없으면 0.0) | 로그인 |
+| GET | /api/shipments/{id}/review | 배송의 리뷰 (아직 없으면 204) · 고객 이름은 가림 | 로그인 |
+| GET | /api/drivers/{id}/reviews | 기사 리뷰 목록(최신순) · 평균 평점(리뷰가 없으면 0.0) · 고객 이름은 가림 | 로그인 |
+
+- 리뷰 응답의 `customerName`은 처음 · 마지막 글자만 남기고 가린다: 김민수 → `김*수`, 남궁현석 → `남**석`, 이민 → `이*`, 한 글자 → `*` (11-19 결정 4). 리뷰 작성 응답 · 배송 상세의 `review`도 같다 (모두 `ReviewResponseDTO.from` → `MaskingUtil.maskName`). 관리자에게도 가린 이름을 준다
 
 ## 결제 흐름
 

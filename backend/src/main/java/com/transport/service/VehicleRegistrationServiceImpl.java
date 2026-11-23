@@ -10,6 +10,7 @@ import com.transport.domain.Vehicle;
 import com.transport.domain.VehicleRegistrationRequest;
 import com.transport.domain.VehicleType;
 import com.transport.domain.enums.DriverStatus;
+import com.transport.domain.enums.ShipmentStatus;
 import com.transport.domain.enums.VehicleRegistrationStatus;
 import com.transport.domain.enums.VehicleStatus;
 import com.transport.dto.DriverVehicleResponseDTO;
@@ -86,6 +87,25 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
         return requestRepository.save(request).getId();
     }
     
+    // 관리자: 완료 건도 포함한 차량 등록 신청 전체 조회 (신청 최신순)
+    @Override
+    public List<VehicleRegistrationResponseDTO> getAllRequests() {
+        return requestRepository.findAllByOrderByCreatedAtDescIdDesc().stream()
+                .map(request -> VehicleRegistrationResponseDTO.builder()
+                        .id(request.getId())
+                        .driverId(request.getDriver().getId())
+                        .driverName(request.getDriver().getMember().getName())
+                        .plateNo(request.getPlateNo())
+                        .vehicleTypeId(request.getVehicleType().getId())
+                        .vehicleTypeName(request.getVehicleType().getName())
+                        .status(request.getStatus())
+                        .rejectionReason(request.getRejectionReason())
+                        .reviewedAt(request.getReviewedAt())
+                        .createdAt(request.getCreatedAt())
+                        .build())
+                .toList();
+    }
+
     // 관리자: 승인 대기 중인 차량 등록 신청 목록 조회
     @Override
     public List<VehicleRegistrationResponseDTO> getPendingRequests() {
@@ -255,9 +275,11 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
                     ErrorCode.INVALID_INPUT, "이미 해당 상태인 차량입니다.");
         }
 
-        // 8. 유효한 배차가 있는 차량은 정비 중 변경 불가
+        // 8. 진행 중인 배차가 있는 차량은 정비 중 변경 불가
+        //    (배송이 끝나도 배차는 남겨 두므로 완료 · 취소된 배송의 배차는 빼고 센다 — 11-19 결정 34, #86)
         if (status == VehicleStatus.MAINTENANCE
-                && dispatchRepository.existsByVehicle_IdAndActiveTrue(vehicleId)) {
+                && dispatchRepository.existsByVehicle_IdAndActiveTrueAndShipment_StatusNotIn(
+                        vehicleId, List.of(ShipmentStatus.COMPLETED, ShipmentStatus.CANCELED))) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT,
                     "현재 유효한 배차가 있어 정비 중으로 변경할 수 없습니다.");

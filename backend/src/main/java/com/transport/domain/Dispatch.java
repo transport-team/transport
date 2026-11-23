@@ -41,4 +41,14 @@ public class Dispatch extends BaseEntity {
 	private LocalDateTime assignedAt;
 
 	private LocalDateTime releasedAt;  // 배차 해제 시각
+
+	// 배차 해제 시 기록은 유지하고 활성 상태만 변경
+	public void release() {
+		if (!this.active) {
+			return;
+		}
+
+		this.active = false;
+		this.releasedAt = LocalDateTime.now();
+	}
 }

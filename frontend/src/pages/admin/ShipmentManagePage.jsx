@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { searchAdminShipments } from '../../api/adminTransportApi'
+import Pagination from '../../components/common/Pagination'
 
 const STATUS_OPTIONS = [
   { value: '', label: '전체 상태' },
@@ -8,7 +10,8 @@ const STATUS_OPTIONS = [
   { value: 'ASSIGNED', label: '배차 완료' },
   { value: 'PICKED_UP', label: '상차 완료' },
   { value: 'IN_TRANSIT', label: '배송 중' },
-  { value: 'DELIVERED', label: '배송 완료' },
+  { value: 'ARRIVED', label: '도착' },
+  { value: 'COMPLETED', label: '배송 완료' },  // 서버 상태값(ShipmentStatus)과 같게 — DELIVERED는 없는 값이라 400이었다
   { value: 'CANCELED', label: '취소됨' },
 ]
 
@@ -18,7 +21,8 @@ const STATUS_BADGE = {
   ASSIGNED: 'bg-blue-50 text-blue-700 border-blue-200',
   PICKED_UP: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   IN_TRANSIT: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  DELIVERED: 'bg-gray-100 text-gray-700 border-gray-200',
+  ARRIVED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  COMPLETED: 'bg-gray-100 text-gray-700 border-gray-200',
   CANCELED: 'bg-red-50 text-red-600 border-red-200',
 }
 
@@ -28,6 +32,7 @@ const getStatusLabel = (status) =>
 const formatDateTime = (value) => (value ? value.replace('T', ' ').slice(0, 16) : '-')
 
 const ShipmentManagePage = () => {
+  const navigate = useNavigate()
   const [formInputs, setFormInputs] = useState({ status: '', from: '', to: '', keyword: '' })
   const [appliedFilter, setAppliedFilter] = useState({ page: 1, status: '', from: '', to: '', keyword: '' })
   const [fetchState, setFetchState] = useState({
@@ -164,8 +169,30 @@ const ShipmentManagePage = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data.dtoList.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/70">
-                    <td className="px-4 py-3 font-bold text-gray-900">#{item.id}</td>
+                  <tr
+                    key={item.id}
+                    onClick={() => navigate(`/admin/shipments/${item.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault()
+                        navigate(`/admin/shipments/${item.id}`)
+                      }
+                    }}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`배송 ${item.id} 상세 보기`}
+                    className="cursor-pointer hover:bg-emerald-50/60 focus-visible:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-500"
+                  >
+                    <td className="px-4 py-3 font-bold">
+                      <Link
+                        to={`/admin/shipments/${item.id}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="text-emerald-700 underline-offset-2 hover:underline focus-visible:underline"
+                        aria-label={`배송 ${item.id} 상세 보기`}
+                      >
+                        #{item.id}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block rounded-full border px-2.5 py-0.5 font-bold ${STATUS_BADGE[item.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
                         {getStatusLabel(item.status)}
@@ -200,40 +227,7 @@ const ShipmentManagePage = () => {
 
       {/* 페이지네이션 */}
       {!loading && data.pageNumList?.length > 0 && (
-        <div className="flex items-center justify-center gap-1.5">
-          {data.prev && (
-            <button
-              type="button"
-              onClick={() => setAppliedFilter((prev) => ({ ...prev, page: data.prevPage }))}
-              className="rounded border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              이전
-            </button>
-          )}
-          {data.pageNumList.map((num) => (
-            <button
-              key={num}
-              type="button"
-              onClick={() => setAppliedFilter((prev) => ({ ...prev, page: num }))}
-              className={`rounded px-3 py-1 text-xs font-bold ${
-                data.current === num
-                  ? 'bg-emerald-600 text-white'
-                  : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {num}
-            </button>
-          ))}
-          {data.next && (
-            <button
-              type="button"
-              onClick={() => setAppliedFilter((prev) => ({ ...prev, page: data.nextPage }))}
-              className="rounded border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              다음
-            </button>
-          )}
-        </div>
+        <Pagination pageData={data} onMove={(page) => setAppliedFilter((prev) => ({ ...prev, page }))} />
       )}
     </section>
   )

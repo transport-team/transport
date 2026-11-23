@@ -18,16 +18,22 @@ const AppHeader = ({ menus = [] }) => {
 
   return (
     <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-        <Link to={isLogin ? ROLE_HOME[loginState.role] : '/'} className="text-lg font-bold text-emerald-800">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-4 py-3">
+        <Link to={isLogin ? ROLE_HOME[loginState.role] : '/'} className="shrink-0 text-lg font-bold text-emerald-800">
           운송서비스
         </Link>
         {menus.length > 0 && (
-          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {menus.map((menu) => <MenuLink key={menu.label} menu={menu} />)}
+          <nav aria-label="역할별 메뉴" className="flex min-w-[140px] flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap">
+            {menus.map((menu) => (
+              <MenuLink
+                key={menu.label}
+                menu={menu}
+                className="shrink-0 rounded-lg px-2 py-2 text-sm"
+              />
+            ))}
           </nav>
         )}
-        <div className="ml-auto flex items-center gap-3 text-sm">
+        <div className="ml-auto flex shrink-0 items-center gap-3 whitespace-nowrap text-sm">
           <Link to="/notices" className="text-gray-600 hover:text-emerald-800">
             공지사항
           </Link>

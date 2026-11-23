@@ -26,6 +26,12 @@ public class AdminVehicleRegistrationController {
 
     private final VehicleRegistrationService vehicleRegistrationService;
 
+    // 전체 신청 (처리 완료 건 포함) — 신청일 최신순
+    @GetMapping("/all")
+    public List<VehicleRegistrationResponseDTO> getAllRequests() {
+        return vehicleRegistrationService.getAllRequests();
+    }
+
     // 승인 대기 중인 차량 등록 신청 목록 조회
     @GetMapping
     public List<VehicleRegistrationResponseDTO> getPendingRequests() {
