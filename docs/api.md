@@ -262,7 +262,8 @@
 | GET · POST · DELETE | /api/driver/schedules(/{id}) | 내 근무 일정 (month) | DRIVER |
 | POST | /api/admin/shipments/{id}/dispatch/cancel | 배차 취소(재배차) { reason 180자 이하 } — 배차 완료(ASSIGNED)만, 접수(REQUESTED)로 되돌리고 배차 해제 · 이력 · 기사 · 고객 알림 (#124). 관리자 후보 추천 · 직접 배정은 하지 않는다(11-06 결정) | ADMIN |
 | GET | /api/driver/dispatches | 내 배차 (tab = today · upcoming · done) | DRIVER |
-| GET | /api/driver/stats | 내 실적 · 평점 (month) | DRIVER |
+| GET | /api/driver/settlements/monthly?month, /monthly/items?month, /range?from&to, /range/items?from&to | 내 실적: 월별 · 기간별 완료 건수 · 운임 합계 · 운임 내역 (#107) | DRIVER |
+| GET | /api/driver/settlements/reviews | 내 평균 평점 · 리뷰 (DRV-07) — { averageRating(소수 첫째 자리, 없으면 0.0), reviewCount, reviews(최신순, 고객 이름 가림) }. `ReviewService` 약속 메서드를 `driver.id`로 부른다 | DRIVER |
 | POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
 | PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
 | GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |

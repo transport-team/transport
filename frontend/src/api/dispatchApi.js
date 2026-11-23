@@ -137,3 +137,9 @@ export const getDriverSettlementRangeItems = async (from, to) => {
 
   return res.data
 }
+
+// 기사: 내 평균 평점 · 리뷰 (DRV-07) — { averageRating, reviewCount, reviews(최신순, 고객 이름 가림) }
+export const getDriverMyReviews = async () => {
+  const res = await jwtAxios.get('/api/driver/settlements/reviews')
+  return res.data
+}
