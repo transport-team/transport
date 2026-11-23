@@ -3,6 +3,8 @@ package com.transport.service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +46,12 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 	private final StatusHistoryService statusHistoryService;
 	// 배차 확정 알림 서비스
 	private final NotificationService notificationService;
+
+    @Override
+    public Map<Long, Long> getPendingApplicantCounts(Long memberId) {
+        return applicationRepository.countPendingByCustomer(memberId, ShipmentStatus.REQUESTED, DispatchApplicationStatus.PENDING).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+    }
 
 	// 기사: 운송 요청에 지원
 	@Override

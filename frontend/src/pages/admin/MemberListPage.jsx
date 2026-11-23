@@ -11,7 +11,7 @@ const initSearch = { role: '', enabled: '', keyword: '' }
 const toParams = ({ role, enabled, keyword, page }) => ({
   page,
   ...(role && { role }),
-  ...(enabled && { enabled }),
+  ...(enabled !== '' && { enabled }),
   ...(keyword.trim() && { keyword: keyword.trim() }),
 })
 
@@ -25,16 +25,28 @@ const MemberListPage = () => {
   const [changingId, setChangingId] = useState(null)  // 상태를 바꾸는 중인 회원
 
   useEffect(() => {
+    let active = true
     getMembers(toParams(query))
-      .then(setPageData)
-      .catch((err) => setError(err.response?.data?.message ?? '회원 목록을 불러오지 못했어요.'))
+      .then((data) => { if (active) { setPageData(data); setError('') } })
+      .catch((err) => { if (active) setError(err.response?.data?.message ?? '회원 목록을 불러오지 못했어요.') })
+    return () => { active = false }
   }, [query])
 
-  const handleChange = (e) => setSearch({ ...search, [e.target.name]: e.target.value })
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setSearch((previous) => ({ ...previous, [name]: value }))
+    // 선택 필터는 변경 즉시 적용하고, 검색어는 입력 중인 값을 유지한다.
+    if (name !== 'keyword') {
+      setError('')
+      setPageData(null)
+      setQuery((previous) => ({ ...previous, [name]: value, page: 1 }))
+    }
+  }
 
   const handleSearch = (e) => {
     e.preventDefault()
     setError('')
+    setPageData(null)
     setQuery({ ...search, page: 1 })
   }
 

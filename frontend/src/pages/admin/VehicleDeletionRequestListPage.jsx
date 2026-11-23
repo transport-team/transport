@@ -1,0 +1,185 @@
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import { getAllVehicleDeletionRequests, approveVehicleDeletion, rejectVehicleDeletion } from '../../api/vehicleApi'
+import { useOutletContext } from 'react-router-dom'
+
+const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
+const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절', WITHDRAWN: '기사 철회' }
+const RESULT_STYLE = {
+  APPROVED: 'border-emerald-200 bg-emerald-100 text-emerald-800',
+  REJECTED: 'border-red-200 bg-red-100 text-red-700',
+  WITHDRAWN: 'border-gray-200 bg-gray-100 text-gray-600',
+}
+
+// 관리자 차량 삭제 신청함: 차량 등록 신청함과 동일한 표 및 필터 구성
+const VehicleDeletionRequestListPage = () => {
+  const { refreshPendingDeletionCount } = useOutletContext()
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [processingId, setProcessingId] = useState(null)
+  const [rejectId, setRejectId] = useState(null)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [filters, setFilters] = useState({ progress: '', result: '', date: '' })
+
+  const loadRequests = () => getAllVehicleDeletionRequests()
+    .then((data) => setRequests(Array.isArray(data) ? data : []))
+
+  useEffect(() => {
+    loadRequests()
+      .catch(() => setError('차량 삭제 신청 목록을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const visibleRequests = useMemo(() => requests.filter((request) => {
+    const processed = request.status !== 'PENDING'
+    if (filters.progress === 'PENDING' && processed) return false
+    if (filters.progress === 'PROCESSED' && !processed) return false
+    if (filters.result && request.status !== filters.result) return false
+    if (filters.date && request.createdAt?.slice(0, 10) !== filters.date) return false
+    return true
+  }).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '') || b.id - a.id), [requests, filters])
+
+  const handleApprove = async (request) => {
+    if (!window.confirm(`${request.plateNo} 차량의 삭제를 승인하시겠습니까?\n차량 DB 기록은 보존되며 운행만 중단됩니다.`)) return
+    setProcessingId(request.id)
+    setError('')
+    setMessage('')
+    try {
+      await approveVehicleDeletion(request.id)
+      setMessage('차량 삭제를 승인했습니다.')
+      await loadRequests()
+      await refreshPendingDeletionCount()
+    } catch (err) {
+      setError(err.response?.data?.message || '승인 처리 중 오류가 발생했습니다.')
+    } finally { setProcessingId(null) }
+  }
+
+  const handleReject = async (requestId) => {
+    if (!rejectionReason.trim() || rejectionReason.trim().length > 300) {
+      setError('거절 사유를 1~300자로 입력해 주세요.')
+      return
+    }
+    setProcessingId(requestId)
+    setError('')
+    setMessage('')
+    try {
+      await rejectVehicleDeletion(requestId, rejectionReason.trim())
+      setRejectId(null)
+      setRejectionReason('')
+      setMessage('차량 삭제를 거절했습니다.')
+      await loadRequests()
+      await refreshPendingDeletionCount()
+    } catch (err) {
+      setError(err.response?.data?.message || '거절 처리 중 오류가 발생했습니다.')
+    } finally { setProcessingId(null) }
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">차량 삭제 신청함</h1>
+          <p className="mt-1 text-xs text-gray-500">삭제 승인 시 차량은 비활성화되고 운송 기록은 보존됩니다. 처리 완료된 신청도 이력으로 유지합니다.</p>
+        </div>
+        <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
+          조회 <strong className="text-emerald-700">{visibleRequests.length}</strong>건
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:grid-cols-4">
+        <label className="text-xs text-gray-600">처리 상태
+          <select value={filters.progress} onChange={(e) => setFilters((p) => ({ ...p, progress: e.target.value }))}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
+            <option value="">전체</option><option value="PENDING">처리 전</option><option value="PROCESSED">처리 완료</option>
+          </select>
+        </label>
+        <label className="text-xs text-gray-600">처리 결과
+          <select value={filters.result} onChange={(e) => setFilters((p) => ({ ...p, result: e.target.value }))}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
+            <option value="">전체</option><option value="APPROVED">승인</option><option value="REJECTED">거절</option><option value="WITHDRAWN">기사 철회</option>
+          </select>
+        </label>
+        <label className="text-xs text-gray-600">신청일
+          <input type="date" value={filters.date} onChange={(e) => setFilters((p) => ({ ...p, date: e.target.value }))}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm" />
+        </label>
+        <div className="flex items-end">
+          <button type="button" onClick={() => setFilters({ progress: '', result: '', date: '' })}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">필터 초기화</button>
+        </div>
+      </div>
+
+      {message && <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</p>}
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        {loading ? <p className="p-10 text-center text-sm text-gray-500">신청 목록을 불러오는 중...</p> : visibleRequests.length === 0 ? (
+          <p className="p-10 text-center text-sm text-gray-500">조건에 맞는 차량 삭제 신청이 없습니다.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-xs">
+              <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">신청번호</th>
+                  <th className="px-4 py-3 font-semibold">기사</th>
+                  <th className="px-4 py-3 font-semibold">차량번호 · 차종</th>
+                  <th className="px-4 py-3 font-semibold">신청일</th>
+                  <th className="px-4 py-3 font-semibold">승인/거절일</th>
+                  <th className="px-4 py-3 text-right font-semibold">처리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {visibleRequests.map((request) => {
+                  const processed = request.status !== 'PENDING'
+                  return (
+                    <Fragment key={request.id}>
+                      <tr className={processed ? 'bg-gray-100/90 text-gray-500' : 'bg-white text-gray-900'}>
+                        <td className="px-4 py-3 font-semibold">#{request.id}</td>
+                        <td className="px-4 py-3">{request.driverName}</td>
+                        <td className="px-4 py-3"><p className="font-semibold">{request.plateNo}</p><p className="mt-1 text-[11px]">{request.vehicleTypeName}</p></td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatDateTime(request.createdAt)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatDateTime(request.reviewedAt)}</td>
+                        <td className="px-4 py-3 text-right">
+                          {processed ? (
+                            <span className={`inline-block min-w-14 rounded-lg border px-2.5 py-1 text-center text-xs font-semibold ${RESULT_STYLE[request.status] || 'border-gray-300 bg-gray-200 text-gray-600'}`} title={request.rejectionReason || undefined}>
+                              {STATUS_LABEL[request.status] || request.status}
+                            </span>
+                          ) : (
+                            <div className="flex justify-end gap-1.5">
+                              <button type="button" disabled={processingId !== null} onClick={() => handleApprove(request)}
+                                className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">승인</button>
+                              <button type="button" disabled={processingId !== null} onClick={() => { setRejectId(rejectId === request.id ? null : request.id); setRejectionReason(''); setError('') }}
+                                className="rounded-lg border border-red-200 bg-white px-3 py-1.5 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">거절</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                      {rejectId === request.id && !processed && (
+                        <tr className="bg-red-50/50">
+                          <td colSpan={6} className="px-4 py-3">
+                            <label htmlFor={`delete-reject-${request.id}`} className="block text-xs font-semibold text-gray-700">거절 사유</label>
+                            <textarea id={`delete-reject-${request.id}`} value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)}
+                              maxLength={300} rows={2} placeholder="거절 사유를 입력해 주세요."
+                              className="mt-2 w-full rounded-lg border border-gray-200 p-2 text-sm focus:border-red-400 focus:outline-none" />
+                            <div className="mt-2 flex justify-end gap-2">
+                              <button type="button" onClick={() => setRejectId(null)} className="rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100">닫기</button>
+                              <button type="button" disabled={processingId !== null} onClick={() => handleReject(request.id)}
+                                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50">거절 확정</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+export default VehicleDeletionRequestListPage

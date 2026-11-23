@@ -17,4 +17,6 @@ public class DriverVehicleResponseDTO {
     private Long vehicleTypeId;
 
     private VehicleStatus status;
+
+    private boolean deletionPending;
 }

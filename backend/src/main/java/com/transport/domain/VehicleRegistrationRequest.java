@@ -54,6 +54,11 @@ public class VehicleRegistrationRequest extends BaseEntity {
         this.reviewedAt = LocalDateTime.now();
     }
 
+    // 기사 본인의 미처리 신청 철회 (관리자 처리일은 기록하지 않음)
+    public void withdraw() {
+        this.status = VehicleRegistrationStatus.WITHDRAWN;
+    }
+
     // 차량 등록 신청 거절
     public void reject(String rejectionReason) {
         this.status = VehicleRegistrationStatus.REJECTED;

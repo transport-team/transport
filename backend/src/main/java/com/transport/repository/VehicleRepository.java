@@ -8,6 +8,12 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import com.transport.domain.Driver;
 import com.transport.domain.Vehicle;
 import com.transport.domain.VehicleType;
+import com.transport.domain.enums.VehicleStatus;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
+import java.util.Optional;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
@@ -25,6 +31,14 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     // 관리자 기사별 차량 보기 (등록일 최신순, 비활성 차량도 포함)
     @EntityGraph(attributePaths = "vehicleType")
     List<Vehicle> findByDriver_IdOrderByCreatedAtDescIdDesc(Long driverId);
+
+    // 삭제 신청과 관리자 승인에서 같은 차량의 동시 수정 직렬화
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select v from Vehicle v where v.id = :id")
+    Optional<Vehicle> findForUpdate(@Param("id") Long id);
+
+    // 비활성 차량은 기사 화면에서 숨기되 DB 이력은 보존
+    List<Vehicle> findByDriver_IdAndStatusNot(Long driverId, VehicleStatus status);
 
     // 기사가 소유한 차량 목록 조회 (배차 신청 가능 여부 판단)
     List<Vehicle> findByDriver_Id(Long driverId);

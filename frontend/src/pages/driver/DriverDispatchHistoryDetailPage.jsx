@@ -1,3 +1,4 @@
+import ShipmentProgress from '../../components/tracking/ShipmentProgress'
 
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -125,6 +126,8 @@ const DriverDispatchHistoryDetailPage = () => {
               {historyStatusNames[status] || status}
             </span>
           </div>
+
+          {history.applicationStatus === 'SELECTED' && <ShipmentProgress status={history.shipmentStatus} />}
 
           {/* 운송 경로 */}
           <DriverRouteCard
