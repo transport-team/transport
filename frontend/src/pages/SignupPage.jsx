@@ -45,7 +45,7 @@ const SignupPage = () => {
   useEffect(() => {
     getTerms()
       .then(setTerms)
-      .catch(() => setTermsError('약관을 불러오지 못했어요. 백엔드가 실행 중인지 확인해 주세요.'))
+      .catch(() => setTermsError('약관을 불러오지 못했어요. 잠시 후 새로고침해 주세요.'))
   }, [])
 
   if (isLogin) {
@@ -88,7 +88,7 @@ const SignupPage = () => {
       navigate('/login', { replace: true, state: { signupRole: role, email: form.email } })
     } catch (err) {
       // 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED · INVALID_INPUT → 서버 문구 그대로
-      setError(err.response?.data?.message ?? '서버에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.')
+      setError(err.response?.data?.message ?? '회원가입을 하지 못했어요. 잠시 후 다시 시도해 주세요.')
       setSubmitting(false)
     }
   }

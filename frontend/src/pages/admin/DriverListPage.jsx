@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getAdminDriverVehicles, getDriverReviews, getDrivers, patchDriverStatus } from '../../api/adminDriverApi'
 import Pagination from '../../components/common/Pagination'
+import Modal from '../../components/common/Modal'
 
 const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
 
@@ -81,20 +82,8 @@ const DriverListPage = () => {
     }
   }, [query, reloadKey])
 
-  // 창이 열려 있으면 Esc로 닫는다
-  useEffect(() => {
-    if (!confirm && !review && !vehicleModal && !detail) return
-    const closeOnEsc = (e) => {
-      if (e.key === 'Escape') {
-        setConfirm(null)
-        setReview(null)
-        setVehicleModal(null)
-        setDetail(null)
-      }
-    }
-    document.addEventListener('keydown', closeOnEsc)
-    return () => document.removeEventListener('keydown', closeOnEsc)
-  }, [confirm, review, vehicleModal, detail])
+  // 창은 공통 Modal (Esc · 배경 누르기로 닫힘). 거절 · 중지 확인 창은 바꾸는 중에는 닫지 않는다
+  const closeConfirm = () => { if (changingId === null) setConfirm(null) }
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -280,16 +269,10 @@ const DriverListPage = () => {
         </>
       )}
 
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setDetail(null)} role="presentation">
-          <div role="dialog" aria-modal="true" aria-labelledby="driver-detail-title"
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between gap-3 border-b border-gray-200 pb-3">
-              <h2 id="driver-detail-title" className="text-base font-semibold">{detail.name} 기사 정보</h2>
-              <button type="button" onClick={() => setDetail(null)} className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">닫기</button>
-            </div>
-            <dl className="mt-4 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+      <Modal open={detail !== null} onClose={() => setDetail(null)} title={detail ? `${detail.name} 기사 정보` : ''} size="md">
+        {detail && (
+          <>
+            <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               {[
                 ['이름', detail.name],
                 ['이메일', detail.email],
@@ -310,23 +293,19 @@ const DriverListPage = () => {
               <span className="text-xs text-gray-500">기사 계정 승인·거절·중지 관리</span>
               {renderAction(detail)}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
-      {confirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div
-            role="dialog" aria-modal="true" aria-labelledby="driver-confirm-title"
-            className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"
-          >
-            <h2 id="driver-confirm-title" className="text-base font-semibold">{confirmText.title}</h2>
-            <p className="mt-2 text-sm font-medium text-gray-800">{confirm.driver.name} 기사를 {confirmText.verb}할까요?</p>
+      <Modal open={confirm !== null} onClose={closeConfirm} title={confirm ? confirmText.title : ''} size="sm">
+        {confirm && (
+          <>
+            <p className="text-sm font-medium text-gray-800">{confirm.driver.name} 기사를 {confirmText.verb}할까요?</p>
             <p className="mt-2 text-sm text-gray-600">{confirmText.message}</p>
             <div className="mt-5 flex justify-end gap-2">
               <button
-                type="button" onClick={() => setConfirm(null)}
-                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+                type="button" disabled={changingId === confirm.driver.id} onClick={closeConfirm}
+                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
               >
                 취소
               </button>
@@ -337,20 +316,13 @@ const DriverListPage = () => {
                 {confirmText.verb}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
-      {vehicleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setVehicleModal(null)} role="presentation">
-          <div role="dialog" aria-modal="true" aria-labelledby="driver-vehicles-title"
-            onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-              <h2 id="driver-vehicles-title" className="text-base font-semibold">{vehicleModal.driver.name} 기사 보유 차량</h2>
-              <button type="button" onClick={() => setVehicleModal(null)} className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100">닫기</button>
-            </div>
-            <div className="overflow-auto p-5 text-sm">
+      <Modal open={vehicleModal !== null} onClose={() => setVehicleModal(null)} title={vehicleModal ? `${vehicleModal.driver.name} 기사 보유 차량` : ''} size="md">
+        {vehicleModal && (
+            <div className="text-sm">
               {vehicleModal.error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{vehicleModal.error}</p>}
               {!vehicleModal.vehicles && !vehicleModal.error && <p className="text-gray-500">차량 조회 중...</p>}
               {vehicleModal.vehicles?.length === 0 && <p className="text-gray-500">등록된 차량이 없습니다.</p>}
@@ -372,23 +344,12 @@ const DriverListPage = () => {
                 </table>
               )}
             </div>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {review && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setReview(null)} role="presentation">
-          <div
-            role="dialog" aria-modal="true" aria-labelledby="driver-review-title" onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl"
-          >
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-              <h2 id="driver-review-title" className="text-base font-semibold">{review.driver.name} 기사 리뷰</h2>
-              <button type="button" onClick={() => setReview(null)} className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100">
-                닫기
-              </button>
-            </div>
-            <div className="overflow-y-auto px-5 py-4 text-sm">
+      <Modal open={review !== null} onClose={() => setReview(null)} title={review ? `${review.driver.name} 기사 리뷰` : ''} size="sm">
+        {review && (
+            <div className="text-sm">
               {review.error && <p role="alert" className="rounded bg-red-50 p-3 text-red-800">{review.error}</p>}
               {!review.data && !review.error && <p className="text-gray-500">리뷰 불러오는 중...</p>}
               {review.data?.reviews.length === 0 && <p className="text-gray-500">아직 리뷰가 없어요.</p>}
@@ -408,9 +369,8 @@ const DriverListPage = () => {
                 </>
               )}
             </div>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </section>
   )
 }
