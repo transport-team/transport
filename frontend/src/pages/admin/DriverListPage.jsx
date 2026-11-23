@@ -3,15 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import { getAdminDriverVehicles, getDriverReviews, getDrivers, patchDriverStatus } from '../../api/adminDriverApi'
 import Pagination from '../../components/common/Pagination'
 import Modal from '../../components/common/Modal'
+import Badge from '../../components/common/Badge'
 
 const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
 
 const STATUS_NAME = { PENDING: '승인 대기', ACTIVE: '승인됨', INACTIVE: '중지' }
-const STATUS_CLASS = {
-  PENDING: 'bg-amber-50 text-amber-800',
-  ACTIVE: 'bg-emerald-50 text-emerald-800',
-  INACTIVE: 'bg-gray-100 text-gray-600',
-}
+// 기사 상태 배지 색 (모양은 공통 Badge)
+const STATUS_TONE = { PENDING: 'amber', ACTIVE: 'green', INACTIVE: 'gray' }
 
 // 거절 · 중지는 한 번 더 확인한다 (둘 다 INACTIVE로 바꾼다)
 const CONFIRM_TEXT = {
@@ -232,9 +230,9 @@ const DriverListPage = () => {
                     <td className="px-4 py-3">{driver.email}</td>
                     <td className="px-4 py-3">{driver.phone}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[driver.status]}`}>
-                        {STATUS_NAME[driver.status]}
-                      </span>
+                      <Badge tone={STATUS_TONE[driver.status]} size="sm">
+                        {STATUS_NAME[driver.status] || driver.status}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3">
                       {driver.status === 'PENDING' ? (

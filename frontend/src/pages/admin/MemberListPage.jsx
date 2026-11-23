@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getMembers, patchMemberEnabled } from '../../api/adminMemberApi'
+import Badge from '../../components/common/Badge'
 import Modal from '../../components/common/Modal'
 import Pagination from '../../components/common/Pagination'
 import { ROLE_NAME } from '../../util/roleUtil'
@@ -158,11 +159,9 @@ const MemberListPage = () => {
                     <td className="px-4 py-3">{ROLE_NAME[member.role]}</td>
                     <td className="px-4 py-3">{member.createdAt?.slice(0, 10)}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${member.enabled ? 'bg-emerald-50 text-emerald-800' : 'bg-gray-100 text-gray-600'}`}
-                      >
+                      <Badge tone={member.enabled ? 'green' : 'gray'} size="sm">
                         {member.enabled ? '사용 중' : '비활성'}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">{renderAction(member)}</td>
                   </tr>
