@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getMembers, patchMemberEnabled } from '../../api/adminMemberApi'
+import Modal from '../../components/common/Modal'
 import Pagination from '../../components/common/Pagination'
 import { ROLE_NAME } from '../../util/roleUtil'
 
@@ -69,46 +70,16 @@ const MemberListPage = () => {
     }
   }
 
+  // 비활성화를 확인 중인 회원 (확인 창은 공통 Modal 하나로 — Esc · 배경 누르기로도 닫힌다)
+  const confirmMember = pageData?.dtoList.find((row) => row.id === confirmId) ?? null
+  const closeConfirm = () => {
+    if (changingId === null) setConfirmId(null)  // 바꾸는 중에는 닫지 않는다
+  }
+
   // 관리 칸: 관리자는 변경 불가, 비활성화는 한 번 더 확인, 다시 활성화는 바로
   const renderAction = (member) => {
     if (member.role === 'ADMIN') {
       return <span className="text-xs text-gray-400">변경 불가</span>
-    }
-
-    if (confirmId === member.id) {
-      return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="회원 비활성화 확인"
-            className="w-80 rounded-lg bg-white p-6 text-center shadow-xl"
-          >
-            <p className="mb-5 text-sm font-medium text-gray-800">
-              이 회원의 로그인을 막을까요?
-            </p>
-
-            <div className="flex justify-center gap-2">
-              <button
-                type="button"
-                disabled={changingId === member.id}
-                onClick={() => changeEnabled(member, false)}
-                className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                비활성화
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setConfirmId(null)}
-                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )
     }
 
     if (member.enabled) {
@@ -202,6 +173,30 @@ const MemberListPage = () => {
           <Pagination pageData={pageData} onMove={movePage} />
         </>
       )}
+
+      <Modal open={confirmMember !== null} onClose={closeConfirm} title="회원 비활성화" size="sm">
+        <p className="mb-5 text-sm font-medium text-gray-800">
+          {confirmMember?.name} 회원의 로그인을 막을까요?
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={closeConfirm}
+            disabled={changingId !== null}
+            className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            disabled={changingId !== null}
+            onClick={() => confirmMember && changeEnabled(confirmMember, false)}
+            className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-60"
+          >
+            {changingId !== null ? '바꾸는 중...' : '비활성화'}
+          </button>
+        </div>
+      </Modal>
     </section>
   )
 }
