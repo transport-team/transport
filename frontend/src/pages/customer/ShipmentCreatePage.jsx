@@ -229,15 +229,27 @@ const ShipmentCreatePage = () => {
     clearEstimate()
   }
 
-  const getShipmentRequest = () => ({
-    ...form,
-    cargoName: [cargoItems.filter((item) => item.detail).map((item) => `${item.detail} ${item.quantity}개`).join(', '), form.cargoName.trim()].filter(Boolean).join(', '),
-    vehicleTypeId: Number(form.vehicleTypeId),
-    cargoTypeId: Number(effectiveCargoTypeId),
-    cargoWeightKg: Number(form.cargoWeightKg),
-    senderName: form.senderName.trim(),
-    senderPhone: form.senderPhone.trim(),
-  })
+  const getShipmentRequest = () => {
+    const combinedCargoName = [
+      cargoItems
+        .filter((item) => item.detail)
+        .map((item) => `${item.detail} ${item.quantity}개`)
+        .join(', '),
+      form.cargoName.trim(),
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+    return {
+      ...form,
+      cargoName: combinedCargoName.slice(0, 200),
+      vehicleTypeId: Number(form.vehicleTypeId),
+      cargoTypeId: Number(effectiveCargoTypeId),
+      cargoWeightKg: Number(form.cargoWeightKg),
+      senderName: form.senderName.trim(),
+      senderPhone: form.senderPhone.trim(),
+    }
+  }
 
   const canMoveToTransport = Boolean(
     form.vehicleTypeId && effectiveCargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
