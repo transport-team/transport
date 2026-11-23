@@ -78,7 +78,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         CargoType cargoType = cargoTypeRepository.findById(requestDTO.getCargoTypeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
         if (!cargoType.isActive()) {
-            throw new CustomException(ErrorCode.BAD_REQUEST, "비활성화된 화물 유형입니다.");
+            throw new CustomException(ErrorCode.INACTIVE_CARGO_TYPE, "비활성화된 화물 유형입니다.");
         }
         // 2. 배송 엔티티 생성
         Shipment shipment = Shipment.builder()
