@@ -20,7 +20,9 @@ const VehicleDeletionRequestListPage = lazy(() => import('../pages/admin/Vehicle
 const ShipmentManagePage = lazy(() => import('../pages/admin/ShipmentManagePage'))
 const AdminShipmentDetailPage = lazy(() => import('../pages/admin/AdminShipmentDetailPage'))
 const PaymentManagePage = lazy(() => import('../pages/admin/PaymentManagePage'))
+const AdminSettlementPage = lazy(() => import('../pages/admin/AdminSettlementPage'))
 const CargoTypeManagePage = lazy(() => import('../pages/admin/CargoTypeManagePage'))
+const VehicleTypeFareManagePage = lazy(() => import('../pages/admin/VehicleTypeFareManagePage'))
 
 // 관리자 화면 경로 (/admin/...) — 공통 파일: 화면을 추가할 때 PR로 경로를 더한다
 const adminRouter = () => [
@@ -29,7 +31,9 @@ const adminRouter = () => [
   { path: 'shipments', element: <Suspense fallback={Loading}><ShipmentManagePage /></Suspense> },
   { path: 'shipments/:id', element: <Suspense fallback={Loading}><AdminShipmentDetailPage /></Suspense> },
   { path: 'payments', element: <Suspense fallback={Loading}><PaymentManagePage /></Suspense> },
+  { path: 'settlements', element: <Suspense fallback={Loading}><AdminSettlementPage /></Suspense> },
   { path: 'cargo-types', element: <Suspense fallback={Loading}><CargoTypeManagePage /></Suspense> },
+  { path: 'vehicle-type-fares', element: <Suspense fallback={Loading}><VehicleTypeFareManagePage /></Suspense> },
   { path: 'vehicles', element: <Suspense fallback={Loading}><VehicleListPage /></Suspense> },
   { path: 'vehicles/new', element: <Suspense fallback={Loading}><VehicleRegisterPage /></Suspense> },
   { path: 'vehicles/:id/edit', element: <Suspense fallback={Loading}><VehicleEditPage /></Suspense> },

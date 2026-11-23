@@ -38,4 +38,21 @@ public class VehicleType extends BaseEntity {
 	private int heavyRate;  // 중량 할증률(%)
 
 	private boolean active;
+
+	// 기존 운송 기록에서 사용하므로 차종 코드는 변경하지 않는다.
+	public void updateFareSettings(String name, int maxLoadKg, int baseFare, int baseDistanceKm,
+			int perKmFare, int nightRate, int weekendRate, int heavyRate) {
+		this.name = name;
+		this.maxLoadKg = maxLoadKg;
+		this.baseFare = baseFare;
+		this.baseDistanceKm = baseDistanceKm;
+		this.perKmFare = perKmFare;
+		this.nightRate = nightRate;
+		this.weekendRate = weekendRate;
+		this.heavyRate = heavyRate;
+	}
+
+	public void changeActive(boolean active) {
+		this.active = active;
+	}
 }

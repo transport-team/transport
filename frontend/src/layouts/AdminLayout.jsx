@@ -18,7 +18,7 @@ const MENU_GROUPS = [
       { label: '배송 관리', to: '/admin/shipments' },
       { label: '배차' },
       { label: '결제 내역', to: '/admin/payments' },
-      { label: '정산' },
+      { label: '정산', to: '/admin/settlements' },
     ],
   },
   {
@@ -26,6 +26,7 @@ const MENU_GROUPS = [
     menus: [
       { label: '기사 관리', to: '/admin/drivers' },
       { label: '차량 · 차종', to: '/admin/vehicles' },
+      { label: '차종 · 요금 관리', to: '/admin/vehicle-type-fares' },
       { label: '차량 등록 신청함', to: '/admin/vehicle-requests' },
       { label: '차량 삭제 신청함', to: '/admin/vehicle-deletion-requests' },
       { label: '화물 종류', to: '/admin/cargo-types' },

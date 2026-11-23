@@ -63,6 +63,7 @@ class FareServiceTest {
                 .nightRate(20)
                 .weekendRate(10)
                 .heavyRate(15)
+                .active(true)
                 .build();
 
         midVehicle = VehicleType.builder()
@@ -75,6 +76,7 @@ class FareServiceTest {
                 .nightRate(20)
                 .weekendRate(10)
                 .heavyRate(15)
+                .active(true)
                 .build();
 
         normalCargo = CargoType.builder()
