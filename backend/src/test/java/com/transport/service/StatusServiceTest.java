@@ -19,7 +19,6 @@ import com.transport.dto.ShipmentStatusHistoryResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.ShipmentImageRepository;
-import com.transport.repository.ShipmentRepository;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StatusServiceTest {
 
 	@Mock
-	ShipmentRepository shipmentRepository;
+	ShipmentService shipmentService;  // 배송 = 팀원 3 약속 메서드 (#94 저장소 직접 사용 정리)
 
 	@Mock
 	DispatchService dispatchService;
@@ -63,8 +62,8 @@ class StatusServiceTest {
                             .customer(Member.builder().id(100L).build())
                             .build();
 
-            when(shipmentRepository.findById(1L))
-                            .thenReturn(Optional.of(shipment));
+            when(shipmentService.getShipment(1L))
+                            .thenReturn(shipment);
 
             lenient().when(dispatchService.getActiveDriver(1L))
                             .thenReturn(driverId);
@@ -138,7 +137,7 @@ class StatusServiceTest {
 	@Test
 	@DisplayName("예외: 존재하지 않는 배송")
 	void changeStatus_shipmentNotFound() {
-		when(shipmentRepository.findById(1L)).thenReturn(Optional.empty());
+		when(shipmentService.getShipment(1L)).thenThrow(new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
 
 		CustomException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
 				() -> statusService.changeStatus(1L, ShipmentStatus.PICKED_UP, "", 10L),

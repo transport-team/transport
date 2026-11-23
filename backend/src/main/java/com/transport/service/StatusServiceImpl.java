@@ -12,7 +12,6 @@ import com.transport.dto.ShipmentStatusHistoryResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.ShipmentImageRepository;
-import com.transport.repository.ShipmentRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -26,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Log4j2
 public class StatusServiceImpl implements StatusService {
 
-	private final ShipmentRepository shipmentRepository;
+	private final ShipmentService shipmentService;  // 배송 = 팀원 3 약속 메서드 (저장소 직접 사용 정리, #94)
 	private final ShipmentImageRepository shipmentImageRepository;
 	private final DispatchService dispatchService;
 	private final StatusHistoryService statusHistoryService;
@@ -34,8 +33,7 @@ public class StatusServiceImpl implements StatusService {
 
 	@Override
 	public void changeStatus(Long shipmentId, ShipmentStatus nextStatus, String memo, Long driverId) {
-		Shipment shipment = shipmentRepository.findById(shipmentId)
-				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+		Shipment shipment = shipmentService.getShipment(shipmentId);  // 같은 트랜잭션의 엔티티라 상태 변경이 그대로 저장된다
 
 		// 1. 배정 기사 확인 (DispatchService — 현재 목, 5주차에 팀원2 실구현으로 교체)
 		Long assignedDriverId = dispatchService.getActiveDriver(shipmentId);
@@ -65,8 +63,7 @@ public class StatusServiceImpl implements StatusService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<ShipmentStatusHistoryResponseDTO> getHistory(Long shipmentId, Long memberId, MemberRole role) {
-		Shipment shipment = shipmentRepository.findById(shipmentId)
-				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+		Shipment shipment = shipmentService.getShipment(shipmentId);
 
 		// 권한: 관리자 · 본인 고객 · 배정 기사만 (requirements.md — 배송 상세 접근 제한)
 		boolean isAdmin = role == MemberRole.ADMIN;

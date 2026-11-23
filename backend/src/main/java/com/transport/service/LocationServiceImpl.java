@@ -15,10 +15,7 @@ import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.LocationResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
-import com.transport.repository.DispatchRepository;
-import com.transport.repository.DriverRepository;
 import com.transport.repository.LocationLogRepository;
-import com.transport.repository.ShipmentRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -33,28 +30,25 @@ import lombok.extern.log4j.Log4j2;
 public class LocationServiceImpl implements LocationService {
 
 	private final LocationLogRepository locationLogRepository;
-	private final ShipmentRepository shipmentRepository;
-	private final DispatchRepository dispatchRepository;
-	private final DriverRepository driverRepository;
+	// 다른 도메인은 약속 메서드로만 (배송 = 팀원 3, 기사 = 팀원 2 — 저장소 직접 사용 정리, #94)
+	private final ShipmentService shipmentService;
+	private final DriverService driverService;
 	private final NotificationServiceImpl notificationService; // SSE emitter 저장소 재사용 (getEmitter)
 	private final DispatchService dispatchService;             // 배정 기사 회원 ID (약속된 getActiveDriver)
 
 	@Override
 	public LocationResponseDTO sendLocation(Long shipmentId, Long memberId, double lat, double lng) {
 
-		// 1. 배송 조회
-		Shipment shipment = shipmentRepository.findById(shipmentId)
-				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+		// 1. 배송 조회 (없으면 SHIPMENT_NOT_FOUND — ShipmentService 약속 메서드)
+		Shipment shipment = shipmentService.getShipment(shipmentId);
 
-		// 2. 로그인 기사의 Driver 엔티티
-		Driver driver = driverRepository.findByMemberId(memberId)
+		// 2. 로그인 기사의 Driver 엔티티 (위치 기록에 기사를 남긴다)
+		Driver driver = driverService.findByMemberId(memberId)
 				.orElseThrow(() -> new CustomException(ErrorCode.FORBIDDEN, "기사만 위치를 전송할 수 있습니다."));
 
-		// 3. 배정 기사인지 (dispatch의 driver는 Driver — member.id가 아니라 driver.id와 비교)
-		Long activeDriverId = dispatchRepository.findByShipmentIdAndActiveTrue(shipmentId)
-				.map(d -> d.getDriver().getId())
-				.orElse(null);
-		if (activeDriverId == null || !activeDriverId.equals(driver.getId())) {
+		// 3. 배정 기사인지 — getActiveDriver는 배정 기사의 회원 ID라 로그인 회원 ID와 바로 비교한다
+		Long activeDriverMemberId = dispatchService.getActiveDriver(shipmentId);
+		if (activeDriverMemberId == null || !activeDriverMemberId.equals(memberId)) {
 			throw new CustomException(ErrorCode.NOT_ASSIGNED_DRIVER);
 		}
 
@@ -96,8 +90,7 @@ public class LocationServiceImpl implements LocationService {
 	@Override
 	@Transactional(readOnly = true)
 	public LocationResponseDTO getLatestLocation(Long shipmentId, Long memberId, MemberRole role) {
-		Shipment shipment = shipmentRepository.findById(shipmentId)
-				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+		Shipment shipment = shipmentService.getShipment(shipmentId);
 
 		// 권한: 관리자 · 본인 고객 · 배정 기사만 (이력 조회 StatusServiceImpl.getHistory와 같은 규칙)
 		boolean isAdmin = role == MemberRole.ADMIN;

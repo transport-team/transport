@@ -28,7 +28,6 @@ import com.transport.dto.ShipmentImageResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.ShipmentImageRepository;
-import com.transport.repository.ShipmentRepository;
 import com.transport.storage.FileStorage;
 import com.transport.util.CustomFileUtil;
 
@@ -37,7 +36,7 @@ import com.transport.util.CustomFileUtil;
 class ShipmentImageServiceTest {
 
 	@Mock
-	ShipmentRepository shipmentRepository;
+	ShipmentService shipmentService;  // 배송 = 팀원 3 약속 메서드 (#94 저장소 직접 사용 정리)
 
 	@Mock
 	ShipmentImageRepository shipmentImageRepository;
@@ -73,7 +72,7 @@ class ShipmentImageServiceTest {
 	void upload_success() {
 		// given
 		when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(DRIVER_MEMBER_ID);
-		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.of(shipment));
+		when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
 		when(fileStorage.save(any(), eq("PICKUP"))).thenReturn("uuid_a.jpg", "uuid_b.jpg");
 		when(shipmentImageRepository.save(any(ShipmentImage.class)))
 				.thenAnswer(inv -> inv.getArgument(0));
@@ -95,7 +94,7 @@ class ShipmentImageServiceTest {
 	@Test
 	@DisplayName("실패 — 배송이 없으면 SHIPMENT_NOT_FOUND")
 	void upload_shipmentNotFound() {
-		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.empty());
+		when(shipmentService.getShipment(SHIPMENT_ID)).thenThrow(new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
 
 		assertThatThrownBy(() -> shipmentImageService.upload(
 				SHIPMENT_ID, List.of(imageFile("a.jpg")), ShipmentImageType.PICKUP, DRIVER_MEMBER_ID))
@@ -107,7 +106,7 @@ class ShipmentImageServiceTest {
 	@Test
 	@DisplayName("실패 — 배정 기사가 아니면 NOT_ASSIGNED_DRIVER (파일 저장 안 함)")
 	void upload_notAssignedDriver() {
-		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.of(shipment));
+		when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
 		when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(999L); // 다른 기사
 
 		assertThatThrownBy(() -> shipmentImageService.upload(
@@ -122,7 +121,7 @@ class ShipmentImageServiceTest {
 	@Test
 	@DisplayName("실패 — 배정이 아예 없으면(null) NOT_ASSIGNED_DRIVER")
 	void upload_noAssignment() {
-		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.of(shipment));
+		when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
 		when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(null);
 
 		assertThatThrownBy(() -> shipmentImageService.upload(
@@ -135,7 +134,7 @@ class ShipmentImageServiceTest {
 	@Test
 	@DisplayName("실패 — 파일이 비어있으면 INVALID_INPUT")
 	void upload_emptyFiles() {
-		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.of(shipment));
+		when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
 		when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(DRIVER_MEMBER_ID);
 
 		assertThatThrownBy(() -> shipmentImageService.upload(
@@ -148,7 +147,7 @@ class ShipmentImageServiceTest {
 	@Test
 	@DisplayName("실패 — 파일 검증 통과 못 하면 예외 전파 (400 INVALID_INPUT, 저장 안 함)")
 	void upload_invalidFile() {
-		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(java.util.Optional.of(shipment));
+		when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
 		when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(DRIVER_MEMBER_ID);
 		org.mockito.Mockito.doThrow(new CustomException(ErrorCode.INVALID_INPUT, "허용되지 않는 파일 형식입니다."))
 				.when(customFileUtil).validateImage(any());

@@ -36,6 +36,7 @@
 | 7주차 (T) | 3 → 1 | 대시보드 집계(읽기 전용): `ShipmentService.countByStatus()` · `PaymentService.getPaidStat(from, to)` · `getDailyPaidStats(fromDate, toDate)` · `getPaidStatsByVehicleType(from, to)` (팀원 1이 작성, 팀원 3 리뷰) |
 | 보안 점검 후속 | 1 → 전원 | `MemberService.findById(memberId)` → `Optional<Member>` (회원 엔티티가 필요할 때 `MemberRepository` 대신, 예: 배송 신청 고객 연결) |
 | 배차 해제 (#123) | 2 → 3 | `DispatchService.releaseDispatch(shipmentId)` — 그 배송의 활성 배차를 해제(`active = false`, `releasedAt` 기록), 활성 배차가 없으면 아무것도 안 함. 배송 완료 때는 부르지 않고 취소 · 재배차 때만 부른다 (11-19 결정 34, #86) |
+| 저장소 직접 사용 정리 (11-23) | 3 → 전원 · 2 → 4 | `ShipmentService.getShipment(shipmentId)` → 배송 엔티티(없으면 `SHIPMENT_NOT_FOUND`, 같은 트랜잭션이라 상태를 바꾸면 그대로 저장) · `DriverService.findByMemberId(memberId)` → `Optional<Driver>`(위치 · 리뷰처럼 기사 엔티티를 연결할 때). 위치 · 리뷰 · 사진 · 상태 변경 서비스가 다른 도메인 저장소 대신 쓴다 (#94) |
 | 7주차 (T 2단계) | 4 → 1 | 대시보드 집계(읽기 전용): `StatusHistoryService.countCompleted(from, to)` · `getCompletedCountsByDriver(from, to, limit)` · `ReviewService.getRatingStat()` (팀원 1이 작성, 팀원 4 리뷰). 기사 순위도 상태 이력의 완료 변경자(배정 기사)로 세서, 예정했던 팀원 2의 기사별 완료 건수 메서드는 필요 없어졌다 (2026-11-13) |
 | #102 후속 | 2 → 3 | `DispatchApplicationService.closePendingApplications(shipment)` — 배송이 취소되면 대기 중인 지원을 모두 자동 마감(`NOT_SELECTED`). 결제 취소가 같은 트랜잭션에서 부른다 (팀원 1 작성, 팀원 2 리뷰, 2026-11-19) |
 

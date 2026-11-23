@@ -27,6 +27,9 @@ public interface DriverService {
 
 	Optional<Driver> findById(Long id);
 
+	// 회원 ID로 기사 엔티티 (위치 · 리뷰처럼 기사를 엔티티로 연결해야 하는 다른 도메인용 — 저장소 직접 사용 대신)
+	Optional<Driver> findByMemberId(Long memberId);
+
 	default DriverDTO entityToDTO(Driver driver) {
 		Member member = driver.getMember();
 		return DriverDTO.builder()
