@@ -108,16 +108,7 @@ const ShipmentDetailPage = () => {
         cargoName: shipment.cargoName,
       })
     } catch (err) {
-      const rawMessage = err.response?.data?.message || err.message || ''
-      const isClosedByUser =
-        /cancel|close|user_cancel/i.test(String(err.code || '')) ||
-        /취소|닫|중단/i.test(rawMessage)
-
-      if (isClosedByUser) {
-        setActionError('결제창이 닫혀 결제가 완료되지 않았습니다. 결제하기 버튼을 눌러 다시 시도해 주세요. (30분 미결제 시 자동 취소)')
-      } else {
-        setActionError(err.response?.data?.message || '결제창 호출 중 오류가 발생했습니다.')
-      }
+      setActionError(err.response?.data?.message || '결제창 호출 중 오류가 발생했습니다.')
     } finally {
       setActionLoading(false)
     }
