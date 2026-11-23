@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Pagination from '../../components/common/Pagination'
 import DriverReviewModal from '../../components/review/DriverReviewModal'
+import StatusBadge from '../../components/common/StatusBadge'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyShipments, getShipment } from '../../api/shipmentApi'
 import {
@@ -289,7 +290,7 @@ const CustomerDispatchRequestsPage = () => {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">배차 대기</span>
+                    <StatusBadge status={item.status} />
                     {Number(applicantCounts[item.id] || 0) > 0 && <span className="flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white" aria-label={`지원 기사 ${applicantCounts[item.id]}명`}>{applicantCounts[item.id]}</span>}
                   </span>
                   <span className="text-xs text-gray-500">상차 {formatDateTime(item.pickupAt)}</span>

@@ -1,4 +1,5 @@
 import { StatusBadge, Loading, Button } from '../common'
+import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
 
 // 배송 상태 변경 타임라인 (팀원 4 — 4-5)
 // 배송 상세(팀원 3 소유)에서 import해서 사용
@@ -76,7 +77,7 @@ const Timeline = ({ history = [], loading = false, error = null, onRetry }) => {
           </div>
 
           <p className="mt-1.5 text-sm text-text-primary">
-            {item.fromStatus ? `${statusLabel(item.fromStatus)} →` : '신청'}
+            {item.fromStatus ? `${shipmentStatusLabel(item.fromStatus)} →` : '신청'}
             <span className="sr-only"> </span>
             {item.changedByName ? ` · ${item.changedByName}` : ' · 시스템'}
           </p>
@@ -86,21 +87,6 @@ const Timeline = ({ history = [], loading = false, error = null, onRetry }) => {
       ))}
     </ol>
   )
-}
-
-// fromStatus 한글 표시용 (StatusBadge의 매핑과 동일)
-const statusLabel = (status) => {
-  const labels = {
-    PENDING_PAYMENT: '결제대기',
-    REQUESTED: '접수',
-    ASSIGNED: '배차완료',
-    PICKED_UP: '상차완료',
-    IN_TRANSIT: '운송중',
-    ARRIVED: '도착',
-    COMPLETED: '배송완료',
-    CANCELED: '취소',
-  }
-  return labels[status] || status
 }
 
 export default Timeline

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getMyDispatchHistoryDetail } from '../../api/dispatchApi'
 import { DriverRouteCard, DriverCargoCard, DriverMemoCard } from '../../components/driver/DriverDetailCards'
+import { shipmentStatusBadge, shipmentStatusLabel } from '../../util/shipmentStatusUtil'
 
 // 기사: 지난 배차 신청 및 배송 내역 상세
 const DriverDispatchHistoryDetailPage = () => {
@@ -21,22 +22,17 @@ const DriverDispatchHistoryDetailPage = () => {
     4: '5톤',
   }
 
-  // 지난 내역 상태별 이름
-  const historyStatusNames = {
+  // 신청 상태 이름 · 배지 색 (선정된 신청은 배송 상태라 공통 표 util/shipmentStatusUtil.js를 쓴다)
+  const applicationStatusNames = {
     WITHDRAWN: '신청 취소',
     REJECTED: '신청 거절',
     NOT_SELECTED: '미선정',
-    COMPLETED: '배송 완료',
-    CANCELED: '배송 취소',
   }
 
-  // 상태별 배지 색상
-  const historyStatusColors = {
-    WITHDRAWN: 'bg-gray-100 text-gray-600',
-    REJECTED: 'bg-red-50 text-red-600',
-    NOT_SELECTED: 'bg-gray-100 text-gray-600',
-    COMPLETED: 'border border-emerald-200 bg-emerald-50 text-emerald-700',
-    CANCELED: 'bg-gray-100 text-gray-600',
+  const applicationStatusColors = {
+    WITHDRAWN: 'border-gray-200 bg-gray-100 text-gray-600',
+    REJECTED: 'border-red-200 bg-red-50 text-red-700',
+    NOT_SELECTED: 'border-gray-200 bg-gray-100 text-gray-600',
   }
 
   // 지난 신청 기록 상세 조회
@@ -119,11 +115,9 @@ const DriverDispatchHistoryDetailPage = () => {
             </h2>
 
             <span
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                historyStatusColors[status] || 'bg-gray-100 text-gray-600'
-              }`}
+              className={`rounded-full border px-3 py-1 text-xs font-bold ${applicationStatusColors[status] ?? shipmentStatusBadge(status)}`}
             >
-              {historyStatusNames[status] || status}
+              {applicationStatusNames[status] ?? shipmentStatusLabel(status)}
             </span>
           </div>
 

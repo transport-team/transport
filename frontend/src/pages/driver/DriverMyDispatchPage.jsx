@@ -5,6 +5,8 @@ import {
   getMyAssignedDispatches,
   getMyDispatchHistory,
 } from '../../api/dispatchApi'
+import StatusBadge from '../../components/common/StatusBadge'
+import { shipmentStatusBadge, shipmentStatusLabel } from '../../util/shipmentStatusUtil'
 
 // 기사: 내가 신청한 운송 요청 및 배차 내역 관리
 const DriverMyDispatchPage = () => {
@@ -130,14 +132,6 @@ const DriverMyDispatchPage = () => {
     { id: 'history', label: '지난 내역' },
   ]
 
-  // 배송 진행 상태별 이름
-  const dispatchStatusNames = {
-    ASSIGNED: '배차 확정',
-    PICKED_UP: '상차 완료',
-    IN_TRANSIT: '운송 중',
-    ARRIVED: '도착',
-  }
-
   // 차종별 이름 (운송 요청 목록과 동일)
   const vehicleTypeNames = {
     1: '소형·다마스/라보',
@@ -146,22 +140,17 @@ const DriverMyDispatchPage = () => {
     4: '5톤',
   }
 
-  // 지난 배차 내역 상태별 이름
-  const historyStatusNames = {
+  // 지난 내역의 신청 상태 이름 · 배지 색 (선정된 신청은 배송 상태라 공통 표 util/shipmentStatusUtil.js를 쓴다)
+  const applicationStatusNames = {
     WITHDRAWN: '신청 취소',
     REJECTED: '신청 거절',
     NOT_SELECTED: '미선정',
-    COMPLETED: '배송 완료',
-    CANCELED: '배송 취소',
   }
 
-  // 지난 내역 상태별 배지 색상
-  const historyStatusColors = {
-    WITHDRAWN: 'bg-gray-100 text-gray-600',
-    REJECTED: 'bg-red-50 text-red-600',
-    NOT_SELECTED: 'bg-gray-100 text-gray-600',
-    COMPLETED: 'bg-green-100 text-green-700',
-    CANCELED: 'bg-gray-100 text-gray-600',
+  const applicationStatusColors = {
+    WITHDRAWN: 'border-gray-200 bg-gray-100 text-gray-600',
+    REJECTED: 'border-red-200 bg-red-50 text-red-700',
+    NOT_SELECTED: 'border-gray-200 bg-gray-100 text-gray-600',
   }
 
   return (
@@ -341,9 +330,7 @@ const DriverMyDispatchPage = () => {
                         {dispatch.cargoName}
                       </h2>
 
-                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                        {dispatchStatusNames[dispatch.status] || dispatch.status}
-                      </span>
+                      <StatusBadge status={dispatch.status} />
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 p-3">
@@ -449,10 +436,9 @@ const DriverMyDispatchPage = () => {
                         </h2>
 
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${historyStatusColors[status] || 'bg-gray-100 text-gray-600'
-                            }`}
+                          className={`rounded-full border px-3 py-1 text-xs font-bold ${applicationStatusColors[status] ?? shipmentStatusBadge(status)}`}
                         >
-                          {historyStatusNames[status] || status}
+                          {applicationStatusNames[status] ?? shipmentStatusLabel(status)}
                         </span>
                       </div>
 

@@ -2,25 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getShipment } from '../../api/shipmentApi'
 import { cancelAdminShipment, cancelAdminShipmentDispatch } from '../../api/adminTransportApi'
+import StatusBadge from '../../components/common/StatusBadge'
+import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
 
 // 관리자 배송 취소(환불)가 되는 상태 — 서버 PaymentService.cancelByAdmin과 같게 (상차 뒤에는 409 CANNOT_CANCEL)
 const ADMIN_CANCELABLE = ['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED']
 
-// 관리자: 고객·기사의 조작 버튼 없이 배송 정보를 조회하는 상세 화면
-const STATUS_META = {
-  PENDING_PAYMENT: { label: '결제 대기', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  REQUESTED: { label: '배차 대기', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  ASSIGNED: { label: '배차 완료', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  PICKED_UP: { label: '상차 완료', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  IN_TRANSIT: { label: '배송 중', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  ARRIVED: { label: '도착', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  COMPLETED: { label: '배송 완료', color: 'bg-gray-100 text-gray-700 border-gray-200' },
-  CANCELED: { label: '취소됨', color: 'bg-red-50 text-red-700 border-red-200' },
-}
-
 const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
 const formatFare = (value) => `${Number(value ?? 0).toLocaleString('ko-KR')}원`
 
+// 관리자: 고객·기사의 조작 버튼 없이 배송 정보를 조회하는 상세 화면
 const AdminShipmentDetailPage = () => {
   const { id } = useParams()
   const [fetchState, setFetchState] = useState({ id: null, shipment: null, error: '' })
@@ -119,7 +110,6 @@ const AdminShipmentDetailPage = () => {
     return () => { active = false }
   }, [id])
 
-  const status = shipment && STATUS_META[shipment.status]
   const canCancelDispatch = shipment?.status === 'ASSIGNED'
   const canCancelShipment = ADMIN_CANCELABLE.includes(shipment?.status)
 
@@ -131,11 +121,7 @@ const AdminShipmentDetailPage = () => {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-gray-900">배송 상세 #{id}</h1>
-        {!loading && shipment && (
-          <span className={`rounded-full border px-3 py-1 text-xs font-bold ${status?.color || 'border-gray-200 bg-gray-100 text-gray-700'}`}>
-            {status?.label || shipment.status}
-          </span>
-        )}
+        {!loading && shipment && <StatusBadge status={shipment.status} />}
       </div>
 
       {loading ? (
@@ -329,7 +315,7 @@ const AdminShipmentDetailPage = () => {
                   <li key={entry.id} className="flex flex-wrap items-start justify-between gap-2 py-3">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">
-                        {STATUS_META[entry.toStatus]?.label || entry.toStatus || '상태 변경'}
+                        {entry.toStatus ? shipmentStatusLabel(entry.toStatus) : '상태 변경'}
                       </p>
                       {entry.memo && <p className="mt-1 text-xs text-gray-600">{entry.memo}</p>}
                       {entry.changedByName && <p className="mt-1 text-xs text-gray-400">처리자: {entry.changedByName}</p>}

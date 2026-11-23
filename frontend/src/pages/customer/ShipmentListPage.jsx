@@ -3,26 +3,14 @@ import Pagination from '../../components/common/Pagination'
 import { Link } from 'react-router-dom'
 import { getMyShipments } from '../../api/shipmentApi'
 import { getDispatchApplicantCounts, getDispatchApplicants } from '../../api/dispatchApi'
+import StatusBadge from '../../components/common/StatusBadge'
+import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
 
-const STATUS_META = {
-  PENDING_PAYMENT: { label: '결제 대기', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  REQUESTED: { label: '배차 대기', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  ASSIGNED: { label: '배차 완료', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  PICKED_UP: { label: '상차 완료', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  IN_TRANSIT: { label: '배송 중', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  ARRIVED: { label: '도착', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  COMPLETED: { label: '배송 완료', badge: 'bg-gray-100 text-gray-700 border-gray-200' },
-  CANCELED: { label: '취소됨', badge: 'bg-red-50 text-red-600 border-red-200' },
-}
-
+// 상태 탭: 고객이 자주 찾는 상태만 (이름은 배지와 같은 공통 표)
 const FILTER_TABS = [
   { value: '', label: '전체' },
-  { value: 'PENDING_PAYMENT', label: '결제 대기' },
-  { value: 'REQUESTED', label: '배차 대기' },
-  { value: 'ASSIGNED', label: '배차 완료' },
-  { value: 'IN_TRANSIT', label: '배송 중' },
-  { value: 'COMPLETED', label: '완료' },  // 서버 상태값(ShipmentStatus)과 같게 — DELIVERED는 없는 값이라 400이었다
-  { value: 'CANCELED', label: '취소' },
+  ...['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED', 'IN_TRANSIT', 'COMPLETED', 'CANCELED']
+    .map((value) => ({ value, label: shipmentStatusLabel(value) })),
 ]
 
 const formatDateTime = (value) => {
@@ -171,15 +159,12 @@ const ShipmentListPage = () => {
         )}
 
         {!loading && !fetchState.error && fetchState.content.map((item) => {
-          const meta = STATUS_META[item.status] || { label: item.status, badge: 'bg-gray-100 text-gray-600 border-gray-200' }
           return (
             <article key={item.id} className="rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:border-emerald-200 hover:shadow-md">
               <Link to={`/customer/shipments/${item.id}`} className="block p-5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${meta.badge}`}>
-                    {meta.label}
-                  </span>
+                  <StatusBadge status={item.status} size="sm" />
                   {item.status === 'REQUESTED' && Number(applicantCounts[item.id] || 0) > 0 && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
                       배차 신청 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-white">{applicantCounts[item.id]}</span>

@@ -2,32 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { searchAdminShipments } from '../../api/adminTransportApi'
 import Pagination from '../../components/common/Pagination'
+import StatusBadge from '../../components/common/StatusBadge'
+import { SHIPMENT_STATUS } from '../../util/shipmentStatusUtil'
 
+// 상태 필터: 8개 상태 전부, 진행 순서대로 (값 · 이름은 배지와 같은 공통 표)
 const STATUS_OPTIONS = [
   { value: '', label: '전체 상태' },
-  { value: 'PENDING_PAYMENT', label: '결제 대기' },
-  { value: 'REQUESTED', label: '배차 대기' },
-  { value: 'ASSIGNED', label: '배차 완료' },
-  { value: 'PICKED_UP', label: '상차 완료' },
-  { value: 'IN_TRANSIT', label: '배송 중' },
-  { value: 'ARRIVED', label: '도착' },
-  { value: 'COMPLETED', label: '배송 완료' },  // 서버 상태값(ShipmentStatus)과 같게 — DELIVERED는 없는 값이라 400이었다
-  { value: 'CANCELED', label: '취소됨' },
+  ...Object.entries(SHIPMENT_STATUS).map(([value, { label }]) => ({ value, label })),
 ]
-
-const STATUS_BADGE = {
-  PENDING_PAYMENT: 'bg-amber-50 text-amber-700 border-amber-200',
-  REQUESTED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  ASSIGNED: 'bg-blue-50 text-blue-700 border-blue-200',
-  PICKED_UP: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  IN_TRANSIT: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  ARRIVED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  COMPLETED: 'bg-gray-100 text-gray-700 border-gray-200',
-  CANCELED: 'bg-red-50 text-red-600 border-red-200',
-}
-
-const getStatusLabel = (status) =>
-  STATUS_OPTIONS.find((opt) => opt.value === status)?.label || status
 
 const formatDateTime = (value) => (value ? value.replace('T', ' ').slice(0, 16) : '-')
 
@@ -194,9 +176,7 @@ const ShipmentManagePage = () => {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full border px-2.5 py-0.5 font-bold ${STATUS_BADGE[item.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                        {getStatusLabel(item.status)}
-                      </span>
+                      <StatusBadge status={item.status} size="sm" />
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-gray-900">{item.customerName}</div>

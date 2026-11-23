@@ -9,17 +9,7 @@ import { getDispatchApplicants } from '../../api/dispatchApi'
 import LiveTrackingMap from '../../components/tracking/LiveTrackingMap'
 import ReviewSection from '../../components/review/ReviewSection'
 import { SHIPMENT_LOCATION_EVENT } from '../../hooks/useNotification'
-
-const STATUS_META = {
-  PENDING_PAYMENT: { label: '결제 대기', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  REQUESTED: { label: '배차 대기', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  ASSIGNED: { label: '배차 완료', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  PICKED_UP: { label: '상차 완료', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  IN_TRANSIT: { label: '배송 중', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  ARRIVED: { label: '도착', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  COMPLETED: { label: '배송 완료', badge: 'bg-gray-100 text-gray-700 border-gray-200' },
-  CANCELED: { label: '취소됨', badge: 'bg-red-50 text-red-600 border-red-200' },
-}
+import StatusBadge from '../../components/common/StatusBadge'
 
 // 배차 뒤부터 도착까지 지도를 보여 준다 (기사 위치는 운송 중에만 — LiveTrackingMap이 처리)
 const TRACKING_STATUSES = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED']
@@ -154,7 +144,6 @@ const ShipmentDetailPage = () => {
     )
   }
 
-  const meta = STATUS_META[shipment.status] || { label: shipment.status, badge: 'bg-gray-100 text-gray-700 border-gray-200' }
   const canPay = shipment.status === 'PENDING_PAYMENT'
   const canCancel = shipment.status === 'PENDING_PAYMENT' || shipment.status === 'REQUESTED'
   const cancelLocked = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED', 'COMPLETED'].includes(shipment.status)
@@ -167,9 +156,7 @@ const ShipmentDetailPage = () => {
             <Link className="text-2xl leading-none text-gray-700" to="/customer/shipments" aria-label="내 배송 목록으로">←</Link>
             <h1 className="text-lg font-bold text-gray-900">배송 상세 #{shipment.id}</h1>
           </div>
-          <span className={`rounded-full border px-3 py-1 text-xs font-bold ${meta.badge}`}>
-            {meta.label}
-          </span>
+          <StatusBadge status={shipment.status} />
         </div>
       </header>
 
