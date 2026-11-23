@@ -31,7 +31,8 @@ public class FareServiceImpl implements FareService {
 	@Override
 	public FareCalculateResponseDTO calculateFare(FareCalculateRequestDTO requestDTO) {
 		VehicleType type = vehicleTypeService.findById(requestDTO.getVehicleTypeId())
-				.orElseThrow(() -> new EntityNotFoundException("존재하지 않는 차종입니다."));
+				.filter(VehicleType::isActive)
+				.orElseThrow(() -> new EntityNotFoundException("존재하지 않거나 비활성화된 차종입니다."));
 		CargoType cargo = cargoTypeRepository.findById(requestDTO.getCargoTypeId())
 				.orElseThrow(() -> new EntityNotFoundException("존재하지 않는 화물 유형입니다."));
 
@@ -48,6 +49,7 @@ public class FareServiceImpl implements FareService {
 
 		// 무게 기준 자동 추천: 무게를 실을 수 있는 가장 작은 차종 (없으면 문의 안내)
 		Optional<VehicleType> recommended = vehicleTypeService.findAllEntities().stream()
+				.filter(VehicleType::isActive)
 				.filter(v -> v.getMaxLoadKg() >= weightKg)
 				.min(Comparator.comparingInt(VehicleType::getMaxLoadKg));
 

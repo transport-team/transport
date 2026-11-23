@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { getActiveDrivers, getVehicleTypes, updateVehicle } from '../../api/vehicleApi'
+import { getActiveDrivers, updateVehicle } from '../../api/vehicleApi'
+import { getAdminVehicleTypes } from '../../api/adminTransportApi'
 
 const VehicleEditPage = () => {
     const { id } = useParams()
@@ -36,7 +37,7 @@ const VehicleEditPage = () => {
 
     // 수정 화면에서 선택할 차종 목록 조회
     useEffect(() => {
-        getVehicleTypes()
+        getAdminVehicleTypes()
             .then((data) => {
                 // 현재 차량의 차종은 비활성 상태여도 표시
                 setVehicleTypes(

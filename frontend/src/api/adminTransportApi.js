@@ -28,6 +28,27 @@ export const searchAdminPayments = async (params = {}) => {
   return res.data
 }
 
+// ADM-06: 차종별 운임 규칙 조회·등록·수정·활성화
+export const getAdminVehicleTypes = async () => {
+  const res = await jwtAxios.get('/api/admin/vehicle-types')
+  return res.data
+}
+
+export const createAdminVehicleType = async (payload) => {
+  const res = await jwtAxios.post('/api/admin/vehicle-types', payload)
+  return res.data
+}
+
+export const updateAdminVehicleType = async (id, payload) => {
+  const res = await jwtAxios.put(`/api/admin/vehicle-types/${id}`, payload)
+  return res.data
+}
+
+export const changeAdminVehicleTypeActive = async (id, active) => {
+  const res = await jwtAxios.patch(`/api/admin/vehicle-types/${id}/active`, { active })
+  return res.data
+}
+
 // ADM-08: 관리자 화물 유형 전체 목록 조회 (비활성 포함)
 export const getAdminCargoTypes = async () => {
   const res = await jwtAxios.get('/api/admin/cargo-types')

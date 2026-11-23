@@ -42,4 +42,32 @@ public class Settlement extends BaseEntity {
 	private SettlementStatus status;
 
 	private LocalDateTime paidAt;  // 지급일
+
+	@Column(name = "paid_by_admin_email", length = 100)
+	private String paidByAdminEmail; // 지급 확인을 기록한 관리자 (과거 기록은 null)
+
+	@Column(name = "transfer_reference", length = 100)
+	private String transferReference; // 실제 송금 확인번호/메모 (은행 자동 연동 X)
+
+	// 지급 전 정산 초안만 변경할 수 있다.
+	public void refreshDraft(int count, int fare, int rate, int payout) {
+		if (this.status != SettlementStatus.PENDING) {
+			throw new IllegalStateException("지급 완료된 정산은 수정할 수 없습니다.");
+		}
+		this.completedCount = count;
+		this.totalFare = fare;
+		this.commissionRate = rate;
+		this.payoutAmount = payout;
+	}
+
+	// 실제 송금 후 관리자 수동 확인 기록 (은행 송금은 수행하지 않는다).
+	public void markPaid(LocalDateTime now, String adminEmail, String reference) {
+		if (this.status != SettlementStatus.PENDING) {
+			throw new IllegalStateException("이미 지급 처리된 정산입니다.");
+		}
+		this.status = SettlementStatus.PAID;
+		this.paidAt = now;
+		this.paidByAdminEmail = adminEmail;
+		this.transferReference = reference;
+	}
 }
