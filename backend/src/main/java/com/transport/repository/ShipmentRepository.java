@@ -18,6 +18,12 @@ import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
+    // Lock shipment during admin dispatch cancellation.
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select s from Shipment s where s.id = :id")
+    java.util.Optional<Shipment> findByIdForUpdate(
+            @org.springframework.data.repository.query.Param("id") Long id);
+
     @EntityGraph(attributePaths = { "vehicleType", "cargoType" })
     @Query("""
             select s from Shipment s

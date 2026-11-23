@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { searchAdminPayments } from '../../api/adminTransportApi'
+import Pagination from '../../components/common/Pagination'
 
 const PAYMENT_STATUS_OPTIONS = [
   { value: '', label: '전체 결제상태' },
@@ -194,40 +195,7 @@ const PaymentManagePage = () => {
 
       {/* 페이지네이션 */}
       {!loading && data.pageNumList?.length > 0 && (
-        <div className="flex items-center justify-center gap-1.5">
-          {data.prev && (
-            <button
-              type="button"
-              onClick={() => setAppliedFilter((prev) => ({ ...prev, page: data.prevPage }))}
-              className="rounded border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              이전
-            </button>
-          )}
-          {data.pageNumList.map((num) => (
-            <button
-              key={num}
-              type="button"
-              onClick={() => setAppliedFilter((prev) => ({ ...prev, page: num }))}
-              className={`rounded px-3 py-1 text-xs font-bold ${
-                data.current === num
-                  ? 'bg-emerald-600 text-white'
-                  : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {num}
-            </button>
-          ))}
-          {data.next && (
-            <button
-              type="button"
-              onClick={() => setAppliedFilter((prev) => ({ ...prev, page: data.nextPage }))}
-              className="rounded border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              다음
-            </button>
-          )}
-        </div>
+        <Pagination pageData={data} onMove={(page) => setAppliedFilter((prev) => ({ ...prev, page }))} />
       )}
     </section>
   )

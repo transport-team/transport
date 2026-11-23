@@ -3,6 +3,7 @@ package com.transport.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import com.transport.domain.Driver;
 import com.transport.domain.VehicleRegistrationRequest;
@@ -24,6 +25,10 @@ public interface VehicleRegistrationRequestRepository
             String plateNo,
             VehicleRegistrationStatus status
     );
+
+    // 관리자: 처리 완료 건을 포함해 전체 신청을 신청일 최신순으로 조회
+    @EntityGraph(attributePaths = {"driver", "driver.member", "vehicleType"})
+    List<VehicleRegistrationRequest> findAllByOrderByCreatedAtDescIdDesc();
 
     // 관리자: 승인 대기 중인 차량 신청을 최신순으로 조회
     List<VehicleRegistrationRequest> findByStatusOrderByCreatedAtDesc(

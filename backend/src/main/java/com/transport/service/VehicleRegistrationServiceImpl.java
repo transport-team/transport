@@ -86,6 +86,25 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
         return requestRepository.save(request).getId();
     }
     
+    // 관리자: 완료 건도 포함한 차량 등록 신청 전체 조회 (신청 최신순)
+    @Override
+    public List<VehicleRegistrationResponseDTO> getAllRequests() {
+        return requestRepository.findAllByOrderByCreatedAtDescIdDesc().stream()
+                .map(request -> VehicleRegistrationResponseDTO.builder()
+                        .id(request.getId())
+                        .driverId(request.getDriver().getId())
+                        .driverName(request.getDriver().getMember().getName())
+                        .plateNo(request.getPlateNo())
+                        .vehicleTypeId(request.getVehicleType().getId())
+                        .vehicleTypeName(request.getVehicleType().getName())
+                        .status(request.getStatus())
+                        .rejectionReason(request.getRejectionReason())
+                        .reviewedAt(request.getReviewedAt())
+                        .createdAt(request.getCreatedAt())
+                        .build())
+                .toList();
+    }
+
     // 관리자: 승인 대기 중인 차량 등록 신청 목록 조회
     @Override
     public List<VehicleRegistrationResponseDTO> getPendingRequests() {

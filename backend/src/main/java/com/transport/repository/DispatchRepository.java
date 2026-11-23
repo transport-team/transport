@@ -4,11 +4,22 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.time.LocalDateTime;
 
 import com.transport.domain.Dispatch;
 import com.transport.domain.Shipment;
 
 public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
+    // 배차 이력은 보존하고 활성 여부와 해제 시각만 변경 (서비스 트랜잭션 안에서 호출)
+    @Modifying(flushAutomatically = true)
+    @Query("update Dispatch d set d.active = false, d.releasedAt = :releasedAt "
+         + "where d.shipment.id = :shipmentId and d.active = true")
+    int deactivateActiveDispatches(@Param("shipmentId") Long shipmentId,
+                                   @Param("releasedAt") LocalDateTime releasedAt);
+
 
     // 해당 배송에 현재 유효한 배차가 있는지 확인
     boolean existsByShipmentAndActiveTrue(Shipment shipment);
