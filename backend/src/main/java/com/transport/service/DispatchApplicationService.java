@@ -1,12 +1,17 @@
 package com.transport.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.transport.domain.Shipment;
 import com.transport.dto.DispatchApplicantResponseDTO;
 import com.transport.dto.DriverShipmentListResponseDTO;
 
 public interface DispatchApplicationService {
+
+    // 고객 소유 배송별 아직 처리 전인 기사 지원 수
+    Map<Long, Long> getPendingApplicantCounts(Long memberId);
+
 
     // 기사: 원하는 운송 요청에 차량을 선택해서 지원
     Long apply(Long memberId, Long shipmentId, Long vehicleId);

@@ -1,6 +1,7 @@
 package com.transport.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +25,12 @@ import lombok.RequiredArgsConstructor;
 public class CustomerDispatchApplicationController {
 
     private final DispatchApplicationService dispatchApplicationService;
+
+    // 배송별 배차 신청 대기 건수 (배지는 실제 PENDING 건수로 표시)
+    @GetMapping("/application-counts")
+    public Map<Long, Long> getApplicantCounts(@AuthenticationPrincipal LoginMember loginMember) {
+        return dispatchApplicationService.getPendingApplicantCounts(loginMember.getId());
+    }
 
     // 고객이 자신의 배송에 지원한 기사 목록 조회
     @GetMapping("/{shipmentId}/applications")

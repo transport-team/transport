@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.transport.domain.Driver;
 import com.transport.domain.Member;
 import com.transport.domain.enums.DriverStatus;
+import com.transport.domain.enums.NotificationType;
 import com.transport.dto.DriverDTO;
 import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageResponseDTO;
@@ -29,6 +30,7 @@ import lombok.extern.log4j.Log4j2;
 public class DriverServiceImpl implements DriverService {
 
 	private final DriverRepository driverRepository;
+	private final NotificationService notificationService;  // 팀원 4 약속 메서드 (승인 · 중지 알림)
 
 	@Override
 	public Long register(Member member, String licenseType, int careerYears) {
@@ -74,10 +76,31 @@ public class DriverServiceImpl implements DriverService {
 		}
 		Driver driver = driverRepository.findById(driverId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "기사 정보가 없습니다."));
+		DriverStatus before = driver.getStatus();
 		driver.changeStatus(status); // 변경 감지로 저장 (트랜잭션이 끝날 때 UPDATE)
 
-		log.info("기사 상태 변경: driverId={}, status={}", driverId, status);
+		log.info("기사 상태 변경: driverId={}, {} → {}", driverId, before, status);
+		notifyStatusChange(driver, before, status);
 		return entityToDTO(driver);
+	}
+
+	// 기사에게 승인 · 가입 거절 · 중지 · 다시 활성화 알림 (상태가 그대로면 보내지 않는다)
+	// 승인 대기 · 중지 중에는 로그인할 수 없어서, 다음에 로그인했을 때 알림 목록에서 보인다
+	private void notifyStatusChange(Driver driver, DriverStatus before, DriverStatus after) {
+		if (before == after) {
+			return;
+		}
+		String message;
+		if (after == DriverStatus.ACTIVE) {
+			message = before == DriverStatus.PENDING
+					? "기사 가입이 승인되었어요. 이제 운송 요청에 지원할 수 있어요."
+					: "기사 계정이 다시 활성화되었어요. 운송 요청에 다시 지원할 수 있어요.";
+		} else {
+			message = before == DriverStatus.PENDING
+					? "기사 가입이 승인되지 않았어요."
+					: "관리자가 기사 계정을 중지했어요.";
+		}
+		notificationService.send(driver.getMember(), NotificationType.DRIVER_STATUS_CHANGED, message, null);
 	}
 
 	// 기사 ID로 기사 정보 조회

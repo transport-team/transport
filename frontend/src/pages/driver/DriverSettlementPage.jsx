@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
     getDriverMonthlySettlement,
+    getDriverMyReviews,
     getDriverSettlementRange,
     getDriverSettlementRangeItems,
 } from '../../api/dispatchApi'
+
+// 리뷰 카드에 처음 보여 줄 개수 (나머지는 '모두 보기')
+const REVIEW_PREVIEW_COUNT = 3
 
 // 현재 월을 YYYY-MM 형식으로 반환
 const getCurrentMonth = () => {
@@ -51,6 +55,31 @@ const DriverSettlementPage = () => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [tooltipMonth, setTooltipMonth] = useState(null)
+
+    // 내 평균 평점 · 리뷰 (DRV-07) — 정산과 따로 불러와서 한쪽이 실패해도 다른 쪽은 보인다
+    const [reviewSummary, setReviewSummary] = useState(null)
+    const [reviewError, setReviewError] = useState('')
+    const [showAllReviews, setShowAllReviews] = useState(false)
+
+    useEffect(() => {
+        let isActive = true
+
+        getDriverMyReviews()
+            .then((data) => {
+                if (!isActive) return
+                setReviewSummary(data)
+                setReviewError('')
+            })
+            .catch((err) => {
+                if (!isActive) return
+                console.error('평점 · 리뷰 조회 실패:', err)
+                setReviewError('평점 · 리뷰를 불러오지 못했습니다.')
+            })
+
+        return () => {
+            isActive = false
+        }
+    }, [])
 
     // 선택한 월의 정산 요약 및 상세 내역 조회
     useEffect(() => {
@@ -190,8 +219,67 @@ const DriverSettlementPage = () => {
                     월별 정산 내역
                 </h1>
                 <p className="mt-2 text-sm text-gray-500">
-                    배송 완료 건수와 운임 합계를 월별로 확인할 수 있습니다.
+                    배송 완료 건수 · 운임 합계와 받은 평점 · 리뷰를 확인할 수 있습니다.
                 </p>
+            </div>
+
+            {/* 평균 평점 · 리뷰 (DRV-07) */}
+            <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">평점 · 리뷰</h2>
+                        <p className="mt-1 text-sm text-gray-500">고객이 배송 완료 뒤 남긴 리뷰예요. 고객 이름은 가려서 보여요.</p>
+                    </div>
+                    {reviewSummary && (
+                        <p className="text-right">
+                            <span className="text-2xl font-bold text-amber-500" aria-hidden="true">★</span>
+                            <span className="ml-1 text-2xl font-bold text-gray-900">{Number(reviewSummary.averageRating ?? 0).toFixed(1)}</span>
+                            <span className="ml-2 text-sm text-gray-500">리뷰 {reviewSummary.reviewCount}개</span>
+                        </p>
+                    )}
+                </div>
+
+                {reviewError && (
+                    <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{reviewError}</p>
+                )}
+
+                {!reviewError && !reviewSummary && (
+                    <p className="mt-4 text-sm text-gray-500">평점 · 리뷰를 불러오는 중...</p>
+                )}
+
+                {reviewSummary?.reviewCount === 0 && (
+                    <p className="mt-4 rounded-xl bg-gray-50 p-4 text-center text-sm text-gray-500">아직 받은 리뷰가 없어요.</p>
+                )}
+
+                {reviewSummary?.reviewCount > 0 && (
+                    <>
+                        <ul className="mt-4 divide-y divide-gray-100">
+                            {(showAllReviews ? reviewSummary.reviews : reviewSummary.reviews.slice(0, REVIEW_PREVIEW_COUNT)).map((review) => (
+                                <li key={review.id} className="py-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="text-sm font-semibold text-amber-500" aria-label={`별점 ${review.rating}점`}>
+                                            {'★'.repeat(review.rating)}
+                                            <span className="text-gray-300">{'★'.repeat(Math.max(0, 5 - review.rating))}</span>
+                                        </span>
+                                        <span className="text-xs text-gray-400">
+                                            {review.customerName} · {review.createdAt?.slice(0, 10)}
+                                        </span>
+                                    </div>
+                                    {review.content && <p className="mt-1 text-sm text-gray-700">{review.content}</p>}
+                                </li>
+                            ))}
+                        </ul>
+                        {reviewSummary.reviewCount > REVIEW_PREVIEW_COUNT && (
+                            <button
+                                type="button"
+                                onClick={() => setShowAllReviews((open) => !open)}
+                                className="mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                            >
+                                {showAllReviews ? '접기' : `리뷰 ${reviewSummary.reviewCount}개 모두 보기`}
+                            </button>
+                        )}
+                    </>
+                )}
             </div>
 
             {/* 조회 오류 */}

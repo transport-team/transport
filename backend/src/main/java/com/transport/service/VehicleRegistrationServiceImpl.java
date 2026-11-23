@@ -19,6 +19,7 @@ import com.transport.dto.VehicleRegistrationResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchRepository;
+import com.transport.repository.VehicleDeletionRequestRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.VehicleRegistrationRequestRepository;
 import com.transport.repository.VehicleRepository;
@@ -35,6 +36,7 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
     private final VehicleRepository vehicleRepository;
     private final VehicleTypeService vehicleTypeService;
     private final DispatchRepository dispatchRepository;
+    private final VehicleDeletionRequestRepository deletionRequestRepository;
 
     @Override
     @Transactional
@@ -87,6 +89,41 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
         return requestRepository.save(request).getId();
     }
     
+    @Override
+    public List<VehicleRegistrationResponseDTO> getMyRequests(Long memberId) {
+        return requestRepository.findByDriver_Member_IdOrderByCreatedAtDescIdDesc(memberId).stream()
+                .map(this::toRegistrationResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public void withdrawRequest(Long memberId, Long requestId) {
+        VehicleRegistrationRequest request = requestRepository.findForReview(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "차량 등록 신청을 찾을 수 없습니다."));
+        if (!request.getDriver().getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "본인 차량 등록 신청만 철회할 수 있습니다.");
+        }
+        if (request.getStatus() != VehicleRegistrationStatus.PENDING) {
+            throw new CustomException(ErrorCode.INVALID_INPUT, "이미 처리된 신청은 철회할 수 없습니다.");
+        }
+        request.withdraw();
+    }
+
+    private VehicleRegistrationResponseDTO toRegistrationResponse(VehicleRegistrationRequest request) {
+        return VehicleRegistrationResponseDTO.builder()
+                .id(request.getId())
+                .driverId(request.getDriver().getId())
+                .driverName(request.getDriver().getMember().getName())
+                .plateNo(request.getPlateNo())
+                .vehicleTypeId(request.getVehicleType().getId())
+                .vehicleTypeName(request.getVehicleType().getName())
+                .status(request.getStatus())
+                .rejectionReason(request.getRejectionReason())
+                .reviewedAt(request.getReviewedAt())
+                .createdAt(request.getCreatedAt())
+                .build();
+    }
+
     // 관리자: 완료 건도 포함한 차량 등록 신청 전체 조회 (신청 최신순)
     @Override
     public List<VehicleRegistrationResponseDTO> getAllRequests() {
@@ -134,7 +171,7 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
     public void approve(Long requestId) {
 
         // 1. 신청 정보 조회
-        VehicleRegistrationRequest request = requestRepository.findById(requestId)
+        VehicleRegistrationRequest request = requestRepository.findForReview(requestId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         // 2. 승인 대기 중인 신청인지 확인
@@ -183,7 +220,7 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
     public void reject(Long requestId, String rejectionReason) {
 
         // 1. 신청 정보 조회
-        VehicleRegistrationRequest request = requestRepository.findById(requestId)
+        VehicleRegistrationRequest request = requestRepository.findForReview(requestId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         // 2. 승인 대기 중인 신청인지 확인
@@ -214,13 +251,15 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
                         ErrorCode.NOT_FOUND, "기사 정보를 찾을 수 없습니다."));
 
         // 2. 기사 소유 차량 목록 조회 후 DTO로 변환
-        return vehicleRepository.findByDriver_Id(driver.getId())
+        return vehicleRepository.findByDriver_IdAndStatusNot(driver.getId(), VehicleStatus.INACTIVE)
                 .stream()
                 .map(vehicle -> DriverVehicleResponseDTO.builder()
                         .vehicleId(vehicle.getId())
                         .plateNo(vehicle.getPlateNo())
                         .vehicleTypeId(vehicle.getVehicleType().getId())
                         .status(vehicle.getStatus())
+                        .deletionPending(deletionRequestRepository.existsByVehicle_IdAndStatus(
+                                vehicle.getId(), VehicleRegistrationStatus.PENDING))
                         .build())
                 .toList();
     }
@@ -243,7 +282,7 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
         }
 
         // 3. 변경할 차량 조회
-        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+        Vehicle vehicle = vehicleRepository.findForUpdate(vehicleId)
                 .orElseThrow(() -> new CustomException(
                         ErrorCode.NOT_FOUND, "차량을 찾을 수 없습니다."));
 
@@ -260,6 +299,13 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
             throw new CustomException(
                     ErrorCode.INVALID_INPUT,
                     "운행 가능 또는 정비 중 상태로만 변경할 수 있습니다.");
+        }
+
+        // 삭제 승인 대기 차량은 임의로 운행 가능 상태로 되돌릴 수 없음
+        if (deletionRequestRepository.existsByVehicle_IdAndStatus(
+                vehicleId, VehicleRegistrationStatus.PENDING)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT,
+                    "차량 삭제 신청 심사 중에는 운행 상태를 변경할 수 없습니다.");
         }
 
         // 6. 비활성화된 차량은 기사 본인이 변경할 수 없음
@@ -294,6 +340,7 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
                 .plateNo(vehicle.getPlateNo())
                 .vehicleTypeId(vehicle.getVehicleType().getId())
                 .status(vehicle.getStatus())
+                .deletionPending(false)
                 .build();
     }
 }

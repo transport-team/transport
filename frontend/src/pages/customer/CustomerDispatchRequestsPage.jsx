@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Pagination from '../../components/common/Pagination'
+import DriverReviewModal from '../../components/review/DriverReviewModal'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyShipments, getShipment } from '../../api/shipmentApi'
 import {
@@ -24,6 +25,7 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
   const [workingId, setWorkingId] = useState(null)
   const [actionError, setActionError] = useState('')
   const [actionNotice, setActionNotice] = useState('')
+  const [reviewDriver, setReviewDriver] = useState(null)
 
   const requestKey = `${shipmentId}-${reload}`
   const loading = fetchState.key !== requestKey
@@ -162,6 +164,10 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
                 <div><span className="text-gray-500">차종 </span><span className="font-semibold text-gray-900">{application.vehicleTypeName || `차종 #${application.vehicleTypeId}`}</span></div>
               </div>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setReviewDriver({ id: application.driverId, name: application.driverName || `기사 #${application.driverId}` })}
+                  className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                  ★ 리뷰 보기
+                </button>
                 <button
                   type="button"
                   onClick={() => handleReject(application)}
@@ -183,6 +189,7 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
           ))}
         </div>
       )}
+      {reviewDriver && <DriverReviewModal driverId={reviewDriver.id} driverName={reviewDriver.name} onClose={() => setReviewDriver(null)} />}
     </div>
   )
 }
@@ -192,6 +199,8 @@ const CustomerDispatchRequestsPage = () => {
   const shipmentId = searchParams.get('shipmentId')
   const [page, setPage] = useState(1)
   const [listState, setListState] = useState({ key: '', items: [], totalPages: 1, totalCount: 0, error: '' })
+  const [applicantCounts, setApplicantCounts] = useState({})
+  const [countsError, setCountsError] = useState('')
   const requestKey = String(page)
   const loading = listState.key !== requestKey
 
@@ -224,6 +233,23 @@ const CustomerDispatchRequestsPage = () => {
     return () => { active = false }
   }, [shipmentId, page, requestKey])
 
+  useEffect(() => {
+    if (shipmentId || loading || listState.error) return undefined
+    let active = true
+    const waiting = listState.items.filter((item) => item.status === 'REQUESTED')
+    Promise.allSettled(waiting.map((item) => getDispatchApplicants(item.id)))
+      .then((results) => {
+        if (!active) return
+        const counts = {}
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') counts[waiting[index].id] = result.value.length
+        })
+        setApplicantCounts(counts)
+        setCountsError(results.some((result) => result.status === 'rejected') ? '일부 지원자 수를 조회하지 못했습니다.' : '')
+      })
+    return () => { active = false }
+  }, [shipmentId, loading, listState.items, listState.error])
+
   return (
     <section className="mx-auto w-full max-w-3xl space-y-5 pb-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -243,6 +269,7 @@ const CustomerDispatchRequestsPage = () => {
       ) : (
         <div className="space-y-3">
           <p className="px-1 text-sm font-semibold text-gray-700">배차 대기 중인 배송 {listState.totalCount}건</p>
+          {countsError && <p role="alert" className="text-xs text-red-600">{countsError}</p>}
 
           {loading ? (
             <div className="rounded-2xl bg-white p-10 text-center text-sm text-gray-500 shadow-sm">배송 목록을 불러오는 중...</div>
@@ -261,7 +288,10 @@ const CustomerDispatchRequestsPage = () => {
                 className="block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">배차 대기</span>
+                  <span className="flex items-center gap-2">
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">배차 대기</span>
+                    {Number(applicantCounts[item.id] || 0) > 0 && <span className="flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white" aria-label={`지원 기사 ${applicantCounts[item.id]}명`}>{applicantCounts[item.id]}</span>}
+                  </span>
                   <span className="text-xs text-gray-500">상차 {formatDateTime(item.pickupAt)}</span>
                 </div>
                 <h2 className="mt-3 text-base font-bold text-gray-900">{item.cargoName || `배송 #${item.id}`}</h2>
