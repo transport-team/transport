@@ -47,9 +47,9 @@ const NotificationBell = ({ onNavigate }) => {
                 )}
             </button>
 
-            {/* 드롭다운 */}
+            {/* 드롭다운 — 좁은 화면에서는 종 위치와 상관없이 화면 양옆 16px 안에 고정 (종에 맞추면 왼쪽이 화면 밖으로 나감) */}
             {open && (
-                <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                <div className="fixed inset-x-4 top-28 z-50 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-80">
                     <p className="border-b border-gray-100 px-4 py-3 text-sm font-bold text-gray-800">알림</p>
 
                     {notifications.length === 0 ? (

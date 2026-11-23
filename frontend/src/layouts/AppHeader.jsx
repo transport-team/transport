@@ -18,7 +18,8 @@ const AppHeader = ({ menus = [] }) => {
 
   return (
     <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-4 py-3">
+      {/* 여기에 overflow를 걸면 알림 종 드롭다운이 헤더 높이에서 잘린다 — 좁은 화면은 줄바꿈 · 메뉴만 가로 스크롤 */}
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
         <Link to={isLogin ? ROLE_HOME[loginState.role] : '/'} className="shrink-0 text-lg font-bold text-emerald-800">
           운송서비스
         </Link>
