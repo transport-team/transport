@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import com.transport.dto.DriverMonthlySettlementResponseDTO;
+import com.transport.dto.DriverReviewSummaryResponseDTO;
 import com.transport.dto.DriverSettlementItemResponseDTO;
 import com.transport.dto.DriverSettlementRangeResponseDTO;
 import com.transport.security.LoginMember;
@@ -25,6 +26,15 @@ import lombok.RequiredArgsConstructor;
 public class DriverSettlementController {
 
     private final DriverSettlementService driverSettlementService;
+
+    // 로그인한 기사의 평균 평점 · 리뷰 (DRV-07, 실적 화면)
+    @GetMapping("/reviews")
+    public ResponseEntity<DriverReviewSummaryResponseDTO> getMyReviews(
+            @AuthenticationPrincipal LoginMember loginMember) {
+
+        return ResponseEntity.ok(
+                driverSettlementService.getMyReviews(loginMember.getId()));
+    }
 
     // 로그인한 기사의 월별 정산 요약 조회
     @GetMapping("/monthly")
