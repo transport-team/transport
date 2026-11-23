@@ -179,24 +179,51 @@ const ShipmentCreatePage = () => {
     return () => window.clearTimeout(timer)
   }, [estimatedTotalWeight, form.cargoWeightKg, form.vehicleTypeId, vehicleTypes])
 
+  const syncCargoAndWeightState = (nextItems) => {
+    const hasAnySelectedItem = nextItems.some((item) => item.detail)
+    const nextEstimatedWeight = nextItems.reduce((total, item) => total + getEstimatedWeight(item), 0)
+
+    if (!hasAnySelectedItem) {
+      setCargoTypeManuallyEdited(false)
+      setWeightManuallyEdited(false)
+      setForm((current) => ({
+        ...current,
+        cargoTypeId: '',
+        cargoWeightKg: '',
+      }))
+      return
+    }
+
+    if (!weightManuallyEdited) {
+      setForm((current) => ({
+        ...current,
+        cargoWeightKg: String(nextEstimatedWeight),
+      }))
+    }
+  }
+
   const updateCargoItem = (index, field, value) => {
     const nextItems = cargoItems.map((item, itemIndex) => {
       if (itemIndex !== index) return item
       if (field === 'category') return { ...item, category: value, detail: '' }
-      return { ...item, [field]: field === 'quantity' ? Math.max(1, Number(value)) : value }
+      if (field === 'quantity') {
+        const parsedQty = Number(value)
+        const safeQty = Number.isFinite(parsedQty) ? Math.max(1, Math.floor(parsedQty)) : 1
+        return { ...item, quantity: safeQty }
+      }
+      return { ...item, [field]: value }
     })
     setCargoItems(nextItems)
     clearEstimate()
-    if (!weightManuallyEdited) setForm((current) => ({ ...current, cargoWeightKg: String(nextItems.reduce((total, item) => total + getEstimatedWeight(item), 0)) }))
+    syncCargoAndWeightState(nextItems)
   }
 
   const removeCargoItem = (index) => {
-    const nextItems = cargoItems.filter((_, itemIndex) => itemIndex !== index)
-    setCargoItems(nextItems.length ? nextItems : [createCargoItem()])
+    const filtered = cargoItems.filter((_, itemIndex) => itemIndex !== index)
+    const nextItems = filtered.length ? filtered : [createCargoItem()]
+    setCargoItems(nextItems)
     clearEstimate()
-    if (!weightManuallyEdited) {
-      setForm((current) => ({ ...current, cargoWeightKg: String(nextItems.reduce((total, item) => total + getEstimatedWeight(item), 0)) }))
-    }
+    syncCargoAndWeightState(nextItems)
   }
 
   const toggleCargoDetail = (category, detail) => {
@@ -206,17 +233,12 @@ const ShipmentCreatePage = () => {
       return
     }
     const emptyIndex = cargoItems.findIndex((item) => !item.category && !item.detail)
-    let nextItems
-    if (emptyIndex >= 0) {
-      nextItems = cargoItems.map((item, i) => (i === emptyIndex ? { ...item, category, detail, quantity: 1 } : item))
-    } else {
-      nextItems = [...cargoItems, { category, detail, quantity: 1 }]
-    }
+    const nextItems = emptyIndex >= 0
+      ? cargoItems.map((item, i) => (i === emptyIndex ? { ...item, category, detail, quantity: 1 } : item))
+      : [...cargoItems, { category, detail, quantity: 1 }]
     setCargoItems(nextItems)
     clearEstimate()
-    if (!weightManuallyEdited) {
-      setForm((current) => ({ ...current, cargoWeightKg: String(nextItems.reduce((total, item) => total + getEstimatedWeight(item), 0)) }))
-    }
+    syncCargoAndWeightState(nextItems)
   }
 
   const handleWeightChange = (event) => {
@@ -229,22 +251,27 @@ const ShipmentCreatePage = () => {
     clearEstimate()
   }
 
+  const activeCargoTypeList = cargoTypes.filter((cargoType) => cargoType.active)
+  const isValidCargoTypeSelected = activeCargoTypeList.some(
+    (cargoType) => String(cargoType.id) === String(effectiveCargoTypeId)
+  )
+
   const getShipmentRequest = () => {
-    const combinedCargoName = [
-      cargoItems
-        .filter((item) => item.detail)
-        .map((item) => `${item.detail} ${item.quantity}개`)
-        .join(', '),
-      form.cargoName.trim(),
-    ]
+    const selectedItemSummary = cargoItems
+      .filter((item) => item.detail)
+      .map((item) => `${item.detail} ${Math.max(1, Number(item.quantity) || 1)}개`)
+      .join(', ')
+    const customDescription = form.cargoName.trim()
+    const combinedCargoName = [selectedItemSummary, customDescription]
       .filter(Boolean)
       .join(', ')
+      .slice(0, 255)
 
     return {
       ...form,
-      cargoName: combinedCargoName.slice(0, 200),
+      cargoName: combinedCargoName,
       vehicleTypeId: Number(form.vehicleTypeId),
-      cargoTypeId: Number(effectiveCargoTypeId),
+      cargoTypeId: isValidCargoTypeSelected ? Number(effectiveCargoTypeId) : null,
       cargoWeightKg: Number(form.cargoWeightKg),
       senderName: form.senderName.trim(),
       senderPhone: form.senderPhone.trim(),
@@ -252,7 +279,10 @@ const ShipmentCreatePage = () => {
   }
 
   const canMoveToTransport = Boolean(
-    form.vehicleTypeId && effectiveCargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
+    form.vehicleTypeId &&
+    isValidCargoTypeSelected &&
+    Number(form.cargoWeightKg) > 0 &&
+    !vehicleWeightWarning.includes('신청할 수 없습니다')
   )
 
   const canEstimateFare = Boolean(
@@ -261,8 +291,20 @@ const ShipmentCreatePage = () => {
 
   const handleNextInputStep = (event) => {
     event?.preventDefault()
-    if (!canMoveToTransport) {
-      setError('차종, 화물 유형, 총 무게를 입력해 주세요.')
+    if (!form.vehicleTypeId) {
+      setError('차종을 선택해 주세요.')
+      return
+    }
+    if (!isValidCargoTypeSelected) {
+      setError('화물 유형을 선택해 주세요.')
+      return
+    }
+    if (!(Number(form.cargoWeightKg) > 0)) {
+      setError('총 무게(kg)를 1kg 이상 입력해 주세요.')
+      return
+    }
+    if (vehicleWeightWarning.includes('신청할 수 없습니다')) {
+      setError(vehicleWeightWarning)
       return
     }
     setError('')
@@ -285,8 +327,35 @@ const ShipmentCreatePage = () => {
     ]
     const missingField = requiredFields.find(([field]) => !String(form[field] || '').trim())
 
-    if (missingField || !request.vehicleTypeId || !request.cargoTypeId || !request.cargoName || request.cargoWeightKg < 1) {
-      setError(`${missingField?.[1] || '차종·화물 유형·화물명·총 무게'}을(를) 입력해 주세요.`)
+    const selectedVehicleType = vehicleTypes.find(
+      (vehicleType) => String(vehicleType.id) === String(request.vehicleTypeId)
+    )
+    if (selectedVehicleType && request.cargoWeightKg > selectedVehicleType.maxLoadKg) {
+      setError(`선택한 ${selectedVehicleType.name} 차종의 최대 적재 중량(${selectedVehicleType.maxLoadKg.toLocaleString()}kg)을 초과했습니다.`)
+      return
+    }
+    if (vehicleWeightWarning.includes('신청할 수 없습니다')) {
+      setError(vehicleWeightWarning)
+      return
+    }
+    if (missingField) {
+      setError(`${missingField[1]}을(를) 입력해 주세요.`)
+      return
+    }
+    if (!request.vehicleTypeId) {
+      setError('차종을 선택해 주세요.')
+      return
+    }
+    if (!request.cargoTypeId || !isValidCargoTypeSelected) {
+      setError('화물 유형을 선택해 주세요.')
+      return
+    }
+    if (!request.cargoName) {
+      setError('화물 품목을 선택하거나 추가 설명(화물명)을 입력해 주세요.')
+      return
+    }
+    if (!(request.cargoWeightKg >= 1)) {
+      setError('화물 무게는 1kg 이상 입력해 주세요.')
       return
     }
     if (form.pickupAt < getLocalDateTimeValue()) {
