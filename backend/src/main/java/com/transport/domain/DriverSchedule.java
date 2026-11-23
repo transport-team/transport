@@ -39,4 +39,10 @@ public class DriverSchedule extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
 	private DriverScheduleStatus status;
+
+	// 근무 가능 시간 바꾸기 (DRV-01 — 근무 가능 일정만 쓴다. 휴무는 시간을 쓰지 않는다)
+	public void changeWorkHours(LocalTime startTime, LocalTime endTime) {
+		this.startTime = startTime;
+		this.endTime = endTime;
+	}
 }

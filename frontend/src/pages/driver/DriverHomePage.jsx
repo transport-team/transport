@@ -7,7 +7,13 @@ import {
   getDriverOffDays,
   registerDriverOffDay,
   cancelDriverOffDay,
+  getDriverWorkHours,
+  saveDriverWorkHours,
+  deleteDriverWorkHours,
 } from '../../api/dispatchApi'
+
+// 서버 시간("09:00:00")을 화면용 "09:00"으로
+const hhmm = (time) => time?.slice(0, 5) || ''
 
 // 날짜를 YYYY-MM-DD 형식으로 변환
 const makeDateKey = (year, month, day) => {
@@ -66,6 +72,13 @@ const DriverHomePage = () => {
   const [offError, setOffError] = useState('')
   const [offSaving, setOffSaving] = useState(false)
   const [offActionError, setOffActionError] = useState('')
+
+  // 기사 근무 가능 시간 (DRV-01) — 입력 칸은 고른 날짜 기준 (다른 날짜를 고르면 그 날짜 값으로 다시 채운다)
+  const [workHours, setWorkHours] = useState([])
+  const [workError, setWorkError] = useState('')
+  const [workSaving, setWorkSaving] = useState(false)
+  const [workActionError, setWorkActionError] = useState('')
+  const [workForm, setWorkForm] = useState({ date: '', start: '', end: '' })
 
   // 기존 API를 활용하여 기사 일정 조회
   useEffect(() => {
@@ -166,6 +179,28 @@ const DriverHomePage = () => {
       })
       .finally(() => {
         if (isActive) setOffLoading(false)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [currentMonth.year, currentMonth.month])
+
+  // 현재 달의 근무 가능 시간 조회 (DRV-01)
+  useEffect(() => {
+    let isActive = true
+
+    getDriverWorkHours(currentMonth.year, currentMonth.month + 1)
+      .then((data) => {
+        if (!isActive) return
+        setWorkHours(Array.isArray(data) ? data : [])
+        setWorkError('')
+      })
+      .catch((err) => {
+        if (!isActive) return
+        console.error('근무 가능 시간 조회 실패:', err)
+        setWorkHours([])
+        setWorkError('근무 가능 시간을 불러오지 못했습니다.')
       })
 
     return () => {
@@ -293,6 +328,57 @@ const DriverHomePage = () => {
       )
     } finally {
       setOffSaving(false)
+    }
+  }
+
+  // 선택한 날짜의 근무 가능 시간 (입력 칸 값은 고친 중이면 그 값, 아니면 저장된 값 · 기본 09:00 ~ 18:00)
+  const selectedWork = workHours.find((work) => work.date === selectedDate)
+  const editingSelected = workForm.date === selectedDate
+  const formStart = editingSelected ? workForm.start : (hhmm(selectedWork?.startTime) || '09:00')
+  const formEnd = editingSelected ? workForm.end : (hhmm(selectedWork?.endTime) || '18:00')
+
+  // 근무 가능 시간 등록 · 수정
+  const handleSaveWorkHours = async () => {
+    if (workSaving || isPastDate || selectedIsOff) return
+    if (!formStart || !formEnd || formStart === formEnd) {
+      setWorkActionError('시작 시간과 끝 시간을 다르게 입력해 주세요.')
+      return
+    }
+
+    const date = selectedDate
+    setWorkSaving(true)
+    setWorkActionError('')
+
+    try {
+      const saved = await saveDriverWorkHours(date, formStart, formEnd)
+      setWorkHours((prev) =>
+        [...prev.filter((work) => work.date !== date), saved].sort((a, b) => a.date.localeCompare(b.date)))
+      setWorkForm({ date: '', start: '', end: '' })
+    } catch (err) {
+      console.error('근무 가능 시간 저장 실패:', err)
+      setWorkActionError(err.response?.data?.message || '근무 가능 시간 저장에 실패했습니다.')
+    } finally {
+      setWorkSaving(false)
+    }
+  }
+
+  // 근무 가능 시간 지우기
+  const handleDeleteWorkHours = async () => {
+    if (workSaving || isPastDate || !selectedWork) return
+
+    const date = selectedDate
+    setWorkSaving(true)
+    setWorkActionError('')
+
+    try {
+      await deleteDriverWorkHours(date)
+      setWorkHours((prev) => prev.filter((work) => work.date !== date))
+      setWorkForm({ date: '', start: '', end: '' })
+    } catch (err) {
+      console.error('근무 가능 시간 삭제 실패:', err)
+      setWorkActionError(err.response?.data?.message || '근무 가능 시간 삭제에 실패했습니다.')
+    } finally {
+      setWorkSaving(false)
     }
   }
 
@@ -446,6 +532,11 @@ const DriverHomePage = () => {
             <span className="h-4 w-4 rounded bg-slate-300" />
             휴무일
           </div>
+
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded border border-emerald-300 bg-emerald-100" />
+            근무 가능 시간
+          </div>
         </div>
 
         {/* 달력 */}
@@ -485,12 +576,16 @@ const DriverHomePage = () => {
             const isSelected = selectedDate === dateKey
             const isToday = todayKey === dateKey
             const isOff = offDays.includes(dateKey)
+            const work = workHours.find((item) => item.date === dateKey)
 
             return (
               <button
                 key={dateKey}
                 type="button"
-                onClick={() => setSelectedDate(dateKey)}
+                onClick={() => {
+                  setSelectedDate(dateKey)
+                  setWorkActionError('')
+                }}
                 className={`flex min-h-[92px] flex-col items-center rounded-xl border-2 p-2 transition sm:min-h-[116px] sm:p-3 ${isToday
                   ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-100'
                   : isOff
@@ -532,7 +627,7 @@ const DriverHomePage = () => {
 
                   {completedCount > 0 && (
                     <span
-                      title={`배송 완료 $DIL2건`}
+                      title={`배송 완료 ${completedCount}건`}
                       className="h-4 w-4 rounded-full bg-purple-500 shadow-sm"
                     />
                   )}
@@ -541,6 +636,16 @@ const DriverHomePage = () => {
                 {isOff && (
                   <span className="mt-1 rounded-md bg-slate-200 px-2 py-1 text-xs font-bold text-slate-700">
                     휴무
+                  </span>
+                )}
+
+                {!isOff && work && (
+                  <span
+                    title={`근무 가능 ${hhmm(work.startTime)} ~ ${hhmm(work.endTime)}${work.overnight ? ' (다음 날)' : ''}`}
+                    className="mt-1 rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700"
+                  >
+                    <span className="sm:hidden">근무</span>
+                    <span className="hidden sm:inline">{hhmm(work.startTime)}~{hhmm(work.endTime)}</span>
                   </span>
                 )}
               </button>
@@ -610,6 +715,74 @@ const DriverHomePage = () => {
           {selectedIsOff && (
             <div className="mt-4 rounded-xl bg-slate-100 p-4 text-sm font-medium text-slate-700">
               휴무일로 등록된 날짜입니다.
+            </div>
+          )}
+
+          {/* 근무 가능 시간 (DRV-01): 휴무가 아닌 날짜 — 지난 날짜는 보기만 */}
+          {!selectedIsOff && (
+            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold text-emerald-800">근무 가능 시간</p>
+                <p className="text-sm font-semibold text-emerald-700">
+                  {selectedWork
+                    ? `${hhmm(selectedWork.startTime)} ~ ${hhmm(selectedWork.endTime)}${selectedWork.overnight ? ' (다음 날)' : ''}`
+                    : '등록 안 함'}
+                </p>
+              </div>
+
+              {workError && (
+                <p className="mt-2 text-xs text-red-600">{workError}</p>
+              )}
+
+              {!isPastDate && !workError && (
+                <>
+                  <div className="mt-3 flex flex-wrap items-end gap-2">
+                    <label className="text-xs font-medium text-gray-600">
+                      시작
+                      <input
+                        type="time"
+                        value={formStart}
+                        onChange={(event) => setWorkForm({ date: selectedDate, start: event.target.value, end: formEnd })}
+                        className="mt-1 block rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                      />
+                    </label>
+                    <label className="text-xs font-medium text-gray-600">
+                      끝
+                      <input
+                        type="time"
+                        value={formEnd}
+                        onChange={(event) => setWorkForm({ date: selectedDate, start: formStart, end: event.target.value })}
+                        className="mt-1 block rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleSaveWorkHours}
+                      disabled={workSaving}
+                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {workSaving ? '저장 중...' : selectedWork ? '시간 바꾸기' : '근무 시간 등록'}
+                    </button>
+                    {selectedWork && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteWorkHours}
+                        disabled={workSaving}
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        지우기
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    끝 시간을 시작보다 이르게 적으면 자정을 넘기는 근무로 저장돼요. 운송 요청 목록에서 근무 끝 시간을 넘기는 요청에 안내가 떠요.
+                  </p>
+                </>
+              )}
+
+              {workActionError && (
+                <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-600">{workActionError}</p>
+              )}
             </div>
           )}
 
