@@ -229,15 +229,27 @@ const ShipmentCreatePage = () => {
     clearEstimate()
   }
 
-  const getShipmentRequest = () => ({
-    ...form,
-    cargoName: [cargoItems.filter((item) => item.detail).map((item) => `${item.detail} ${item.quantity}개`).join(', '), form.cargoName.trim()].filter(Boolean).join(', '),
-    vehicleTypeId: Number(form.vehicleTypeId),
-    cargoTypeId: Number(effectiveCargoTypeId),
-    cargoWeightKg: Number(form.cargoWeightKg),
-    senderName: form.senderName.trim(),
-    senderPhone: form.senderPhone.trim(),
-  })
+  const getShipmentRequest = () => {
+    const combinedCargoName = [
+      cargoItems
+        .filter((item) => item.detail)
+        .map((item) => `${item.detail} ${item.quantity}개`)
+        .join(', '),
+      form.cargoName.trim(),
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+    return {
+      ...form,
+      cargoName: combinedCargoName.slice(0, 200),
+      vehicleTypeId: Number(form.vehicleTypeId),
+      cargoTypeId: Number(effectiveCargoTypeId),
+      cargoWeightKg: Number(form.cargoWeightKg),
+      senderName: form.senderName.trim(),
+      senderPhone: form.senderPhone.trim(),
+    }
+  }
 
   const canMoveToTransport = Boolean(
     form.vehicleTypeId && effectiveCargoTypeId && Number(form.cargoWeightKg) > 0 && !vehicleWeightWarning.includes('신청할 수 없습니다')
@@ -318,7 +330,16 @@ const ShipmentCreatePage = () => {
       })
     } catch (requestError) {
       console.error("토스 결제창 호출 에러 상세:", requestError);
-      setError(requestError.response?.data?.message || '배송 신청 중 오류가 발생했습니다.')
+      const rawMessage = requestError.response?.data?.message || requestError.message || ''
+      const isClosedByUser =
+        /cancel|close|user_cancel/i.test(String(requestError.code || '')) ||
+        /취소|닫|중단/i.test(rawMessage)
+
+      if (isClosedByUser) {
+        setError('결제창이 닫혀 결제가 완료되지 않았습니다. 배송 신청 내역에서 다시 결제할 수 있습니다. (30분 미결제 시 자동 취소)')
+      } else {
+        setError(requestError.response?.data?.message || '배송 신청 중 오류가 발생했습니다.')
+      }
     } finally {
       setLoading(false)
     }
