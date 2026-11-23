@@ -353,6 +353,79 @@ class DispatchApplicationServiceImplTest {
                 .save(any(DispatchApplication.class));
     }
 
+    // 배송이 끝나도 배차(active)는 남겨 두므로, 끝난 배송의 배차는 시간 겹침 검사에서 뺀다 (11-19 결정 34, #86)
+    @Test
+    @DisplayName("완료 · 취소된 배송의 배차는 시간이 겹쳐도 새 지원을 막지 않는다 (#86)")
+    void finishedDispatchesDoNotBlockApply() {
+        Driver driver = Driver.builder().id(5L).status(DriverStatus.ACTIVE).build();
+        VehicleType vehicleType = VehicleType.builder().id(2L).build();
+        Vehicle vehicle = Vehicle.builder()
+                .id(7L).driver(driver).vehicleType(vehicleType).status(VehicleStatus.AVAILABLE).build();
+
+        // 새로 지원하려는 배송 (10:00 ~ 11:00)
+        Shipment shipment = Shipment.builder()
+                .id(2L).status(ShipmentStatus.REQUESTED).vehicleType(vehicleType)
+                .pickupAt(LocalDateTime.of(2026, 11, 15, 10, 0)).durationMin(60).build();
+
+        // 같은 시간대(10:30 ~ 11:30)지만 이미 끝난 배송의 배차들 — active는 그대로 남아 있다
+        Dispatch completed = activeDispatchOf(driver, 98L, ShipmentStatus.COMPLETED, LocalDateTime.of(2026, 11, 15, 10, 30));
+        Dispatch canceled = activeDispatchOf(driver, 99L, ShipmentStatus.CANCELED, LocalDateTime.of(2026, 11, 15, 10, 30));
+
+        when(driverRepository.findByMemberId(10L)).thenReturn(Optional.of(driver));
+        when(shipmentService.getShipment(2L)).thenReturn(shipment);
+        when(vehicleRepository.findById(7L)).thenReturn(Optional.of(vehicle));
+        when(driverScheduleRepository.findByDriver_IdAndWorkDate(5L, shipment.getPickupAt().toLocalDate()))
+                .thenReturn(Optional.empty());
+        when(dispatchRepository.findByDriver_IdAndActiveTrue(5L)).thenReturn(List.of(completed, canceled));
+        when(applicationRepository.save(any(DispatchApplication.class)))
+                .thenAnswer(invocation -> DispatchApplication.builder().id(77L).build());
+
+        Long applicationId = dispatchApplicationService.apply(10L, 2L, 7L);
+
+        assertThat(applicationId).isEqualTo(77L);
+    }
+
+    @Test
+    @DisplayName("운송 요청 목록: 진행 중인 배차와 겹치면 지원 불가, 끝난 배송의 배차와 겹치는 것은 지원 가능 (#86)")
+    void availableShipmentsIgnoreFinishedDispatches() {
+        Long memberId = 10L;
+        Driver driver = Driver.builder().id(40L).status(DriverStatus.ACTIVE).build();
+        VehicleType vehicleType = VehicleType.builder().id(50L).build();
+        Vehicle vehicle = Vehicle.builder()
+                .id(30L).driver(driver).vehicleType(vehicleType).status(VehicleStatus.AVAILABLE).build();
+        LocalDateTime tomorrow10 = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime dayAfter10 = tomorrow10.plusDays(1);
+
+        // 내일 10시 요청은 진행 중(배차 완료) 배차와, 모레 10시 요청은 이미 완료된 배송의 배차와 시간이 겹친다
+        Shipment overlapsOngoing = Shipment.builder()
+                .id(21L).vehicleType(vehicleType).status(ShipmentStatus.REQUESTED).pickupAt(tomorrow10).durationMin(60).build();
+        Shipment overlapsFinished = Shipment.builder()
+                .id(22L).vehicleType(vehicleType).status(ShipmentStatus.REQUESTED).pickupAt(dayAfter10).durationMin(60).build();
+        Dispatch ongoing = activeDispatchOf(driver, 91L, ShipmentStatus.ASSIGNED, tomorrow10.plusMinutes(30));
+        Dispatch finished = activeDispatchOf(driver, 92L, ShipmentStatus.COMPLETED, dayAfter10.plusMinutes(30));
+
+        when(driverRepository.findByMemberId(memberId)).thenReturn(Optional.of(driver));
+        when(vehicleRepository.findByDriver_Id(40L)).thenReturn(List.of(vehicle));
+        when(dispatchRepository.findByDriver_IdAndActiveTrue(40L)).thenReturn(List.of(ongoing, finished));
+        when(applicationRepository.findByDriver_IdAndStatus(40L, DispatchApplicationStatus.PENDING)).thenReturn(List.of());
+        when(applicationRepository.findByDriver_IdAndStatus(40L, DispatchApplicationStatus.REJECTED)).thenReturn(List.of());
+        when(shipmentService.getRequestedShipments()).thenReturn(List.of(overlapsOngoing, overlapsFinished));
+        when(driverScheduleRepository.findByDriver_IdAndWorkDate(any(), any())).thenReturn(Optional.empty());
+
+        var result = dispatchApplicationService.getAvailableShipments(memberId);
+
+        assertThat(result.get(0).isCanApply()).isFalse();
+        assertThat(result.get(0).getBlockReasons()).contains("이미 확정된 배차와 운송 시간이 겹칩니다.");
+        assertThat(result.get(1).getBlockReasons()).doesNotContain("이미 확정된 배차와 운송 시간이 겹칩니다.");
+        assertThat(result.get(1).isCanApply()).isTrue();
+    }
+
+    // 기사의 활성 배차 (배송 상태 · 상차 시각 지정, 소요 60분)
+    private Dispatch activeDispatchOf(Driver driver, Long shipmentId, ShipmentStatus status, LocalDateTime pickupAt) {
+        Shipment assigned = Shipment.builder().id(shipmentId).status(status).pickupAt(pickupAt).durationMin(60).build();
+        return Dispatch.builder().shipment(assigned).driver(driver).active(true).build();
+    }
+
     // 기사 휴무일(OFF)에는 배차 신청 불가
     @Test
     void cannotApplyOnDriverDayOff() {

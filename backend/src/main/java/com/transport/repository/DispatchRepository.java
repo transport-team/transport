@@ -1,5 +1,6 @@
 package com.transport.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 
 import com.transport.domain.Dispatch;
 import com.transport.domain.Shipment;
+import com.transport.domain.enums.ShipmentStatus;
 
 public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
     // 배차 이력은 보존하고 활성 여부와 해제 시각만 변경 (서비스 트랜잭션 안에서 호출)
@@ -32,6 +34,9 @@ public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
 
 	// 특정 차량에 현재 유효한 배차가 있는지 확인
 	boolean existsByVehicle_IdAndActiveTrue(Long vehicleId);
+
+	// 특정 차량에 진행 중인 배차가 있는지 — 주어진 상태(완료 · 취소)의 배송 배차는 뺀다 (11-19 결정 34, #86)
+	boolean existsByVehicle_IdAndActiveTrueAndShipment_StatusNotIn(Long vehicleId, Collection<ShipmentStatus> statuses);
 
     // 배송 ID로 현재 활성화된 배차 조회 (최근 배차 우선)
     Optional<Dispatch> findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(Long shipmentId);
