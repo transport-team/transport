@@ -29,6 +29,7 @@ import com.transport.dto.ShipmentResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.CargoTypeRepository;
+import com.transport.repository.DispatchRepository;
 import com.transport.repository.PaymentRepository;
 import com.transport.repository.ReviewRepository;
 import com.transport.repository.ShipmentRepository;
@@ -49,6 +50,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final DispatchService dispatchService;
     private final StatusHistoryService statusHistoryService;
     private final ReviewRepository reviewRepository;
+    private final DispatchRepository dispatchRepository;
 
     @Override
     @Transactional
@@ -160,6 +162,14 @@ public class ShipmentServiceImpl implements ShipmentService {
             throw new CustomException(ErrorCode.FORBIDDEN, "본인 배송만 조회할 수 있습니다.");
         }
 
+        var driverInfo = dispatchRepository.findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(shipmentId)
+                .map(ShipmentDetailResponseDTO.DriverInfoDTO::from)
+                .orElse(null);
+
+        var paymentInfo = paymentRepository.findByShipmentId(shipmentId)
+                .map(ShipmentDetailResponseDTO.PaymentInfoDTO::from)
+                .orElse(null);
+
         var history = statusHistoryService.getHistory(shipmentId).stream()
                 .map(com.transport.dto.ShipmentStatusHistoryResponseDTO::from)
                 .toList();
@@ -169,7 +179,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .map(com.transport.dto.ReviewResponseDTO::from)
                 .orElse(null);
 
-        return ShipmentDetailResponseDTO.from(shipment, assignedDriverMemberId, history, review);
+        return ShipmentDetailResponseDTO.from(shipment, assignedDriverMemberId, driverInfo, paymentInfo, history, review);
     }
 
     // 관리자 대시보드: 지금 상태별 배송 건수 (팀원 1 대시보드가 쓰는 읽기 전용 메서드)

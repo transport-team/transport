@@ -122,7 +122,7 @@ const ShipmentManagePage = () => {
             type="text"
             value={formInputs.keyword}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, keyword: e.target.value }))}
-            placeholder="배송번호, 화물, 주소, 고객명/이메일"
+            placeholder="배송번호, 화물, 주소, 고객명/이메일, 기사명/ID"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-emerald-500 focus:outline-none"
           />
         </div>

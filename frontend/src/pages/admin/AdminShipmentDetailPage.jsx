@@ -342,6 +342,79 @@ const AdminShipmentDetailPage = () => {
               <p className="mt-3 text-sm text-gray-500">등록된 상태 변경 이력이 없습니다.</p>
             )}
           </div>
+
+          {/* 배차 기사 정보 */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="text-sm font-bold text-emerald-700">ASSIGNED DRIVER</h2>
+            {shipment.driverInfo ? (
+              <div className="mt-3 grid gap-3 rounded-xl bg-gray-50 p-4 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-gray-500">기사명</p>
+                  <p className="mt-1 font-semibold text-gray-900">{shipment.driverInfo.driverName || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">연락처</p>
+                  <p className="mt-1 font-semibold text-gray-900">{shipment.driverInfo.phone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">차량 번호</p>
+                  <p className="mt-1 font-semibold text-gray-900">{shipment.driverInfo.plateNo || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">차종</p>
+                  <p className="mt-1 font-semibold text-gray-900">{shipment.driverInfo.vehicleTypeName || '-'}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+                현재 배차된 기사가 없습니다.
+              </p>
+            )}
+          </div>
+
+          {/* 결제 정보 */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="text-sm font-bold text-emerald-700">PAYMENT</h2>
+            {shipment.paymentInfo ? (
+              <div className="mt-3 grid gap-3 rounded-xl bg-gray-50 p-4 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-gray-500">결제 상태</p>
+                  <p className="mt-1 font-semibold text-gray-900">{shipment.paymentInfo.status || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">결제 금액</p>
+                  <p className="mt-1 font-semibold text-gray-900">{formatFare(shipment.paymentInfo.amount)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">결제 수단</p>
+                  <p className="mt-1 font-semibold text-gray-900">{shipment.paymentInfo.method || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">주문번호</p>
+                  <p className="mt-1 break-all font-mono text-xs text-gray-800">{shipment.paymentInfo.orderId || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">결제 완료 일시</p>
+                  <p className="mt-1 font-semibold text-gray-900">{formatDateTime(shipment.paymentInfo.paidAt)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">취소/환불 일시</p>
+                  <p className="mt-1 font-semibold text-gray-900">{formatDateTime(shipment.paymentInfo.canceledAt)}</p>
+                </div>
+                {shipment.paymentInfo.cancelReason && (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-gray-500">취소 사유</p>
+                    <p className="mt-1 text-gray-800">{shipment.paymentInfo.cancelReason}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+                결제 정보가 없습니다.
+              </p>
+            )}
+          </div>
+          
         </>
       )}
     </section>
