@@ -24,6 +24,7 @@ import com.transport.dto.DriverVehicleResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchRepository;
+import com.transport.repository.VehicleDeletionRequestRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.VehicleRegistrationRequestRepository;
 import com.transport.repository.VehicleRepository;
@@ -48,6 +49,9 @@ class VehicleRegistrationServiceImplTest {
 
 	@Mock
 	DispatchRepository dispatchRepository;
+
+	@Mock
+	VehicleDeletionRequestRepository deletionRequestRepository;
 
 	@InjectMocks
 	VehicleRegistrationServiceImpl vehicleRegistrationService;
@@ -85,6 +89,6 @@ class VehicleRegistrationServiceImplTest {
 
 	private void givenMyVehicle() {
 		when(driverRepository.findByMemberId(10L)).thenReturn(Optional.of(driver));
-		when(vehicleRepository.findById(7L)).thenReturn(Optional.of(vehicle));
+		when(vehicleRepository.findForUpdate(7L)).thenReturn(Optional.of(vehicle));
 	}
 }
