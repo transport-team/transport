@@ -8,12 +8,16 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.transport.domain.Driver;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.DriverMonthlySettlementResponseDTO;
+import com.transport.dto.DriverReviewSummaryResponseDTO;
 import com.transport.dto.DriverSettlementItemResponseDTO;
 import com.transport.dto.DriverSettlementRangeResponseDTO;
+import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
+import com.transport.repository.DriverRepository;
 import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -24,6 +28,23 @@ import lombok.RequiredArgsConstructor;
 public class DriverSettlementServiceImpl implements DriverSettlementService {
 
     private final ShipmentStatusHistoryRepository historyRepository;
+    private final DriverRepository driverRepository;
+    private final ReviewService reviewService;  // 팀원 4 약속 메서드 (평균 평점 · 리뷰 목록, driverId = driver.id)
+
+    // 내 평균 평점 · 리뷰 (DRV-07) — 리뷰는 driver.id로 찾으니 로그인 회원의 기사 정보부터
+    @Override
+    public DriverReviewSummaryResponseDTO getMyReviews(Long memberId) {
+        Driver driver = driverRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new CustomException(
+                        ErrorCode.NOT_FOUND,
+                        "기사 정보를 찾을 수 없습니다."));
+
+        List<ReviewResponseDTO> reviews = reviewService.getDriverReviews(driver.getId());
+        return new DriverReviewSummaryResponseDTO(
+                reviewService.getAverageRating(driver.getId()),
+                reviews.size(),
+                reviews);
+    }
 
     // 기사별 월간 배송 완료 건수 및 운임 합계 조회
     @Override

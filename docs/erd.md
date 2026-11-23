@@ -247,7 +247,7 @@
 |---|---|---|
 | receiver_id (FK) | BIGINT | 받는 회원 |
 | shipment_id (FK, NULL) | BIGINT | 관련 배송 |
-| type | VARCHAR(30) | DISPATCHED · STATUS_CHANGED · INQUIRY_ANSWERED · REVIEW_REQUEST |
+| type | VARCHAR(30) | DISPATCHED · STATUS_CHANGED · INQUIRY_ANSWERED · REVIEW_REQUEST · APPLICATION_REJECTED(지원 거절 → 기사) · DRIVER_STATUS_CHANGED(승인 · 가입 거절 · 중지 · 다시 활성화 → 기사, shipment_id 없음) |
 | message / is_read | VARCHAR(255) / BOOLEAN | 문구 / 읽음 |
 
 ## 설계 메모

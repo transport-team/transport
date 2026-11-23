@@ -57,7 +57,10 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
     // 관리자 배송 통합 검색: customer, vehicleType, cargoType을 EntityGraph로 한 번에 조회 (N+1 방지)
     @EntityGraph(attributePaths = { "customer", "vehicleType", "cargoType" })
     @Query("""
-            select s from Shipment s
+            select distinct s from Shipment s
+            left join Dispatch d on d.shipment = s and d.active = true
+            left join d.driver dr
+            left join dr.member dm
             where (:status is null or s.status = :status)
               and (:from is null or s.createdAt >= :from)
               and (:to is null or s.createdAt < :to)
@@ -68,7 +71,9 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
                    or lower(s.destAddress) like lower(concat('%', :keyword, '%'))
                    or lower(s.customer.name) like lower(concat('%', :keyword, '%'))
                    or lower(s.customer.email) like lower(concat('%', :keyword, '%'))
-                   or lower(s.receiverName) like lower(concat('%', :keyword, '%')))
+                   or lower(s.receiverName) like lower(concat('%', :keyword, '%'))
+                   or (dm.name is not null and lower(dm.name) like lower(concat('%', :keyword, '%')))
+                   or (dr.id is not null and str(dr.id) = :keyword))
             """)
     Page<Shipment> searchAdminShipments(
             @Param("status") ShipmentStatus status,
