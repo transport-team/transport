@@ -10,6 +10,7 @@ import { getVehicleTypes } from '../../api/vehicleApi'
 import { Input } from '../../components/common'
 import { CARGO_CATEGORIES } from '../../util/cargoCatalog'
 import { formatPhone, PHONE_PATTERN } from '../../util/formatUtil'
+import { loadKakaoMapSdk } from '../../util/kakaoMapLoader'
 
 const initialForm = {
   vehicleTypeId: '', cargoTypeId: '', originAddress: '', originDetail: '',
@@ -60,6 +61,20 @@ const ShipmentCreatePage = () => {
   const [vehicleTypeError, setVehicleTypeError] = useState('')
   const [cargoTypeError, setCargoTypeError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [originCoords, setOriginCoords] = useState(null)
+  const [destCoords, setDestCoords] = useState(null)
+  const [mapNotice, setMapNotice] = useState('')
+  const mapContainerRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const originMarkerRef = useRef(null)
+  const destMarkerRef = useRef(null)
+
+  const trimmedOriginAddress = form.originAddress?.trim() || ''
+  const trimmedDestAddress = form.destAddress?.trim() || ''
+  const hasAddressInput = Boolean(trimmedOriginAddress || trimmedDestAddress)
+  const effectiveOriginCoords = hasAddressInput ? originCoords : null
+  const effectiveDestCoords = hasAddressInput ? destCoords : null
+  const effectiveMapNotice = hasAddressInput ? mapNotice : ''
 
   useEffect(() => {
     if (!window.daum?.Postcode) {
@@ -178,6 +193,127 @@ const ShipmentCreatePage = () => {
 
     return () => window.clearTimeout(timer)
   }, [estimatedTotalWeight, form.cargoWeightKg, form.vehicleTypeId, vehicleTypes])
+
+  useEffect(() => {
+    if (!hasAddressInput) {
+      return
+    }
+
+    let cancelled = false
+
+    loadKakaoMapSdk()
+      .then((maps) => {
+        if (cancelled) return
+        const geocoder = new maps.services.Geocoder()
+
+        const geocodeAddress = (address) =>
+          new Promise((resolve) => {
+            if (!address) {
+              resolve(null)
+              return
+            }
+            geocoder.addressSearch(address, (result, status) => {
+              if (status === maps.services.Status.OK && result?.[0]) {
+                resolve({ lat: Number(result[0].y), lng: Number(result[0].x) })
+              } else {
+                resolve(null)
+              }
+            })
+          })
+
+        Promise.all([
+          geocodeAddress(trimmedOriginAddress),
+          geocodeAddress(trimmedDestAddress),
+        ]).then(([nextOrigin, nextDest]) => {
+          if (cancelled) return
+          setOriginCoords(nextOrigin)
+          setDestCoords(nextDest)
+          if ((trimmedOriginAddress && !nextOrigin) || (trimmedDestAddress && !nextDest)) {
+            setMapNotice('일부 주소의 좌표를 찾지 못해 마커를 표시할 수 없습니다.')
+          } else {
+            setMapNotice('')
+          }
+        })
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMapNotice('지도를 불러올 수 없어 주소 정보만 표시합니다.')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [hasAddressInput, trimmedOriginAddress, trimmedDestAddress])
+
+  useEffect(() => {
+    const hasCoords = Boolean(effectiveOriginCoords || effectiveDestCoords)
+    if (!hasCoords || !mapContainerRef.current || !window.kakao?.maps) return
+
+    const maps = window.kakao.maps
+    const initialCenter = effectiveOriginCoords || effectiveDestCoords
+    const latLngOrigin = effectiveOriginCoords ? new maps.LatLng(effectiveOriginCoords.lat, effectiveOriginCoords.lng) : null
+    const latLngDest = effectiveDestCoords ? new maps.LatLng(effectiveDestCoords.lat, effectiveDestCoords.lng) : null
+
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = new maps.Map(mapContainerRef.current, {
+        center: new maps.LatLng(initialCenter.lat, initialCenter.lng),
+        level: 5,
+      })
+    }
+
+    const map = mapInstanceRef.current
+
+    if (originMarkerRef.current) {
+      originMarkerRef.current.setMap(null)
+      originMarkerRef.current = null
+    }
+    if (destMarkerRef.current) {
+      destMarkerRef.current.setMap(null)
+      destMarkerRef.current = null
+    }
+
+    if (latLngOrigin) {
+      originMarkerRef.current = new maps.Marker({
+        map,
+        position: latLngOrigin,
+        title: '출발',
+      })
+    }
+
+    if (latLngDest) {
+      destMarkerRef.current = new maps.Marker({
+        map,
+        position: latLngDest,
+        title: '도착',
+      })
+    }
+
+    if (latLngOrigin && latLngDest) {
+      const bounds = new maps.LatLngBounds()
+      bounds.extend(latLngOrigin)
+      bounds.extend(latLngDest)
+      map.setBounds(bounds, 60, 60, 60, 60)
+    } else if (latLngOrigin) {
+      map.setCenter(latLngOrigin)
+      map.setLevel(4)
+    } else if (latLngDest) {
+      map.setCenter(latLngDest)
+      map.setLevel(4)
+    }
+
+    return () => {
+      if (originMarkerRef.current) {
+        originMarkerRef.current.setMap(null)
+        originMarkerRef.current = null
+      }
+      if (destMarkerRef.current) {
+        destMarkerRef.current.setMap(null)
+        destMarkerRef.current = null
+      }
+      mapInstanceRef.current = null
+    }
+  }, [effectiveOriginCoords, effectiveDestCoords, inputStep])
 
   const syncCargoAndWeightState = (nextItems) => {
     const hasAnySelectedItem = nextItems.some((item) => item.detail)
@@ -593,6 +729,19 @@ const ShipmentCreatePage = () => {
                   </div>
                 </div>
               </div>
+
+              {(effectiveOriginCoords || effectiveDestCoords) && (
+                <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                  <div ref={mapContainerRef} className="h-56 w-full" aria-label="출발지 및 도착지 위치 지도" />
+                  <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-3.5 py-2 text-xs text-gray-600">
+                    <span>{effectiveOriginCoords ? '● 출발 표시됨' : '○ 출발 미선택'}</span>
+                    <span>{effectiveDestCoords ? '● 도착 표시됨' : '○ 도착 미선택'}</span>
+                  </div>
+                </div>
+              )}
+              {effectiveMapNotice && (
+                <p className="mt-2 text-xs font-medium text-amber-700">{effectiveMapNotice}</p>
+              )}
             </div>
 
             <div className="space-y-4">
