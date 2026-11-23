@@ -4,7 +4,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.transport.dto.NotificationResponseDTO;
 import com.transport.service.event.NotificationSavedEvent;
@@ -25,19 +24,14 @@ public class NotificationSseListener {
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handle(NotificationSavedEvent event) {
-		SseEmitter emitter = notificationService.getEmitter(event.receiverId());
-		if (emitter == null) {
+		// 그 회원이 열어 둔 모든 탭에 보낸다 (끊긴 탭은 NotificationServiceImpl이 정리)
+		int sent = notificationService.sendToMember(
+				event.receiverId(), "notification", toPayload(event), MediaType.APPLICATION_JSON);
+		if (sent == 0) {
 			log.debug("SSE 미접속 수신자 — DB 저장분만 유효: receiverId={}", event.receiverId());
 			return;
 		}
-		try {
-			emitter.send(SseEmitter.event()
-					.name("notification")
-					.data(toPayload(event), MediaType.APPLICATION_JSON));
-			log.info("SSE 알림 전송: receiverId={}, type={}", event.receiverId(), event.type());
-		} catch (Exception e) {
-			log.warn("SSE 알림 전송 실패(연결 정리 필요): receiverId={}", event.receiverId());
-		}
+		log.info("SSE 알림 전송: receiverId={}, type={}, 탭 {}개", event.receiverId(), event.type(), sent);
 	}
 
 	// 목록 API(GET /api/notifications)의 한 건과 같은 모양 — JSON 변환은 Spring이 한다

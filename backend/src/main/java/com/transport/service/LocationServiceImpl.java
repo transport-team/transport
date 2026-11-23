@@ -1,11 +1,9 @@
 package com.transport.service;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.transport.domain.Driver;
 import com.transport.domain.LocationLog;
@@ -74,21 +72,13 @@ public class LocationServiceImpl implements LocationService {
 
 		LocationResponseDTO response = LocationResponseDTO.from(saved);
 
-		// 6. 이 배송의 고객이 SSE로 접속 중이면 즉시 location 이벤트 전송 (접속 중이 아니면 저장분만)
-		SseEmitter emitter = notificationService.getEmitter(shipment.getCustomer().getId());
-		if (emitter != null) {
-			try {
-				emitter.send(SseEmitter.event()
-						.name("location")
-						.data("{\"shipmentId\":" + shipmentId
-								+ ",\"lat\":" + response.getLat()
-								+ ",\"lng\":" + response.getLng()
-								+ ",\"recordedAt\":\"" + response.getRecordedAt() + "\"}"));
-			} catch (IOException e) {
-				// 전송 실패는 무시 — 저장은 유지 (다음 위치가 30초 뒤에 온다)
-				log.warn("위치 SSE 전송 실패(저장은 유지): shipmentId={}", shipmentId);
-			}
-		}
+		// 6. 이 배송의 고객이 SSE로 접속 중이면 열어 둔 모든 탭에 location 이벤트 (접속 중이 아니면 저장분만)
+		//    전송에 실패한 탭은 NotificationServiceImpl이 정리하고, 저장은 유지한다 (다음 위치가 30초 뒤에 온다)
+		notificationService.sendToMember(shipment.getCustomer().getId(), "location",
+				"{\"shipmentId\":" + shipmentId
+						+ ",\"lat\":" + response.getLat()
+						+ ",\"lng\":" + response.getLng()
+						+ ",\"recordedAt\":\"" + response.getRecordedAt() + "\"}");
 
 		return response;
 	}
