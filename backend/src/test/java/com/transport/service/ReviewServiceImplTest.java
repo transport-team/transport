@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -80,6 +81,35 @@ class ReviewServiceImplTest {
 		assertThat(result.getId()).isEqualTo(7L);
 		assertThat(result.getDriverId()).isEqualTo(1L);
 		assertThat(result.getRating()).isEqualTo(5);
+		assertThat(result.getCustomerName()).isEqualTo("테***객");  // 작성 응답도 가린다 (11-19 결정 4)
+	}
+
+	// ===== 고객 이름 가리기 (11-19 결정 4): 리뷰는 로그인 사용자면 누구나 볼 수 있어서 이름은 가려서 준다 =====
+
+	@Test
+	@DisplayName("기사 리뷰 목록은 작성한 고객 이름을 가려서 준다 (김민수 → 김*수)")
+	void driverReviewsMaskCustomerName() {
+		when(reviewRepository.findByDriverIdWithCustomer(1L)).thenReturn(List.of(reviewBy("김민수"), reviewBy("이민")));
+
+		List<ReviewResponseDTO> reviews = reviewService.getDriverReviews(1L);
+
+		assertThat(reviews).extracting(ReviewResponseDTO::getCustomerName).containsExactly("김*수", "이*");
+	}
+
+	@Test
+	@DisplayName("배송 리뷰 조회도 고객 이름을 가려서 준다")
+	void shipmentReviewMasksCustomerName() {
+		when(reviewRepository.findByShipmentId(SHIPMENT_ID)).thenReturn(Optional.of(reviewBy("남궁현석")));
+
+		ReviewResponseDTO review = reviewService.getReviewByShipment(SHIPMENT_ID);
+
+		assertThat(review.getCustomerName()).isEqualTo("남**석");
+	}
+
+	private Review reviewBy(String customerName) {
+		Member writer = Member.builder().id(200L).name(customerName).build();
+		Shipment shipment = Shipment.builder().id(SHIPMENT_ID).status(ShipmentStatus.COMPLETED).customer(writer).build();
+		return Review.builder().id(9L).shipment(shipment).customer(writer).driver(driver).rating(4).content("좋아요").build();
 	}
 
 	@Test
