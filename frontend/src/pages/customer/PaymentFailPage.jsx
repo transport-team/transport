@@ -9,6 +9,14 @@ const PaymentFailPage = () => {
   const shipmentId = searchParams.get('shipmentId')
   const code = searchParams.get('code')
   const message = searchParams.get('message') || '결제가 취소되었거나 승인에 실패했습니다.'
+  const isPaymentClosedOrCanceled =
+    Boolean(code && /cancel|close|user_cancel/i.test(code)) ||
+    /취소|닫|중단/i.test(message)
+
+  const headingText = isPaymentClosedOrCanceled ? '결제창이 닫혔습니다' : '결제 실패'
+  const descriptionText = isPaymentClosedOrCanceled
+    ? '결제창이 닫혀 결제가 완료되지 않았습니다. 아래 버튼으로 다시 결제하거나 내 배송 내역에서 이어서 결제할 수 있습니다.'
+    : message
 
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState('')
@@ -41,12 +49,18 @@ const PaymentFailPage = () => {
         <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-gray-50" />
         <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-gray-50" />
 
-        <div className="border-b border-dashed border-gray-200 pb-6 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-3xl font-bold text-red-500">
-            !
+       <div className="border-b border-dashed border-gray-200 pb-6 text-center">
+          <div
+            className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl font-bold ${
+              isPaymentClosedOrCanceled
+                ? 'bg-amber-50 text-amber-600'
+                : 'bg-red-50 text-red-500'
+            }`}
+          >
+            {isPaymentClosedOrCanceled ? 'i' : '!'}
           </div>
-          <h1 className="mt-4 text-2xl font-black text-gray-900">결제 실패</h1>
-          <p className="mt-2 text-sm text-gray-600" role="alert">{message}</p>
+          <h1 className="mt-4 text-2xl font-black text-gray-900">{headingText}</h1>
+          <p className="mt-2 text-sm text-gray-600" role="alert">{descriptionText}</p>
           {code && <p className="mt-1 text-xs text-gray-400">오류 코드: {code}</p>}
         </div>
 

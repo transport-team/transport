@@ -318,7 +318,16 @@ const ShipmentCreatePage = () => {
       })
     } catch (requestError) {
       console.error("토스 결제창 호출 에러 상세:", requestError);
-      setError(requestError.response?.data?.message || '배송 신청 중 오류가 발생했습니다.')
+      const rawMessage = requestError.response?.data?.message || requestError.message || ''
+      const isClosedByUser =
+        /cancel|close|user_cancel/i.test(String(requestError.code || '')) ||
+        /취소|닫|중단/i.test(rawMessage)
+
+      if (isClosedByUser) {
+        setError('결제창이 닫혀 결제가 완료되지 않았습니다. 배송 신청 내역에서 다시 결제할 수 있습니다. (30분 미결제 시 자동 취소)')
+      } else {
+        setError(requestError.response?.data?.message || '배송 신청 중 오류가 발생했습니다.')
+      }
     } finally {
       setLoading(false)
     }
