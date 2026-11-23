@@ -1,5 +1,5 @@
 // 배송 상태(ShipmentStatus)의 화면 이름 · 배지 색 — 모든 화면이 이 표 하나를 쓴다 (이름 · 색을 바꿀 때는 여기만)
-// 키는 서버 enum과 같아야 한다: 검색 필터 값으로도 보내서, 없는 값이면 400이다 (#126 DELIVERED)
+// 키는 서버 enum과 같아야 한다: 검색 필터 값으로도 보내서, 없는 값이면 400이다 (#126 — 그때는 없던 값을 보내 400)
 // 상태 · 전이 규칙은 docs/status.md. 화면에서는 띄어 쓰고, 고객이 알기 쉽게 접수(REQUESTED)는 '배차 대기', 취소는 '취소됨'
 export const SHIPMENT_STATUS = {
   PENDING_PAYMENT: { label: '결제 대기', badge: 'border-amber-200 bg-amber-50 text-amber-700' },

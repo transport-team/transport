@@ -2,7 +2,7 @@ import ShipmentProgress from '../../components/tracking/ShipmentProgress'
 import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
 // 기사 배송 처리 화면 (팀원 4 — 5-3 + 5-4)
 // 경로: /driver/dispatches/:shipmentId (배차 지원용 상세와 역할이 다르다 — 팀원2 화면은 /driver/shipments/:id)
-// 데이터: GET /api/shipments/{id} (팀원 3 미구현 → USE_MOCK_DATA로 임시 개발, 머지되면 false만 바꾼다)
+// 데이터: 기사 본인의 확정 배차 상세 (getMyAssignedDispatch)
 // API: 상태 변경 PATCH /{id}/status · 사진 업로드 POST /{id}/images (PHOTO_REQUIRED는 사람 말로 안내)
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -12,24 +12,6 @@ import StatusBadge from '../../components/common/StatusBadge'
 import useLocationShare from '../../hooks/useLocationShare'
 import Button from '../../components/common/Button'
 import { DriverRouteCard, DriverCargoCard, DriverMemoCard } from '../../components/driver/DriverDetailCards'
-
-// 팀원 3 상세 API 머지 전까지 쓰는 임시 데이터 (api.md의 GET /api/shipments/{id} 예시 필드 기준)
-const USE_MOCK_DATA = false
-const MOCK_SHIPMENT = {
-    shipmentId: 1,
-    status: 'ASSIGNED',
-    cargoName: '유리 진열장',
-    cargoWeightKg: 600,
-    memo: '엘리베이터 없음',
-    originAddress: '서울특별시 강남구 OO로 12',
-    originDetail: '1층 하역장',
-    destAddress: '경기도 수원시 영통구 OO로 34',
-    destDetail: 'B동 창고',
-    pickupAt: '2026-12-03T09:00:00',
-    receiverName: '김수령',
-    receiverPhone: '010-0000-0000',
-    fare: 98500,
-}
 
 // 현재 상태에서 기사가 할 "다음 단계" — docs/status.md 전이표 (기사 몫만)
 const NEXT_STEP = {
@@ -104,18 +86,9 @@ const DriverDispatchProcessPage = () => {
     useEffect(() => {
         const load = async () => {
             try {
-                if (USE_MOCK_DATA) {
-                    // 팀원 3 상세 API 머지 전: 목데이터 (id가 다르면 못 찾은 것처럼 처리)
-                    const data = String(MOCK_SHIPMENT.shipmentId) === String(shipmentId)
-                        ? MOCK_SHIPMENT
-                        : null
-                    if (!data) setLoadError('배송 정보를 찾을 수 없어요.')
-                    else setShipment(data)
-                } else {
-                    // 로그인한 기사 본인의 확정 배차 상세 조회
-                    const data = await getMyAssignedDispatch(shipmentId)
-                    setShipment(data)
-                }
+                // 로그인한 기사 본인의 확정 배차 상세 조회
+                const data = await getMyAssignedDispatch(shipmentId)
+                setShipment(data)
             } catch (err) {
                 setLoadError(toMessage(err))
             } finally {
