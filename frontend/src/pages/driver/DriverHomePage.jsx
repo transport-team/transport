@@ -11,6 +11,7 @@ import {
   saveDriverWorkHours,
   deleteDriverWorkHours,
 } from '../../api/dispatchApi'
+import StatusBadge from '../../components/common/StatusBadge'
 
 // 서버 시간("09:00:00")을 화면용 "09:00"으로
 const hhmm = (time) => time?.slice(0, 5) || ''
@@ -289,14 +290,6 @@ const DriverHomePage = () => {
     today.getMonth(),
     today.getDate()
   )
-
-  // 배송 진행 상태 이름
-  const statusNames = {
-    ASSIGNED: '배차 확정',
-    PICKED_UP: '상차 완료',
-    IN_TRANSIT: '운송 중',
-    ARRIVED: '도착',
-  }
 
   // 선택한 날짜의 휴무 여부
   const selectedIsOff = offDays.includes(selectedDate)
@@ -878,9 +871,7 @@ const DriverHomePage = () => {
                     {dispatch.cargoName}
                   </h4>
 
-                  <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                    {statusNames[dispatch.status] || dispatch.status}
-                  </span>
+                  <StatusBadge status={dispatch.status} />
                 </div>
 
                 {/* 출발지 및 도착지 */}

@@ -2,7 +2,7 @@
 const STEPS = [
   { label: '접수', icon: '1' },
   { label: '결제 완료', icon: '2' },
-  { label: '배차 확정', icon: '3' },
+  { label: '배차 완료', icon: '3' },  // 상태 배지 이름과 같게 (util/shipmentStatusUtil.js)
   { label: '상차 완료', icon: '4' },
   { label: '운송 중', icon: '5' },
   { label: '배송 완료', icon: '6' },
