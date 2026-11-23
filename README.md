@@ -11,14 +11,14 @@
 | 팀원 3 | 이시은 | 배송 접수 · 운임 · 결제 | API 문서(Swagger) 관리 |
 | 팀원 4 | 남궁현석 | 배송 진행 · 실시간 · 리뷰 | UI 통일 관리 |
 
-## 기능 (2026-11-20 develop 기준 — 마감 때 다시 정리)
+## 기능 (2026-11-23 develop `0ae523e` 기준, #128까지 — 마감 때 다시 정리)
 
 | 역할 | 화면까지 되는 것 | 남은 것 |
 |---|---|---|
-| 공통 | 회원가입(약관 동의) · 로그인(JWT) · 마이페이지, 공지 · FAQ · 문의, 알림(SSE, 헤더 종) | |
-| 고객 | 배송 신청(주소 검색 · 서버 운임 계산 · 토스 테스트 결제), 내 배송 목록 · 상세, 결제 재시도, 30분 미결제 자동 취소, 배차 전 취소 · 환불 | 지원한 기사 고르기 화면(API만), 배송 상세에 타임라인 · 실시간 지도 · 리뷰 붙이기, 신청 화면 지도 마커 |
+| 공통 | 회원가입(약관 동의) · 로그인(JWT) · 마이페이지, 공지 · FAQ · 문의, 알림(SSE, 헤더 종), 리뷰(작성 고객 이름은 김*수처럼 가림) | |
+| 고객 | 배송 신청(주소 검색 · 서버 운임 계산 · 토스 테스트 결제), 지원한 기사 고르기(확정 · 거절), 내 배송 목록 · 상세(타임라인 · 실시간 기사 위치 · 리뷰 쓰기), 결제 재시도, 30분 미결제 자동 취소, 배차 전 취소 · 환불 | 신청 화면 지도 마커 |
 | 기사 | 가입 → 관리자 승인 뒤 로그인, 차량 등록 신청 · 내 차량, 운송 요청 목록(차종 필터) · 지원, 내 배차, 상차 → 운송 → 도착 → 완료(사진 · 운송 중 위치 공유), 휴무 달력, 월별 정산 내역 | 근무 가능 시간 등록, 평균 평점 · 리뷰 보기 |
-| 관리자 | 대시보드(오늘 · 이번 달 숫자, 차트, 기사 순위), 기사 승인 · 중지(리뷰 보기), 차량 · 차량 등록 신청, 배송 검색, 결제 · 환불 내역, 화물 종류, 회원, 약관 · 공지 · FAQ · 문의 답변 | 배차된 배송 취소 · 배차 해제(#86), 차종 요금 관리, 월 정산 · 지급 |
+| 관리자 | 대시보드(오늘 · 이번 달 숫자, 차트, 기사 순위), 기사 승인 · 중지(리뷰 · 보유 차량 보기), 차량 · 차량 등록 신청, 배송 검색 · 상세 · 배차 취소(재배차) · 배송 취소(환불), 결제 · 환불 내역, 화물 종류, 회원, 약관 · 공지 · FAQ · 문의 답변 | 배송 검색 기사 조건, 차종 요금 관리, 월 정산 · 지급 |
 
 자세한 진행은 [docs/roadmap.md](docs/roadmap.md), 요구사항은 [docs/requirements.md](docs/requirements.md)
 
@@ -67,14 +67,16 @@ cp backend/src/main/resources/application-local.yml.example backend/src/main/res
 cp frontend/.env.example frontend/.env
 
 # 4) 실행
-#   백엔드: STS에서 Spring Boot App 실행 (8080)
-#   프론트: cd frontend && npm ci && npm run dev (5173)
+#   백엔드: STS에서 Spring Boot App 실행 (8080) — 처음 한 번 아래 'STS 파라미터 이름' 설정
+#   프론트: cd frontend && npm ci && npm run dev (5173) — 브라우저는 http://localhost:5173 으로 연다
 ```
 
 - 이미 PC에 MariaDB가 3306으로 켜져 있으면 `docker-compose.yml`의 포트를 `"3307:3306"`으로 바꾸고 `application-local.yml`의 URL도 3307로 바꾼다
 - Docker를 못 쓰면 MariaDB를 직접 설치하고 `docker-compose.yml`에 적힌 DB 이름 · 계정 · 비밀번호로 똑같이 만든다
 - STS 인코딩: Window → Preferences → General → Workspace → Text file encoding을 **UTF-8**로 (한글 깨짐 방지)
+- STS 파라미터 이름: `backend` 우클릭 → Properties → Java Compiler → Classfile Generation의 **'Store information about method parameters (usable via reflection)'** 체크 → Project → Clean. 안 하면 STS에서 직접 실행할 때 이름 없이 쓴 `@PathVariable` · `@RequestParam` API가 오류를 낸다 (#88). IntelliJ는 Build and run using을 Gradle로 둔다
 - 카카오 · 토스 키는 Git이 아니라 팀 비공개 메모로 받는다
+- 카카오 지도는 `http://localhost:5173`으로 열어야 뜬다. 카카오 콘솔(앱 → 플랫폼 키 → JavaScript 키 → JavaScript SDK 도메인)에 이 주소만 등록돼 있어서 `127.0.0.1:5173`이나 다른 포트로 열면 지도가 안 뜬다
 
 ## DB 공유 방식
 
@@ -105,6 +107,7 @@ cd frontend && npm run lint && npm run build
 ```
 
 - PR을 올리면 GitHub Actions(CI)가 같은 검사(백엔드 테스트 · 프론트 lint · 빌드)를 돌린다. 실패하면 병합 전에 고친다
+- PC를 다시 켠 뒤에는 Docker Desktop부터 켠다. 꺼져 있으면 DB를 쓰는 테스트가 `localhost:3307` 연결 거부(`Connection refused`)로 한꺼번에 실패한다
 - 전체 흐름은 `ShipmentFlowIntegrationTest`가 확인한다: 신청 → 결제 → 배차 → 완료 → 리뷰 → 관리자 대시보드 (카카오 길찾기 · 토스 승인만 가짜)
 
 ## 테스트 계정 (data.sql, 비밀번호 모두 1234)
