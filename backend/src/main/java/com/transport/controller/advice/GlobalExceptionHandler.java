@@ -3,6 +3,7 @@ package com.transport.controller.advice;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,6 +16,7 @@ import com.transport.dto.ErrorResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.log4j.Log4j2;
 
 // 모든 에러 응답을 { code, message }로 맞춘다
@@ -34,6 +36,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler({AccessDeniedException.class, AuthenticationException.class})
 	public void rethrowSecurityException(RuntimeException e) {
 		throw e;
+	}
+
+	// 낙관적 락(@Version) 충돌: 같은 배송을 거의 동시에 바꾸면 뒤의 요청이 실패한다 → 500 대신 409
+	// (예: 고객 취소와 기사 상차가 겹칠 때. 저장은 되지 않았으니 새로고침 후 다시 하면 된다)
+	@ExceptionHandler({ObjectOptimisticLockingFailureException.class, OptimisticLockException.class})
+	public ResponseEntity<ErrorResponseDTO> handleOptimisticLock(Exception e) {
+		log.warn("동시 수정 충돌: {}", e.getMessage());
+		ErrorCode errorCode = ErrorCode.CONCURRENT_UPDATE;
+		return ResponseEntity.status(errorCode.getStatus())
+				.body(new ErrorResponseDTO(errorCode.name(), errorCode.getMessage()));
 	}
 
 	// 예상하지 못한 예외: 원인은 서버 로그에만 남기고 응답은 기본 메시지
