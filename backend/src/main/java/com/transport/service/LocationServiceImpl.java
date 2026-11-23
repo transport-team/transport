@@ -31,7 +31,7 @@ public class LocationServiceImpl implements LocationService {
 	// 다른 도메인은 약속 메서드로만 (배송 = 팀원 3, 기사 = 팀원 2 — 저장소 직접 사용 정리, #94)
 	private final ShipmentService shipmentService;
 	private final DriverService driverService;
-	private final NotificationServiceImpl notificationService; // SSE emitter 저장소 재사용 (getEmitter)
+	private final NotificationServiceImpl notificationService; // 고객의 모든 탭에 위치 보내기 (sendToMember)
 	private final DispatchService dispatchService;             // 배정 기사 회원 ID (약속된 getActiveDriver)
 
 	@Override
