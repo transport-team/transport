@@ -3,6 +3,7 @@ package com.transport.dto;
 import java.time.LocalDateTime;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -27,10 +28,12 @@ public class ShipmentRequestDTO {
 	private Long vehicleTypeId;
 
 	@NotNull(message = "화물 유형 선택은 필수입니다.")
+	@Positive(message = "올바른 화물 유형을 선택해 주세요.")
 	private Long cargoTypeId;
 
 	// 출발지 정보
 	@NotBlank(message = "출발지 주소는 필수입니다.")
+	
 	private String originAddress;
 
 	private String originDetail;
@@ -43,6 +46,7 @@ public class ShipmentRequestDTO {
 
 	// 화물 상세 정보
 	@NotBlank(message = "화물명은 필수입니다.")
+	@Size(max = 255, message = "화물명은 255자 이하로 입력해 주세요.")
 	private String cargoName;
 
 	@NotNull(message = "화물 무게는 필수입니다.")

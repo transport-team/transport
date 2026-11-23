@@ -102,6 +102,26 @@ export const cancelDriverOffDay = async (date) => {
   await jwtAxios.delete(`/api/driver/schedules/off/${date}`)
 }
 
+// 기사: 월별 근무 가능 시간 조회 (DRV-01) — [{ date, startTime, endTime, overnight }]
+export const getDriverWorkHours = async (year, month) => {
+  const res = await jwtAxios.get('/api/driver/schedules/work', {
+    params: { year, month },
+  })
+
+  return res.data
+}
+
+// 기사: 근무 가능 시간 등록 · 수정 (끝이 시작보다 이르면 자정을 넘기는 근무)
+export const saveDriverWorkHours = async (date, startTime, endTime) => {
+  const res = await jwtAxios.put(`/api/driver/schedules/work/${date}`, { startTime, endTime })
+  return res.data
+}
+
+// 기사: 근무 가능 시간 삭제
+export const deleteDriverWorkHours = async (date) => {
+  await jwtAxios.delete(`/api/driver/schedules/work/${date}`)
+}
+
 // 기사: 월별 정산 요약 조회
 export const getDriverMonthlySettlement = async (month) => {
   const res = await jwtAxios.get('/api/driver/settlements/monthly', {
@@ -141,5 +161,10 @@ export const getDriverSettlementRangeItems = async (from, to) => {
 // 기사: 내 평균 평점 · 리뷰 (DRV-07) — { averageRating, reviewCount, reviews(최신순, 고객 이름 가림) }
 export const getDriverMyReviews = async () => {
   const res = await jwtAxios.get('/api/driver/settlements/reviews')
+  return res.data
+}
+// 고객 소유 배송별 아직 처리되지 않은 기사 지원 수
+export const getDispatchApplicantCounts = async () => {
+  const res = await jwtAxios.get('/api/customer/shipments/application-counts')
   return res.data
 }

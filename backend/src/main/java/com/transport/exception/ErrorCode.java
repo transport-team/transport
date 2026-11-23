@@ -42,6 +42,7 @@ public enum ErrorCode {
 
 
 	// 배송 · 결제 (팀원 3)
+    INACTIVE_CARGO_TYPE(HttpStatus.BAD_REQUEST, "비활성화된 화물 유형입니다."),
 	DISTANCE_CALCULATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "거리 계산 중 오류가 발생했습니다."),
 	ADDRESS_NOT_FOUND(HttpStatus.BAD_REQUEST, "주소를 찾을 수 없습니다."),
 	ROUTE_NOT_FOUND(HttpStatus.BAD_REQUEST, "경로를 찾을 수 없습니다."),

@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom'
 import AppHeader from './AppHeader'
 import MenuLink from './MenuLink'
 import { useCallback, useEffect, useState } from 'react'
-import { getPendingVehicleRequests } from '../api/vehicleApi'
+import { getPendingVehicleRequests, getAllVehicleDeletionRequests } from '../api/vehicleApi'
 
 // 관리자 메뉴 — 화면을 만들면 to에 경로를 넣는다 (to가 없으면 준비 중)
 const MENU_GROUPS = [
@@ -27,6 +27,7 @@ const MENU_GROUPS = [
       { label: '기사 관리', to: '/admin/drivers' },
       { label: '차량 · 차종', to: '/admin/vehicles' },
       { label: '차량 등록 신청함', to: '/admin/vehicle-requests' },
+      { label: '차량 삭제 신청함', to: '/admin/vehicle-deletion-requests' },
       { label: '화물 종류', to: '/admin/cargo-types' },
     ],
   },
@@ -45,6 +46,7 @@ const MENU_GROUPS = [
 // 관리자 레이아웃: 왼쪽 메뉴 (좁은 화면에서는 보기 쉬운 두 칸 메뉴)
 const AdminLayout = () => {
   const [pendingCount, setPendingCount] = useState(0)
+  const [pendingDeletionCount, setPendingDeletionCount] = useState(0)
 
   // 승인 대기 중인 차량 등록 신청 건수 조회
   // 상태는 then 안에서 바꾼다 (effect에서 불러도 react-hooks/set-state-in-effect에 걸리지 않게, promise는 그대로 돌려준다)
@@ -55,9 +57,20 @@ const AdminLayout = () => {
     [],
   )
 
+  // 처리 대기 중인 차량 삭제 신청 건수 조회
+  const loadPendingDeletionCount = useCallback(
+    () => getAllVehicleDeletionRequests()
+      .then((requests) => setPendingDeletionCount(Array.isArray(requests)
+        ? requests.filter((request) => request.status === 'PENDING').length
+        : 0))
+      .catch((err) => console.error('차량 삭제 신청 건수 조회 실패', err)),
+    [],
+  )
+
   useEffect(() => {
     loadPendingCount()
-  }, [loadPendingCount])
+    loadPendingDeletionCount()
+  }, [loadPendingCount, loadPendingDeletionCount])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,7 +95,9 @@ const AdminLayout = () => {
                     menu={
                       menu.to === '/admin/vehicle-requests'
                         ? { ...menu, badge: pendingCount }
-                        : menu
+                        : menu.to === '/admin/vehicle-deletion-requests'
+                          ? { ...menu, badge: pendingDeletionCount }
+                          : menu
                     }
                     className={`flex min-h-10 items-center rounded-xl px-3 py-2 text-sm transition-colors aria-[current=page]:bg-emerald-50 aria-[current=page]:ring-1 aria-[current=page]:ring-emerald-100 ${menu.to ? 'hover:bg-gray-50' : ''}`}
                   />
@@ -92,7 +107,7 @@ const AdminLayout = () => {
           ))}
         </nav>
         <main className="min-w-0 flex-1">
-          <Outlet context={{ refreshPendingCount: loadPendingCount }} />
+          <Outlet context={{ refreshPendingCount: loadPendingCount, refreshPendingDeletionCount: loadPendingDeletionCount }} />
         </main>
       </div>
     </div>

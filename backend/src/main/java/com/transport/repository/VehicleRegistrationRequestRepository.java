@@ -4,6 +4,11 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
+import java.util.Optional;
 
 import com.transport.domain.Driver;
 import com.transport.domain.VehicleRegistrationRequest;
@@ -25,6 +30,15 @@ public interface VehicleRegistrationRequestRepository
             String plateNo,
             VehicleRegistrationStatus status
     );
+
+    // 기사 본인의 차량 등록 신청 내역 (관리자 심사 완료 포함)
+    @EntityGraph(attributePaths = {"vehicleType"})
+    List<VehicleRegistrationRequest> findByDriver_Member_IdOrderByCreatedAtDescIdDesc(Long memberId);
+
+    // 기사 철회/관리자 처리 충돌 방지
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from VehicleRegistrationRequest r where r.id = :requestId")
+    Optional<VehicleRegistrationRequest> findForReview(@Param("requestId") Long requestId);
 
     // 관리자: 처리 완료 건을 포함해 전체 신청을 신청일 최신순으로 조회
     @EntityGraph(attributePaths = {"driver", "driver.member", "vehicleType"})

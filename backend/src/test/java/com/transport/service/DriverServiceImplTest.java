@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
@@ -27,6 +29,7 @@ import com.transport.domain.Driver;
 import com.transport.domain.Member;
 import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.MemberRole;
+import com.transport.domain.enums.NotificationType;
 import com.transport.dto.DriverDTO;
 import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageResponseDTO;
@@ -40,6 +43,9 @@ class DriverServiceImplTest {
 
 	@Mock
 	private DriverRepository driverRepository;
+
+	@Mock
+	private NotificationService notificationService;
 
 	@InjectMocks
 	private DriverServiceImpl driverService;
@@ -107,6 +113,7 @@ class DriverServiceImplTest {
 
 		assertThat(result.getStatus()).isEqualTo(DriverStatus.ACTIVE);
 		assertThat(result.getApprovedAt()).isNotNull();
+		verifyStatusNotice("기사 가입이 승인되었어요. 이제 운송 요청에 지원할 수 있어요.");
 	}
 
 	@Test
@@ -115,6 +122,7 @@ class DriverServiceImplTest {
 		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver(DriverStatus.INACTIVE, firstApprovedAt)));
 
 		assertThat(driverService.changeStatus(7L, DriverStatus.ACTIVE).getApprovedAt()).isEqualTo(firstApprovedAt);
+		verifyStatusNotice("기사 계정이 다시 활성화되었어요. 운송 요청에 다시 지원할 수 있어요.");
 	}
 
 	@Test
@@ -122,6 +130,24 @@ class DriverServiceImplTest {
 		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver(DriverStatus.ACTIVE, LocalDateTime.now())));
 
 		assertThat(driverService.changeStatus(7L, DriverStatus.INACTIVE).getStatus()).isEqualTo(DriverStatus.INACTIVE);
+		verifyStatusNotice("관리자가 기사 계정을 중지했어요.");
+	}
+
+	@Test
+	void rejectPendingDriverNotifies() {
+		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver(DriverStatus.PENDING, null)));
+
+		assertThat(driverService.changeStatus(7L, DriverStatus.INACTIVE).getStatus()).isEqualTo(DriverStatus.INACTIVE);
+		verifyStatusNotice("기사 가입이 승인되지 않았어요.");
+	}
+
+	@Test
+	void sameStatusSendsNoNotice() {
+		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver(DriverStatus.ACTIVE, LocalDateTime.now())));
+
+		driverService.changeStatus(7L, DriverStatus.ACTIVE);
+
+		verifyNoInteractions(notificationService);
 	}
 
 	@Test
@@ -129,6 +155,12 @@ class DriverServiceImplTest {
 		assertThatThrownBy(() -> driverService.changeStatus(7L, DriverStatus.PENDING))
 				.isInstanceOf(CustomException.class)
 				.hasMessage("승인 대기로 되돌릴 수 없습니다.");
+		verifyNoInteractions(notificationService);
+	}
+
+	// 기사 회원에게 상태 변경 알림이 갔는지 (배송과 관계없어 shipment는 null)
+	private void verifyStatusNotice(String message) {
+		verify(notificationService).send(eq(member), eq(NotificationType.DRIVER_STATUS_CHANGED), eq(message), isNull());
 	}
 
 	@Test

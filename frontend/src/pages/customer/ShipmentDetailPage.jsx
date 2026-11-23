@@ -4,6 +4,8 @@ import { cancelPayment, retryPayment } from '../../api/paymentApi'
 import { getShipment } from '../../api/shipmentApi'
 import { requestTossPayment } from '../../util/tossPayments'
 import Timeline from '../../components/tracking/Timeline'
+import ShipmentProgress from '../../components/tracking/ShipmentProgress'
+import { getDispatchApplicants } from '../../api/dispatchApi'
 import LiveTrackingMap from '../../components/tracking/LiveTrackingMap'
 import ReviewSection from '../../components/review/ReviewSection'
 import { SHIPMENT_LOCATION_EVENT } from '../../hooks/useNotification'
@@ -39,6 +41,8 @@ const ShipmentDetailPage = () => {
   const [actionError, setActionError] = useState('')
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
+  const [applicantCount, setApplicantCount] = useState(null)
+  const [applicantError, setApplicantError] = useState('')
   const [liveLocation, setLiveLocation] = useState(null)  // SSE로 받은 이 배송의 최신 기사 위치
 
   const requestKey = `${id}-${refreshCount}`
@@ -72,6 +76,22 @@ const ShipmentDetailPage = () => {
     window.addEventListener(SHIPMENT_LOCATION_EVENT, handleLocation)
     return () => window.removeEventListener(SHIPMENT_LOCATION_EVENT, handleLocation)
   }, [id])
+
+  useEffect(() => {
+    let active = true
+    getDispatchApplicants(id)
+      .then((applications) => {
+        if (!active) return
+        setApplicantCount(Array.isArray(applications) ? applications.length : 0)
+        setApplicantError('')
+      })
+      .catch((err) => {
+        if (!active) return
+        setApplicantCount(null)
+        setApplicantError(`지원자 수 조회 실패 (${err.response?.status || '네트워크 오류'})`)
+      })
+    return () => { active = false }
+  }, [id, refreshCount])
 
   const { shipment, error } = fetchState
 
@@ -137,6 +157,7 @@ const ShipmentDetailPage = () => {
   const meta = STATUS_META[shipment.status] || { label: shipment.status, badge: 'bg-gray-100 text-gray-700 border-gray-200' }
   const canPay = shipment.status === 'PENDING_PAYMENT'
   const canCancel = shipment.status === 'PENDING_PAYMENT' || shipment.status === 'REQUESTED'
+  const cancelLocked = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED', 'COMPLETED'].includes(shipment.status)
 
   return (
     <section className="mx-auto min-h-screen w-full max-w-[640px] bg-gray-50 pb-28">
@@ -153,13 +174,20 @@ const ShipmentDetailPage = () => {
       </header>
 
       <div className="space-y-4 px-5 pt-5">
+        <ShipmentProgress status={shipment.status} />
+
         {shipment.status === 'REQUESTED' && (
           <Link
             to={`/customer/dispatch-requests?shipmentId=${shipment.id}`}
             className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-bold text-emerald-800 hover:bg-emerald-100"
           >
-            <span>지원한 기사 확인 및 배차 확정</span>
-            <span aria-hidden="true">→</span>
+            <span className="flex flex-wrap items-center gap-2">
+              <span>지원한 기사 및 배차 확정</span>
+              {applicantCount > 0 && <span className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white" aria-label={`대기 중인 기사 신청 ${applicantCount}건`}>{applicantCount}</span>}
+              {applicantCount === 0 && <span className="text-xs font-medium text-gray-500">아직 지원 0명</span>}
+              {applicantCount === null && <span className="text-xs font-medium text-red-600">{applicantError || '조회 중...'}</span>}
+            </span>
+            <span aria-hidden="true">지원 기사 확인 →</span>
           </Link>
         )}
         {actionError && (
@@ -269,17 +297,25 @@ const ShipmentDetailPage = () => {
         )}
       </div>
 
-      {(canPay || canCancel) && (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-[640px] gap-3 border-t border-gray-100 bg-white/95 px-5 py-3.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur">
-          {canCancel && (
+      {(canPay || canCancel || cancelLocked) && (
+        <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[640px] gap-3 border-t border-gray-100 bg-white/95 px-5 py-3.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur ${cancelLocked ? 'flex flex-col' : 'flex'}`}>
+          {(canCancel || cancelLocked) && (
             <button
               type="button"
-              onClick={() => { setActionError(''); setCancelModalOpen(true) }}
-              disabled={actionLoading}
-              className="flex-1 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+              onClick={() => { if (canCancel) { setActionError(''); setCancelModalOpen(true) } }}
+              disabled={actionLoading || cancelLocked}
+              className={`flex-1 rounded-xl border px-4 py-3 text-sm font-bold ${cancelLocked
+                ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                : 'border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50'}`}
             >
-              {shipment.status === 'REQUESTED' ? '배송 취소 · 환불' : '주문 취소'}
+              {shipment.status === 'PENDING_PAYMENT' ? '주문 취소' : '배송 취소 · 환불'}
             </button>
+          )}
+          {cancelLocked && (
+            <div className="text-center">
+              <p className="py-1 text-sm font-semibold text-gray-400">배차 확정으로 배송 취소·환불이 불가합니다.</p>
+              <p className="text-xs text-gray-400">변경 요청은 <Link to="/customer/inquiries" className="font-semibold text-emerald-700 underline">고객센터 문의</Link>를 이용해 주세요.</p>
+            </div>
           )}
           {canPay && (
             <button

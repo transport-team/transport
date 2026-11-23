@@ -7,10 +7,11 @@ import {
 import { useOutletContext } from 'react-router-dom'
 
 const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
-const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절' }
+const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절', WITHDRAWN: '기사 철회' }
 const RESULT_STYLE = {
     APPROVED: 'border-emerald-200 bg-emerald-100 text-emerald-800',
     REJECTED: 'border-red-200 bg-red-100 text-red-700',
+    WITHDRAWN: 'border-gray-200 bg-gray-100 text-gray-600',
 }
 
 // 관리자 차량 등록 신청함

@@ -101,3 +101,42 @@ export const changeMyVehicleStatus = async (vehicleId, status) => {
   )
   return res.data
 }
+
+// 기사: 나의 차량 등록 신청 내역 조회 및 승인 전 철회
+export const getMyVehicleRegistrationRequests = async () => {
+  const res = await jwtAxios.get('/api/driver/vehicles/requests')
+  return res.data
+}
+
+export const withdrawVehicleRegistrationRequest = async (requestId) => {
+  await jwtAxios.delete(`/api/driver/vehicles/requests/${requestId}`)
+}
+
+// 기사: 차량 삭제 요청 및 내역 (실제 차량은 DB에서 삭제되지 않음)
+export const getMyVehicleDeletionRequests = async () => {
+  const res = await jwtAxios.get('/api/driver/vehicles/deletion-requests')
+  return res.data
+}
+
+export const applyVehicleDeletion = async (vehicleId) => {
+  const res = await jwtAxios.post(`/api/driver/vehicles/deletion-requests/${vehicleId}`)
+  return res.data
+}
+
+export const withdrawVehicleDeletionRequest = async (requestId) => {
+  await jwtAxios.delete(`/api/driver/vehicles/deletion-requests/${requestId}`)
+}
+
+// 관리자: 차량 삭제 요청 목록과 승인·거절
+export const getAllVehicleDeletionRequests = async () => {
+  const res = await jwtAxios.get('/api/admin/vehicle-deletion-requests')
+  return res.data
+}
+
+export const approveVehicleDeletion = async (requestId) => {
+  await jwtAxios.patch(`/api/admin/vehicle-deletion-requests/${requestId}/approve`)
+}
+
+export const rejectVehicleDeletion = async (requestId, rejectionReason) => {
+  await jwtAxios.patch(`/api/admin/vehicle-deletion-requests/${requestId}/reject`, { rejectionReason })
+}
