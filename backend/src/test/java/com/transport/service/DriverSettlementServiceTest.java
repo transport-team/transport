@@ -30,7 +30,7 @@ class DriverSettlementServiceTest {
     private ShipmentStatusHistoryRepository historyRepository;
 
     @InjectMocks
-    private DriverSettlementService service;
+    private DriverSettlementServiceImpl service;
 
     @Test
     void monthlySummaryUsesFirstDayAndNextMonthFirstDay() {
