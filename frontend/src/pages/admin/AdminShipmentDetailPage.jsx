@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getShipment } from '../../api/shipmentApi'
-import { cancelAdminShipmentDispatch } from '../../api/adminTransportApi'
+import { cancelAdminShipment, cancelAdminShipmentDispatch } from '../../api/adminTransportApi'
+
+// 관리자 배송 취소(환불)가 되는 상태 — 서버 PaymentService.cancelByAdmin과 같게 (상차 뒤에는 409 CANNOT_CANCEL)
+const ADMIN_CANCELABLE = ['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED']
 
 // 관리자: 고객·기사의 조작 버튼 없이 배송 정보를 조회하는 상세 화면
 const STATUS_META = {
@@ -28,6 +31,44 @@ const AdminShipmentDetailPage = () => {
   const [cancelling, setCancelling] = useState(false)
   const [cancelError, setCancelError] = useState('')
   const [cancelSuccess, setCancelSuccess] = useState('')
+  // 배송 취소 · 환불 (ADM-02)
+  const [showShipmentCancel, setShowShipmentCancel] = useState(false)
+  const [shipmentCancelReason, setShipmentCancelReason] = useState('')
+  const [shipmentCancelling, setShipmentCancelling] = useState(false)
+  const [shipmentCancelError, setShipmentCancelError] = useState('')
+
+  const handleCancelShipment = async () => {
+    const reason = shipmentCancelReason.trim()
+    if (!reason || reason.length > 500 || shipmentCancelling) {
+      setShipmentCancelError('500자 이내의 취소 사유를 입력해 주세요.')
+      return
+    }
+    const assigned = shipment?.status === 'ASSIGNED'
+    const confirmMessage = '이 배송을 취소하시겠습니까?\n결제된 건은 토스로 환불'
+      + (assigned ? '되고, 배정 기사의 배차도 해제됩니다.' : '됩니다.')
+      + '\n취소한 배송은 되돌릴 수 없습니다.'
+    if (!window.confirm(confirmMessage)) return
+
+    setShipmentCancelling(true)
+    setShipmentCancelError('')
+    setCancelSuccess('')
+    try {
+      await cancelAdminShipment(id, reason)
+      setCancelSuccess(`배송을 취소했습니다. 결제된 건은 환불되었고, 고객${assigned ? '과 배정 기사' : ''}에게 알림을 보냈습니다.`)
+      setShipmentCancelReason('')
+      setShowShipmentCancel(false)
+      try {
+        const updated = await getShipment(id)
+        setFetchState({ id, shipment: updated, error: '' })
+      } catch {
+        setShipmentCancelError('취소는 완료되었지만 화면 갱신에 실패했습니다. 새로고침해 주세요.')
+      }
+    } catch (err) {
+      setShipmentCancelError(err.response?.data?.message || '배송 취소에 실패했습니다.')
+    } finally {
+      setShipmentCancelling(false)
+    }
+  }
 
   const handleCancelDispatch = async () => {
     const reason = cancelReason.trim()
@@ -80,6 +121,7 @@ const AdminShipmentDetailPage = () => {
 
   const status = shipment && STATUS_META[shipment.status]
   const canCancelDispatch = shipment?.status === 'ASSIGNED'
+  const canCancelShipment = ADMIN_CANCELABLE.includes(shipment?.status)
 
   return (
     <section className="mx-auto w-full max-w-4xl space-y-4 pb-10">
@@ -159,6 +201,63 @@ const AdminShipmentDetailPage = () => {
               </div>
             )}
             {cancelError && <p role="alert" className="mt-3 text-sm text-red-700">{cancelError}</p>}
+          </div>
+
+          {/* 관리자 배송 취소 · 환불 (ADM-02): 상차 전(결제 대기 · 배차 대기 · 배차 완료)일 때 */}
+          <div className="rounded-2xl border border-red-100 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">관리자 배송 취소 · 환불</h2>
+                <p className="mt-2 text-xs leading-5 text-gray-600">
+                  배송을 취소합니다. 결제된 건은 토스로 환불되고, 배차된 건은 배차도 해제됩니다. 고객 · 기사에게 알림이 전송됩니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={!canCancelShipment || shipmentCancelling}
+                onClick={() => { setShowShipmentCancel((open) => !open); setShipmentCancelError('') }}
+                className="shrink-0 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                title={!canCancelShipment ? '상차 전(결제 대기 · 배차 대기 · 배차 완료) 배송만 취소할 수 있습니다.' : undefined}
+              >
+                배송 취소
+              </button>
+            </div>
+            {!canCancelShipment && (
+              <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                현재 상태: {status?.label || shipment.status}. 상차 전(결제 대기 · 배차 대기 · 배차 완료) 배송만 취소할 수 있습니다.
+              </p>
+            )}
+            {canCancelShipment && showShipmentCancel && (
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <label htmlFor="admin-shipment-cancel-reason" className="block text-xs font-semibold text-gray-700">
+                  배송 취소 사유 (필수 — 고객 · 기사 알림에 함께 보여요)
+                </label>
+                <textarea
+                  id="admin-shipment-cancel-reason"
+                  value={shipmentCancelReason}
+                  onChange={(event) => setShipmentCancelReason(event.target.value)}
+                  maxLength={500}
+                  rows={2}
+                  placeholder="배송을 취소하는 이유를 입력해 주세요."
+                  className="mt-2 w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:border-red-400"
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <button type="button" disabled={shipmentCancelling} onClick={() => { setShowShipmentCancel(false); setShipmentCancelReason(''); setShipmentCancelError('') }}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                    닫기
+                  </button>
+                  <button
+                    type="button"
+                    disabled={shipmentCancelling || !shipmentCancelReason.trim()}
+                    onClick={handleCancelShipment}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {shipmentCancelling ? '취소 처리 중...' : '배송 취소 확정'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {shipmentCancelError && <p role="alert" className="mt-3 text-sm text-red-700">{shipmentCancelError}</p>}
           </div>
           {cancelSuccess && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{cancelSuccess}</p>}
 
