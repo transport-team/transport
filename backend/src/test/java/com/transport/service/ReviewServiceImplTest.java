@@ -19,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import com.transport.domain.Dispatch;
 import com.transport.domain.Driver;
 import com.transport.domain.Member;
 import com.transport.domain.Review;
@@ -29,29 +28,28 @@ import com.transport.dto.RatingStatDTO;
 import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
-import com.transport.repository.DispatchRepository;
-import com.transport.repository.DriverRepository;
 import com.transport.repository.ReviewRepository;
-import com.transport.repository.ShipmentRepository;
 
 // 리뷰 작성 (8-1 후속): 본인 · 배송완료 · 1회, 동시에 두 번 저장돼도 500이 아니라 REVIEW_EXISTS
+// 배송 · 배차 · 기사는 약속 메서드(ShipmentService · DispatchService · DriverService)를 가짜로 둔다 (#94 저장소 직접 사용 정리)
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceImplTest {
 
 	private static final Long SHIPMENT_ID = 1L;
 	private static final Long CUSTOMER_ID = 100L;
+	private static final Long DRIVER_MEMBER_ID = 30L;  // 배정 기사의 회원 ID (getActiveDriver가 주는 값)
 
 	@Mock
 	ReviewRepository reviewRepository;
 
 	@Mock
-	ShipmentRepository shipmentRepository;
+	ShipmentService shipmentService;
 
 	@Mock
-	DriverRepository driverRepository;
+	DriverService driverService;
 
 	@Mock
-	DispatchRepository dispatchRepository;
+	DispatchService dispatchService;
 
 	@InjectMocks
 	ReviewServiceImpl reviewService;
@@ -61,11 +59,10 @@ class ReviewServiceImplTest {
 
 	private Shipment givenShipment(ShipmentStatus status) {
 		Shipment shipment = Shipment.builder().id(SHIPMENT_ID).status(status).customer(customer).build();
-		when(shipmentRepository.findById(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
+		when(shipmentService.getShipment(SHIPMENT_ID)).thenReturn(shipment);
 		lenient().when(reviewRepository.existsByShipmentId(SHIPMENT_ID)).thenReturn(false);
-		lenient().when(dispatchRepository.findByShipmentIdAndActiveTrue(SHIPMENT_ID))
-				.thenReturn(Optional.of(Dispatch.builder().shipment(shipment).driver(driver).active(true).build()));
-		lenient().when(driverRepository.findById(1L)).thenReturn(Optional.of(driver));
+		lenient().when(dispatchService.getActiveDriver(SHIPMENT_ID)).thenReturn(DRIVER_MEMBER_ID);
+		lenient().when(driverService.findByMemberId(DRIVER_MEMBER_ID)).thenReturn(Optional.of(driver));
 		return shipment;
 	}
 

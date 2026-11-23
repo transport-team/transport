@@ -108,4 +108,10 @@ public class DriverServiceImpl implements DriverService {
 	public Optional<Driver> findById(Long id) {
 		return driverRepository.findById(id);
 	}
+
+	// 회원 ID로 기사 정보 조회 (위치 · 리뷰 서비스가 저장소 대신 쓰는 약속 메서드)
+	@Override
+	public Optional<Driver> findByMemberId(Long memberId) {
+		return driverRepository.findByMemberId(memberId);
+	}
 }

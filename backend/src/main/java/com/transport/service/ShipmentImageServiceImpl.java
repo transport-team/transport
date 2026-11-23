@@ -15,7 +15,6 @@ import com.transport.dto.ShipmentImageResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.ShipmentImageRepository;
-import com.transport.repository.ShipmentRepository;
 import com.transport.storage.FileStorage;
 import com.transport.util.CustomFileUtil;
 
@@ -30,7 +29,7 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class ShipmentImageServiceImpl implements ShipmentImageService {
 
-	private final ShipmentRepository shipmentRepository;
+	private final ShipmentService shipmentService;  // 배송 = 팀원 3 약속 메서드 (저장소 직접 사용 정리, #94)
 	private final ShipmentImageRepository shipmentImageRepository;
 	private final DispatchService dispatchService;
 	private final FileStorage fileStorage;
@@ -39,9 +38,8 @@ public class ShipmentImageServiceImpl implements ShipmentImageService {
 	@Override
 	public List<ShipmentImageResponseDTO> upload(Long shipmentId, List<MultipartFile> files,
 			ShipmentImageType type, Long memberId) {
-		// 1. 배송 조회
-		Shipment shipment = shipmentRepository.findById(shipmentId)
-				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+		// 1. 배송 조회 (없으면 SHIPMENT_NOT_FOUND)
+		Shipment shipment = shipmentService.getShipment(shipmentId);
 
 		// 2. 배정 기사인지 확인 (getActiveDriver는 기사의 member.id를 반환 — 약속 표 5주차)
 		Long assignedDriverId = dispatchService.getActiveDriver(shipmentId);

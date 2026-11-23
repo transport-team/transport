@@ -15,10 +15,7 @@ import com.transport.dto.RatingStatDTO;
 import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
-import com.transport.repository.DriverRepository;
-import com.transport.repository.DispatchRepository;
 import com.transport.repository.ReviewRepository;
-import com.transport.repository.ShipmentRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -31,16 +28,16 @@ import lombok.extern.log4j.Log4j2;
 public class ReviewServiceImpl implements ReviewService {
 
 	private final ReviewRepository reviewRepository;
-	private final ShipmentRepository shipmentRepository;
-	private final DriverRepository driverRepository;
-	private final DispatchRepository dispatchRepository;
+	// 다른 도메인은 약속 메서드로만 (배송 = 팀원 3, 배차 · 기사 = 팀원 2 — 저장소 직접 사용 정리, #94)
+	private final ShipmentService shipmentService;
+	private final DispatchService dispatchService;
+	private final DriverService driverService;
 
 	@Override
 	public ReviewResponseDTO createReview(Long shipmentId, Long memberId, int rating, String content) {
 
-		// 1. 배송 조회
-		Shipment shipment = shipmentRepository.findById(shipmentId)
-				.orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+		// 1. 배송 조회 (없으면 SHIPMENT_NOT_FOUND)
+		Shipment shipment = shipmentService.getShipment(shipmentId);
 
 		// 2. 본인 배송인지
 		if (!shipment.getCustomer().getId().equals(memberId)) {
@@ -58,10 +55,12 @@ public class ReviewServiceImpl implements ReviewService {
 		}
 
 		// 5. driver_id는 배정 기사로 설정 (요청에서 받지 않는다 — 위변조 방지)
-		Long driverId = dispatchRepository.findByShipmentIdAndActiveTrue(shipmentId)
-				.map(d -> d.getDriver().getId())
-				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "배정 기사를 찾을 수 없습니다."));
-		Driver driver = driverRepository.findById(driverId)
+		//    배송이 완료돼도 배차는 남아 있어 배정 기사를 찾을 수 있다 (11-19 결정 34)
+		Long driverMemberId = dispatchService.getActiveDriver(shipmentId);  // 배정 기사의 회원 ID
+		if (driverMemberId == null) {
+			throw new CustomException(ErrorCode.NOT_FOUND, "배정 기사를 찾을 수 없습니다.");
+		}
+		Driver driver = driverService.findByMemberId(driverMemberId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "배정 기사를 찾을 수 없습니다."));
 
 		// 4번 검사와 저장 사이에 같은 요청이 동시에 들어오면(두 탭 · 다시 시도) DB 유니크 키(shipment_id)가 막는다
@@ -79,7 +78,7 @@ public class ReviewServiceImpl implements ReviewService {
 			throw new CustomException(ErrorCode.REVIEW_EXISTS);
 		}
 
-		log.info("리뷰 저장: shipmentId={}, driverId={}, rating={}", shipmentId, driverId, rating);
+		log.info("리뷰 저장: shipmentId={}, driverId={}, rating={}", shipmentId, driver.getId(), rating);
 		return ReviewResponseDTO.from(saved);
 	}
 
