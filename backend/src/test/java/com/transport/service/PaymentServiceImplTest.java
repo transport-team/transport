@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -32,6 +33,7 @@ import com.transport.domain.Member;
 import com.transport.domain.Payment;
 import com.transport.domain.Shipment;
 import com.transport.domain.enums.MemberRole;
+import com.transport.domain.enums.NotificationType;
 import com.transport.domain.enums.PaymentStatus;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.PaymentApproveRequestDTO;
@@ -58,6 +60,15 @@ class PaymentServiceImplTest {
 
     @Mock
     private DispatchApplicationService dispatchApplicationService;
+
+    @Mock
+    private DispatchService dispatchService;
+
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private MemberService memberService;
 
     @InjectMocks
     private PaymentServiceImpl paymentService;
@@ -172,6 +183,103 @@ class PaymentServiceImplTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.FORBIDDEN);
         verifyNoInteractions(tossPaymentClient, statusHistoryService, dispatchApplicationService);
+    }
+
+    // ===== 관리자 취소 (ADM-02, 11-19 결정 34) =====
+
+    private final Member admin = Member.builder().id(1L).role(MemberRole.ADMIN).build();
+    private final Member driverMember = Member.builder().id(30L).role(MemberRole.DRIVER).build();
+
+    @Test
+    @DisplayName("배차된 결제 건: 결제 · 배송 · 이력 · 대기 지원 마감 · 배차 해제를 먼저 저장하고, 고객 · 기사 알림 뒤 토스 환불은 마지막")
+    void cancelByAdmin_assignedReleasesDispatchNotifiesAndRefundsLast() {
+        Payment payment = paidPayment(ShipmentStatus.ASSIGNED, "toss-key");
+        Shipment shipment = payment.getShipment();
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        when(dispatchService.getActiveDriver(1L)).thenReturn(30L);
+        when(memberService.findById(1L)).thenReturn(Optional.of(admin));
+        when(memberService.findById(30L)).thenReturn(Optional.of(driverMember));
+
+        paymentService.cancelByAdmin(1L, "고객 요청", 1L);
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.CANCELED);
+        InOrder order = inOrder(statusHistoryService, dispatchApplicationService, dispatchService, entityManager,
+                notificationService, tossPaymentClient);
+        order.verify(statusHistoryService).record(shipment, ShipmentStatus.ASSIGNED, ShipmentStatus.CANCELED,
+                admin, "관리자 취소: 고객 요청");
+        order.verify(dispatchApplicationService).closePendingApplications(shipment);
+        order.verify(dispatchService).releaseDispatch(1L);
+        order.verify(entityManager).flush();
+        order.verify(notificationService).send(eq(shipment.getCustomer()), eq(NotificationType.STATUS_CHANGED),
+                anyString(), eq(shipment));
+        order.verify(notificationService).send(eq(driverMember), eq(NotificationType.STATUS_CHANGED),
+                anyString(), eq(shipment));
+        order.verify(tossPaymentClient).cancelPayment("toss-key", "고객 요청");
+    }
+
+    @Test
+    @DisplayName("접수(배차 전) 결제 건: 배차는 건드리지 않고 고객에게만 알리고 환불한다")
+    void cancelByAdmin_requestedRefundsWithoutDispatch() {
+        Payment payment = paidPayment(ShipmentStatus.REQUESTED, "toss-key");
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        when(memberService.findById(1L)).thenReturn(Optional.of(admin));
+
+        paymentService.cancelByAdmin(1L, "중복 접수", 1L);
+
+        assertThat(payment.getShipment().getStatus()).isEqualTo(ShipmentStatus.CANCELED);
+        verifyNoInteractions(dispatchService);
+        verify(notificationService).send(eq(payment.getShipment().getCustomer()), eq(NotificationType.STATUS_CHANGED),
+                anyString(), eq(payment.getShipment()));
+        verify(tossPaymentClient).cancelPayment("toss-key", "중복 접수");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ShipmentStatus.class, names = {"PICKED_UP", "IN_TRANSIT", "ARRIVED", "COMPLETED", "CANCELED"})
+    @DisplayName("상차 뒤 · 이미 취소된 배송은 관리자도 취소할 수 없고 아무것도 바뀌지 않는다 (409 CANNOT_CANCEL)")
+    void cancelByAdmin_notAfterPickup(ShipmentStatus status) {
+        Payment payment = paidPayment(status, "toss-key");
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() -> paymentService.cancelByAdmin(1L, "고객 요청", 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.CANNOT_CANCEL);
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PAID);
+        verifyNoInteractions(tossPaymentClient, statusHistoryService, dispatchApplicationService,
+                dispatchService, notificationService, memberService);
+    }
+
+    @Test
+    @DisplayName("개발용 결제 건너뛰기 건은 토스를 부르지 않는다 (배차 해제는 한다)")
+    void cancelByAdmin_localSkipWithoutToss() {
+        Payment payment = paidPayment(ShipmentStatus.ASSIGNED, "LOCAL_SKIP_order-1");
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        when(dispatchService.getActiveDriver(1L)).thenReturn(null);  // 배정 기사를 못 찾아도 취소는 된다
+        when(memberService.findById(1L)).thenReturn(Optional.of(admin));
+
+        paymentService.cancelByAdmin(1L, "점검", 1L);
+
+        verify(dispatchService).releaseDispatch(1L);
+        verify(memberService, never()).findById(30L);
+        verifyNoInteractions(tossPaymentClient);
+    }
+
+    @Test
+    @DisplayName("토스 환불이 실패하면 예외가 그대로 나가 롤백된다 (DB · 배차 해제는 환불 전에 flush)")
+    void cancelByAdmin_refundFailurePropagates() {
+        Payment payment = paidPayment(ShipmentStatus.ASSIGNED, "toss-key");
+        when(paymentRepository.findByShipmentIdForUpdate(1L)).thenReturn(Optional.of(payment));
+        when(dispatchService.getActiveDriver(1L)).thenReturn(30L);
+        when(memberService.findById(1L)).thenReturn(Optional.of(admin));
+        when(memberService.findById(30L)).thenReturn(Optional.of(driverMember));
+        doThrow(new CustomException(ErrorCode.PAYMENT_FAILED, "토스 결제 취소에 실패했습니다."))
+                .when(tossPaymentClient).cancelPayment("toss-key", "고객 요청");
+
+        assertThatThrownBy(() -> paymentService.cancelByAdmin(1L, "고객 요청", 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.PAYMENT_FAILED);
+        verify(dispatchService).releaseDispatch(1L);
+        verify(entityManager).flush();
     }
 
     // 결제 완료 건 (고객 10번)
