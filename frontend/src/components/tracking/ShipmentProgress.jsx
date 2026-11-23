@@ -5,7 +5,8 @@ const STEPS = [
   { label: '배차 완료', icon: '3' },  // 상태 배지 이름과 같게 (util/shipmentStatusUtil.js)
   { label: '상차 완료', icon: '4' },
   { label: '운송 중', icon: '5' },
-  { label: '배송 완료', icon: '6' },
+  { label: '기사 배송 완료', icon: '6' },
+  { label: '수령 확정', icon: '7' },
 ]
 
 const PROGRESS = {
@@ -15,7 +16,8 @@ const PROGRESS = {
   PICKED_UP: 3,
   IN_TRANSIT: 4,
   ARRIVED: 4,
-  COMPLETED: 5,
+  DELIVERED: 5,
+  COMPLETED: 6,
 }
 
 const ShipmentProgress = ({ status }) => {
@@ -31,11 +33,11 @@ const ShipmentProgress = ({ status }) => {
         ) : status === 'ARRIVED' ? (
           <span className="text-xs font-semibold text-emerald-700">목적지 도착</span>
         ) : (
-          <span className="text-xs text-gray-500">현재 단계 {current + 1}/6</span>
+          <span className="text-xs text-gray-500">현재 단계 {current + 1}/{STEPS.length}</span>
         )}
       </div>
       <div className="overflow-x-auto pb-1">
-        <ol className="flex min-w-[450px] items-start" aria-label="배송 진행 단계">
+        <ol className="flex min-w-[520px] items-start" aria-label="배송 진행 단계">
           {STEPS.map((step, index) => {
             const done = !isCanceled && current >= index
             const now = !isCanceled && current === index

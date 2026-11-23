@@ -134,7 +134,7 @@ class PaymentServiceImplTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = ShipmentStatus.class, names = {"ASSIGNED", "PICKED_UP", "IN_TRANSIT", "ARRIVED", "COMPLETED", "CANCELED"})
+    @EnumSource(value = ShipmentStatus.class, names = {"ASSIGNED", "PICKED_UP", "IN_TRANSIT", "ARRIVED", "DELIVERED", "COMPLETED", "CANCELED"})
     @DisplayName("배차가 확정된 뒤 · 이미 취소된 배송은 고객이 취소할 수 없고 아무것도 바뀌지 않는다 (409 CANNOT_CANCEL)")
     void cancelPayment_onlyBeforeDispatch(ShipmentStatus status) {
         Payment payment = paidPayment(status, "toss-key");
@@ -235,7 +235,7 @@ class PaymentServiceImplTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = ShipmentStatus.class, names = {"PICKED_UP", "IN_TRANSIT", "ARRIVED", "COMPLETED", "CANCELED"})
+    @EnumSource(value = ShipmentStatus.class, names = {"PICKED_UP", "IN_TRANSIT", "ARRIVED", "DELIVERED", "COMPLETED", "CANCELED"})
     @DisplayName("상차 뒤 · 이미 취소된 배송은 관리자도 취소할 수 없고 아무것도 바뀌지 않는다 (409 CANNOT_CANCEL)")
     void cancelByAdmin_notAfterPickup(ShipmentStatus status) {
         Payment payment = paidPayment(status, "toss-key");

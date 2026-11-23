@@ -9,7 +9,7 @@ import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
 // 상태 탭: 고객이 자주 찾는 상태만 (이름은 배지와 같은 공통 표)
 const FILTER_TABS = [
   { value: '', label: '전체' },
-  ...['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED', 'IN_TRANSIT', 'COMPLETED', 'CANCELED']
+  ...['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELED']
     .map((value) => ({ value, label: shipmentStatusLabel(value) })),
 ]
 

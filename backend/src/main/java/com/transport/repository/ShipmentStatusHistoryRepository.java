@@ -34,10 +34,13 @@ public interface ShipmentStatusHistoryRepository extends JpaRepository<ShipmentS
 			@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
 	// 기간 안에 그 상태로 바꾼 사람이 기사인 건만 기사별로 센다 (건수 많은 순 → 기사 id 순, 몇 명까지는 pageable)
-	@Query("select d.id as driverId, m.name as driverName, count(h) as changedCount "
-			+ "from ShipmentStatusHistory h join h.changedBy m join Driver d on d.member = m "
-			+ "where h.toStatus = :status and h.changedAt >= :from and h.changedAt < :to "
-			+ "group by d.id, m.name order by count(h) desc, d.id")
+	@Query("select d.id as driverId, d.member.name as driverName, count(h) as changedCount "
+            + "from ShipmentStatusHistory h join Driver d on "
+            + "(exists (select 1 from Dispatch a where a.shipment = h.shipment and a.active = true and a.driver = d) "
+            + "or (not exists (select 1 from Dispatch a where a.shipment = h.shipment and a.active = true) "
+            + "and d.member = h.changedBy)) "
+            + "where h.toStatus = :status and h.changedAt >= :from and h.changedAt < :to "
+            + "group by d.id, d.member.name order by count(h) desc, d.id")
 	List<DriverChangedCount> countGroupByDriver(@Param("status") ShipmentStatus status,
 			@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, Pageable pageable);
 
@@ -54,9 +57,12 @@ public interface ShipmentStatusHistoryRepository extends JpaRepository<ShipmentS
 	@Query("select count(h) as completedCount, "
 			+ "coalesce(sum(h.shipment.fare), 0) as totalFare "
 			+ "from ShipmentStatusHistory h "
-			+ "where h.toStatus = :status "
-			+ "and h.shipment.status = :status "
-			+ "and h.changedBy.id = :memberId "
+            + "where h.toStatus = :status "
+            + "and h.shipment.status = :status "
+            + "and (exists (select 1 from Dispatch d where d.shipment = h.shipment "
+            + "and d.active = true and d.driver.member.id = :memberId) "
+            + "or (h.changedBy.id = :memberId and not exists "
+            + "(select 1 from Dispatch d where d.shipment = h.shipment and d.active = true))) "
 			+ "and h.changedAt >= :from and h.changedAt < :to")
 	DriverMonthlyTotal findDriverMonthlyTotal(
 			@Param("memberId") Long memberId,
@@ -76,9 +82,12 @@ public interface ShipmentStatusHistoryRepository extends JpaRepository<ShipmentS
 			+ "h.shipment.fare as fare, "
 			+ "h.changedAt as completedAt "
 			+ "from ShipmentStatusHistory h "
-			+ "where h.toStatus = :status "
-			+ "and h.shipment.status = :status "
-			+ "and h.changedBy.id = :memberId "
+            + "where h.toStatus = :status "
+            + "and h.shipment.status = :status "
+            + "and (exists (select 1 from Dispatch d where d.shipment = h.shipment "
+            + "and d.active = true and d.driver.member.id = :memberId) "
+            + "or (h.changedBy.id = :memberId and not exists "
+            + "(select 1 from Dispatch d where d.shipment = h.shipment and d.active = true))) "
 			+ "and h.changedAt >= :from and h.changedAt < :to "
 			+ "order by h.changedAt desc")
 	List<DriverMonthlyFareItem> findDriverMonthlyFareItems(

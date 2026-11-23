@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { cancelPayment, retryPayment } from '../../api/paymentApi'
-import { getShipment } from '../../api/shipmentApi'
+import { getShipment, confirmShipmentReceipt } from '../../api/shipmentApi'
 import { requestTossPayment } from '../../util/tossPayments'
 import Timeline from '../../components/tracking/Timeline'
 import ShipmentProgress from '../../components/tracking/ShipmentProgress'
+import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
+import Modal from '../../components/common/Modal'
 import { getDispatchApplicants } from '../../api/dispatchApi'
 import LiveTrackingMap from '../../components/tracking/LiveTrackingMap'
 import ReviewSection from '../../components/review/ReviewSection'
@@ -30,6 +32,7 @@ const ShipmentDetailPage = () => {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [applicantCount, setApplicantCount] = useState(null)
   const [applicantError, setApplicantError] = useState('')
@@ -104,6 +107,21 @@ const ShipmentDetailPage = () => {
     }
   }
 
+  const handleConfirmReceipt = async () => {
+    if (!shipment || shipment.status !== 'DELIVERED' || actionLoading) return
+    setActionLoading(true)
+    setActionError('')
+    try {
+      await confirmShipmentReceipt(shipment.id)
+      setReceiptModalOpen(false)
+      setRefreshCount((count) => count + 1)
+    } catch (err) {
+      setActionError(err.response?.data?.message || '수령 확정에 실패했습니다. 다시 시도해 주세요.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const handleCancelSubmit = async (event) => {
     event.preventDefault()
     if (!shipment) return
@@ -146,7 +164,7 @@ const ShipmentDetailPage = () => {
 
   const canPay = shipment.status === 'PENDING_PAYMENT'
   const canCancel = shipment.status === 'PENDING_PAYMENT' || shipment.status === 'REQUESTED'
-  const cancelLocked = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED', 'COMPLETED'].includes(shipment.status)
+  const cancelLocked = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED', 'DELIVERED', 'COMPLETED'].includes(shipment.status)
 
   return (
     <section className="mx-auto min-h-screen w-full max-w-[640px] bg-gray-50 pb-28">
@@ -278,6 +296,20 @@ const ShipmentDetailPage = () => {
           </div>
         </div>
 
+        <ShipmentPhotoGallery shipmentId={shipment.id} />
+
+        {shipment.status === 'DELIVERED' && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+            <p className="text-sm font-bold text-emerald-900">기사가 배송 완료를 등록했어요.</p>
+            <p className="mt-2 text-sm text-emerald-800">증빙 사진과 실제 화물 상태를 확인한 뒤 수령을 확정해 주세요. 수령 확정 후 운송이 최종 완료되어 정산에 반영됩니다.</p>
+            <button type="button" onClick={() => { setActionError(''); setReceiptModalOpen(true) }}
+              disabled={actionLoading}
+              className="mt-4 w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">
+              화물 수령 확정
+            </button>
+          </div>
+        )}
+
         {/* 배송 완료면 리뷰 쓰기 · 보기 (이 화면은 본인 고객만 열 수 있어서 isMine) */}
         {shipment.status === 'COMPLETED' && (
           <ReviewSection shipmentId={shipment.id} status={shipment.status} isMine />
@@ -316,6 +348,23 @@ const ShipmentDetailPage = () => {
           )}
         </div>
       )}
+
+      <Modal open={receiptModalOpen && shipment.status === 'DELIVERED'}
+        onClose={() => { if (!actionLoading) setReceiptModalOpen(false) }} title="화물 수령 확정">
+        <p className="text-sm leading-6 text-gray-700">
+          기사가 업로드한 상차·배송 증빙 사진과 실제 받은 화물을 확인하셨나요?
+          수령을 확정하면 운송이 최종 완료되며 되돌릴 수 없습니다.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" disabled={actionLoading} onClick={() => setReceiptModalOpen(false)}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold">취소</button>
+          <button type="button" disabled={actionLoading} onClick={handleConfirmReceipt}
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            {actionLoading ? '처리 중...' : '수령 확정'}
+          </button>
+        </div>
+        {actionError && <p role="alert" className="mt-3 text-sm text-red-600">{actionError}</p>}
+      </Modal>
 
       {cancelModalOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-5">

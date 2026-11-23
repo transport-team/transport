@@ -18,6 +18,9 @@ public interface StatusService {
 	 */
 	void changeStatus(Long shipmentId, ShipmentStatus nextStatus, String memo, Long driverId);
 
+	/** 기사 배송 완료 후 본인 고객이 최종 수령을 확정한다. */
+	void confirmReceipt(Long shipmentId, Long customerMemberId);
+
 	/**
 	 * 배송 상태 이력 조회 — 본인 고객 · 배정 기사 · 관리자만 (requirements.md 비기능 요구사항)
 	 * @param shipmentId 배송 ID

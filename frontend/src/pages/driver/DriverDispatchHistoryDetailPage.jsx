@@ -1,4 +1,5 @@
 import ShipmentProgress from '../../components/tracking/ShipmentProgress'
+import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
 
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -140,6 +141,16 @@ const DriverDispatchHistoryDetailPage = () => {
 
           {/* 고객 요청사항 */}
           <DriverMemoCard memo={history.memo} />
+
+          {/* 선정된 기사에게만 이전에 등록된 배송 증빙을 조회 전용으로 제공 */}
+          {history.applicationStatus === 'SELECTED' && (
+            <div className="space-y-2">
+              <ShipmentPhotoGallery shipmentId={history.shipmentId} />
+              <p className="text-xs text-gray-500">
+                지난 운송의 사진은 조회만 가능하며 추가하거나 삭제할 수 없습니다.
+              </p>
+            </div>
+          )}
 
           {/* 신청 기록 정보 */}
           <div className="rounded-2xl bg-white p-5 shadow-sm">

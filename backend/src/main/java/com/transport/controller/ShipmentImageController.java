@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -38,6 +39,15 @@ public class ShipmentImageController {
 	 * @param files 사진 파일들 (multipart, 1장 이상)
 	 * @param type 사진 종류 — PICKUP(상차) / RECEIPT(인수증) / ETC(기타), 대소문자 무관
 	 */
+    @Operation(summary = "배송 증빙 사진 조회", description = "본인 고객 · 배정 기사 · 관리자에게만 사진 목록을 제공합니다.")
+    @GetMapping("/{id}/images")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ShipmentImageResponseDTO>> getImages(
+            @PathVariable Long id, @AuthenticationPrincipal LoginMember loginMember) {
+        return ResponseEntity.ok(shipmentImageService.getImages(
+                id, loginMember.getId(), loginMember.getRole()));
+    }
+
 	@Operation(summary = "배송 사진 업로드", description = "배정 기사가 상차·인수증 사진을 올린다. multipart/form-data: files(여러 장), type")
 	@PostMapping(value = "/{id}/images", consumes = "multipart/form-data")
 	@PreAuthorize("hasRole('DRIVER')")
