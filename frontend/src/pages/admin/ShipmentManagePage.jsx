@@ -10,7 +10,8 @@ const STATUS_OPTIONS = [
   { value: 'ASSIGNED', label: '배차 완료' },
   { value: 'PICKED_UP', label: '상차 완료' },
   { value: 'IN_TRANSIT', label: '배송 중' },
-  { value: 'DELIVERED', label: '배송 완료' },
+  { value: 'ARRIVED', label: '도착' },
+  { value: 'COMPLETED', label: '배송 완료' },  // 서버 상태값(ShipmentStatus)과 같게 — DELIVERED는 없는 값이라 400이었다
   { value: 'CANCELED', label: '취소됨' },
 ]
 
@@ -20,7 +21,8 @@ const STATUS_BADGE = {
   ASSIGNED: 'bg-blue-50 text-blue-700 border-blue-200',
   PICKED_UP: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   IN_TRANSIT: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  DELIVERED: 'bg-gray-100 text-gray-700 border-gray-200',
+  ARRIVED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  COMPLETED: 'bg-gray-100 text-gray-700 border-gray-200',
   CANCELED: 'bg-red-50 text-red-600 border-red-200',
 }
 
