@@ -71,7 +71,6 @@ const AdminSettlementPage = () => {
   // 정산 내역과 그래프는 서로 다른 기준월로 조회한다.
   useEffect(() => {
     let active = true
-    setLoading(true)
     getAdminMonthlySettlements(month)
       .then((result) => {
         if (!active) return
@@ -89,7 +88,6 @@ const AdminSettlementPage = () => {
 
   useEffect(() => {
     let active = true
-    setTrendLoading(true)
     getAdminMonthlyTrend(graphMonth)
       .then((result) => {
         if (!active) return
