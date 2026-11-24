@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { answerInquiry, deleteInquiry, getInquiries } from '../../api/inquiryApi'
 import Pagination from '../../components/common/Pagination'
 import InquiryStatusBadge from '../../components/inquiry/InquiryStatusBadge'
@@ -12,11 +13,27 @@ const TABS = [
   { value: '', label: '전체' },
 ]
 
+// 주소의 조건 (?status=ANSWERED&page=2) — status가 없으면 답변 대기(기본), 전체는 status=ALL, 모르는 값은 기본값
+const readQuery = (searchParams) => {
+  const raw = searchParams.get('status')
+  const page = Math.floor(Number(searchParams.get('page')))
+  return {
+    status: raw === 'ALL' ? '' : raw === 'ANSWERED' ? 'ANSWERED' : 'WAITING',
+    page: page >= 1 ? page : 1,
+  }
+}
+
+const toUrlParams = ({ status, page }) => ({
+  ...(status !== 'WAITING' && { status: status || 'ALL' }),
+  ...(page > 1 && { page: String(page) }),
+})
+
 // 관리자 1:1 문의 (ADM-11): 상태 탭(답변 대기가 기본) · 제목을 누르면 내용 + 답변 입력/수정 · 삭제(같은 줄에서 확인)
-// 첫 답변이면 서버가 작성자에게 알림을 보낸다 (답변을 고칠 때는 알림 없음)
+// 첫 답변이면 서버가 작성자에게 알림을 보낸다 (답변을 고칠 때는 알림 없음). 상태 탭 · 쪽 번호는 주소에 남긴다
 const InquiryManagePage = () => {
-  const [status, setStatus] = useState('WAITING')
-  const [page, setPage] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { status, page } = readQuery(searchParams)
+  const setPage = (next) => setSearchParams(toUrlParams({ status, page: next }))
   const [reloadKey, setReloadKey] = useState(0)    // 답변 · 삭제 뒤 목록을 다시 불러온다
   const [pageData, setPageData] = useState(null)
   const [openId, setOpenId] = useState(null)      // 내용을 펼친 문의
@@ -27,9 +44,11 @@ const InquiryManagePage = () => {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    let active = true  // 탭을 빠르게 바꿀 때 늦게 온 지난 요청의 응답이 덮어쓰지 않게
     getInquiries({ page, ...(status && { status }) })
-      .then(setPageData)
-      .catch((err) => setError(err.response?.data?.message ?? '문의를 불러오지 못했어요.'))
+      .then((data) => { if (active) setPageData(data) })
+      .catch((err) => { if (active) setError(err.response?.data?.message ?? '문의를 불러오지 못했어요.') })
+    return () => { active = false }
   }, [status, page, reloadKey])
 
   const clearNotice = () => {
@@ -38,8 +57,7 @@ const InquiryManagePage = () => {
   }
 
   const selectTab = (value) => {
-    setStatus(value)
-    setPage(1)
+    setSearchParams(toUrlParams({ status: value, page: 1 }))
     setOpenId(null)
     clearNotice()
   }
