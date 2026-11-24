@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import useUrlPage from '../hooks/useUrlPage'
 import { getMyInquiries, postInquiry } from '../api/inquiryApi'
 import Pagination from '../components/common/Pagination'
 import InquiryStatusBadge from '../components/inquiry/InquiryStatusBadge'
@@ -10,7 +11,7 @@ const initForm = { title: '', content: '' }
 // 1:1 문의 (고객 · 기사 공통, /{역할}/inquiries — COM-07): 새 문의 + 내 문의 목록 (누르면 내용 · 답변 펼침)
 // 작성한 문의는 고치거나 지울 수 없다 (답변 확인까지만)
 const InquiryPage = () => {
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useUrlPage()  // 쪽 번호는 주소(?page=)에 남긴다
   const [reloadKey, setReloadKey] = useState(0)  // 문의를 남긴 뒤 목록을 다시 불러온다
   const [pageData, setPageData] = useState(null)
   const [listError, setListError] = useState('')
@@ -20,9 +21,11 @@ const InquiryPage = () => {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
+    let active = true  // 쪽을 빠르게 넘길 때 늦게 온 지난 응답이 덮어쓰지 않게
     getMyInquiries({ page })
-      .then(setPageData)
-      .catch((err) => setListError(err.response?.data?.message ?? '내 문의를 불러오지 못했어요.'))
+      .then((data) => { if (active) setPageData(data) })
+      .catch((err) => { if (active) setListError(err.response?.data?.message ?? '내 문의를 불러오지 못했어요.') })
+    return () => { active = false }
   }, [page, reloadKey])
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })

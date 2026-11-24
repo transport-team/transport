@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import useUrlPage from '../../hooks/useUrlPage'
 import { deleteNotice, getNotices, postNotice, putNotice } from '../../api/noticeApi'
 import Pagination from '../../components/common/Pagination'
 
@@ -8,7 +9,7 @@ const initForm = { title: '', content: '' }
 
 // 관리자 공지 관리 (ADM-11): 작성 · 수정 · 삭제 — 목록은 공개 목록 API를 같이 쓴다 (내용까지 와서 바로 수정 폼에 넣는다)
 const NoticeManagePage = () => {
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useUrlPage()  // 쪽 번호는 주소(?page=)에 남긴다
   const [reloadKey, setReloadKey] = useState(0)     // 저장 · 삭제 뒤 목록을 다시 불러온다
   const [pageData, setPageData] = useState(null)
   const [form, setForm] = useState(initForm)
@@ -19,9 +20,11 @@ const NoticeManagePage = () => {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
+    let active = true  // 쪽을 빠르게 넘길 때 늦게 온 지난 응답이 덮어쓰지 않게
     getNotices({ page })
-      .then(setPageData)
-      .catch((err) => setError(err.response?.data?.message ?? '공지를 불러오지 못했어요.'))
+      .then((data) => { if (active) setPageData(data) })
+      .catch((err) => { if (active) setError(err.response?.data?.message ?? '공지를 불러오지 못했어요.') })
+    return () => { active = false }
   }, [page, reloadKey])
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getMembers, patchMemberEnabled } from '../../api/adminMemberApi'
 import Badge from '../../components/common/Badge'
 import Modal from '../../components/common/Modal'
@@ -7,20 +8,37 @@ import { ROLE_NAME } from '../../util/roleUtil'
 
 const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
 
-const initSearch = { role: '', enabled: '', keyword: '' }
+const ENABLED_VALUES = ['true', 'false']
 
-// 빈 조건은 빼고 보낸다 (role · enabled · keyword가 없으면 전체)
-const toParams = ({ role, enabled, keyword, page }) => ({
-  page,
+// 주소의 검색 조건 (?role=DRIVER&enabled=false&keyword=김&page=2) — 모르는 값은 기본값으로 (기사 관리와 같은 방식)
+const readQuery = (searchParams) => {
+  const role = searchParams.get('role') ?? ''
+  const enabled = searchParams.get('enabled') ?? ''
+  const page = Math.floor(Number(searchParams.get('page')))
+  return {
+    role: Object.hasOwn(ROLE_NAME, role) ? role : '',
+    enabled: ENABLED_VALUES.includes(enabled) ? enabled : '',
+    keyword: searchParams.get('keyword') ?? '',
+    page: page >= 1 ? page : 1,
+  }
+}
+
+// 빈 조건은 빼고 주소에 남긴다 (role · enabled · keyword가 없으면 전체, 1쪽이면 page도 뺀다)
+const toUrlParams = ({ role, enabled, keyword, page }) => ({
   ...(role && { role }),
-  ...(enabled !== '' && { enabled }),
+  ...(enabled && { enabled }),
   ...(keyword.trim() && { keyword: keyword.trim() }),
+  ...(page > 1 && { page: String(page) }),
 })
 
 // 관리자 회원 관리 (ADM-10): 역할 · 상태 · 이름/이메일 검색, 비활성화 · 다시 활성화 (관리자 계정은 바꿀 수 없다)
+// 검색 조건 · 쪽 번호는 주소에 남긴다 — 새로고침 · 뒤로 가기에도 그대로
 const MemberListPage = () => {
-  const [search, setSearch] = useState(initSearch)                // 입력 중인 검색 조건
-  const [query, setQuery] = useState({ ...initSearch, page: 1 })  // 실제로 조회한 조건
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryString = searchParams.toString()
+  const query = useMemo(() => readQuery(new URLSearchParams(queryString)), [queryString])
+
+  const [reloadKey, setReloadKey] = useState(0)       // 같은 조건으로 다시 검색해도 새로 불러온다
   const [pageData, setPageData] = useState(null)
   const [error, setError] = useState('')
   const [confirmId, setConfirmId] = useState(null)    // 비활성화를 확인 중인 회원
@@ -28,33 +46,32 @@ const MemberListPage = () => {
 
   useEffect(() => {
     let active = true
-    getMembers(toParams(query))
+    getMembers({ ...toUrlParams(query), page: query.page })
       .then((data) => { if (active) { setPageData(data); setError('') } })
       .catch((err) => { if (active) setError(err.response?.data?.message ?? '회원 목록을 불러오지 못했어요.') })
     return () => { active = false }
-  }, [query])
+  }, [query, reloadKey])
 
-  const handleChange = (e) => {
+  // 선택 필터는 바꾸면 바로 적용하고, 검색어는 [검색]을 눌러야 적용한다
+  const handleFilterChange = (e) => {
     const { name, value } = e.target
-    setSearch((previous) => ({ ...previous, [name]: value }))
-    // 선택 필터는 변경 즉시 적용하고, 검색어는 입력 중인 값을 유지한다.
-    if (name !== 'keyword') {
-      setError('')
-      setPageData(null)
-      setQuery((previous) => ({ ...previous, [name]: value, page: 1 }))
-    }
+    setError('')
+    setPageData(null)
+    setSearchParams(toUrlParams({ ...query, [name]: value, page: 1 }))
   }
 
   const handleSearch = (e) => {
     e.preventDefault()
+    const keyword = String(new FormData(e.currentTarget).get('keyword') ?? '')
     setError('')
     setPageData(null)
-    setQuery({ ...search, page: 1 })
+    setReloadKey((key) => key + 1)
+    setSearchParams(toUrlParams({ ...query, keyword, page: 1 }))
   }
 
   const movePage = (page) => {
     setError('')
-    setQuery({ ...query, page })
+    setSearchParams(toUrlParams({ ...query, page }))
   }
 
   const changeEnabled = async (member, enabled) => {
@@ -107,18 +124,18 @@ const MemberListPage = () => {
     <section className="grid gap-4">
       <h1 className="text-xl font-bold">회원 관리</h1>
 
-      <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-2">
-        <select name="role" aria-label="역할" value={search.role} onChange={handleChange} className={INPUT_CLASS}>
+      <form key={queryString} onSubmit={handleSearch} className="flex flex-wrap items-end gap-2">
+        <select name="role" aria-label="역할" value={query.role} onChange={handleFilterChange} className={INPUT_CLASS}>
           <option value="">전체 역할</option>
           {Object.entries(ROLE_NAME).map(([role, name]) => <option key={role} value={role}>{name}</option>)}
         </select>
-        <select name="enabled" aria-label="상태" value={search.enabled} onChange={handleChange} className={INPUT_CLASS}>
+        <select name="enabled" aria-label="상태" value={query.enabled} onChange={handleFilterChange} className={INPUT_CLASS}>
           <option value="">전체 상태</option>
           <option value="true">사용 중</option>
           <option value="false">비활성</option>
         </select>
         <input
-          name="keyword" aria-label="이름 · 이메일" placeholder="이름 · 이메일 일부" value={search.keyword} onChange={handleChange}
+          name="keyword" aria-label="이름 · 이메일" placeholder="이름 · 이메일 일부" defaultValue={query.keyword}
           className={`${INPUT_CLASS} w-56`}
         />
         <button type="submit" className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
