@@ -1,14 +1,12 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { getAllVehicleDeletionRequests, approveVehicleDeletion, rejectVehicleDeletion } from '../../api/vehicleApi'
 import { useOutletContext } from 'react-router-dom'
+import Badge from '../../components/common/Badge'
 
 const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
 const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절', WITHDRAWN: '기사 철회' }
-const RESULT_STYLE = {
-  APPROVED: 'border-emerald-200 bg-emerald-100 text-emerald-800',
-  REJECTED: 'border-red-200 bg-red-100 text-red-700',
-  WITHDRAWN: 'border-gray-200 bg-gray-100 text-gray-600',
-}
+// 처리 결과 배지 색 (모양은 공통 Badge)
+const RESULT_TONE = { APPROVED: 'green', REJECTED: 'red', WITHDRAWN: 'gray' }
 
 // 관리자 차량 삭제 신청함: 차량 등록 신청함과 동일한 표 및 필터 구성
 const VehicleDeletionRequestListPage = () => {
@@ -142,9 +140,9 @@ const VehicleDeletionRequestListPage = () => {
                         <td className="whitespace-nowrap px-4 py-3">{formatDateTime(request.reviewedAt)}</td>
                         <td className="px-4 py-3 text-right">
                           {processed ? (
-                            <span className={`inline-block min-w-14 rounded-lg border px-2.5 py-1 text-center text-xs font-semibold ${RESULT_STYLE[request.status] || 'border-gray-300 bg-gray-200 text-gray-600'}`} title={request.rejectionReason || undefined}>
+                            <span title={request.rejectionReason || undefined}><Badge tone={RESULT_TONE[request.status] ?? 'gray'} size="sm">
                               {STATUS_LABEL[request.status] || request.status}
-                            </span>
+                            </Badge></span>
                           ) : (
                             <div className="flex justify-end gap-1.5">
                               <button type="button" disabled={processingId !== null} onClick={() => handleApprove(request)}

@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import { getVehicleList } from '../../api/vehicleApi'
 import Pagination from '../../components/common/Pagination'
+import Badge from '../../components/common/Badge'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+
+// 차량 상태 이름 · 배지 색 (기사 내 차량 화면과 같게)
+const VEHICLE_STATUS = {
+    AVAILABLE: { label: '운행 가능', tone: 'green' },
+    MAINTENANCE: { label: '정비 중', tone: 'amber' },
+    INACTIVE: { label: '비활성', tone: 'gray' },
+}
 
 const VehicleListPage = () => {
     const [vehicles, setVehicles] = useState([])
@@ -110,23 +118,10 @@ const VehicleListPage = () => {
                                 <td className="px-4 py-3">{vehicle.plateNo}</td>
 
                                 <td className="px-4 py-3">
-                                    {/* 차량 상태별 색상과 문구 표시 */}
-                                    <span
-                                        className={`inline-block rounded px-2 py-1 text-xs font-medium ${vehicle.status === 'AVAILABLE'
-                                            ? 'bg-emerald-100 text-emerald-800'
-                                            : vehicle.status === 'MAINTENANCE'
-                                                ? 'bg-amber-100 text-amber-800'
-                                                : 'bg-red-100 text-red-700'
-                                            }`}
-                                    >
-                                        {vehicle.status === 'AVAILABLE'
-                                            ? '✓ 운행 가능'
-                                            : vehicle.status === 'MAINTENANCE'
-                                                ? '⚒ 정비 중'
-                                                : vehicle.status === 'INACTIVE'
-                                                    ? '✕ 비활성'
-                                                    : vehicle.status}
-                                    </span>
+                                    {/* 차량 상태 배지 (모양은 공통 Badge) */}
+                                    <Badge tone={VEHICLE_STATUS[vehicle.status]?.tone ?? 'gray'} size="sm">
+                                        {VEHICLE_STATUS[vehicle.status]?.label ?? vehicle.status}
+                                    </Badge>
                                 </td>
 
                                 <td className="px-4 py-3">

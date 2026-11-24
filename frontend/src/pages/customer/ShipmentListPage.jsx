@@ -77,7 +77,7 @@ const ShipmentListPage = () => {
         else failed = true
       })
       setApplicantCounts(merged)
-      setApplicantError(failed ? '일부 배차 신청 건수를 불러오지 못했습니다. 새로고침 후에도 계속되면 API 상태를 확인해 주세요.' : '')
+      setApplicantError(failed ? '일부 배송의 지원 기사 수를 불러오지 못했어요. 잠시 후 새로고침해 주세요.' : '')
     })
     return () => { active = false }
   }, [loading, fetchState.content, fetchState.error])
