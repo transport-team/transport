@@ -1,9 +1,12 @@
 
 import { useEffect, useState } from 'react'
 import { applyVehicleRegistration, getVehicleTypes, getMyVehicleRegistrationRequests, withdrawVehicleRegistrationRequest } from '../../api/vehicleApi'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 
 // 기사 차량 등록 신청 페이지
 const VehicleRegistrationPage = () => {
+  const { confirm, confirmProps } = useConfirm()
   const [vehicleTypes, setVehicleTypes] = useState([])
   const [plateNo, setPlateNo] = useState('')
   const [vehicleTypeId, setVehicleTypeId] = useState('')
@@ -30,7 +33,12 @@ const VehicleRegistrationPage = () => {
   }, [])
 
   const handleWithdraw = async (request) => {
-    if (!window.confirm(`${request.plateNo} 차량 등록 신청을 철회하시겠습니까?`)) return
+    if (!(await confirm({
+      title: '등록 신청 철회',
+      message: `${request.plateNo} 차량 등록 신청을 철회하시겠습니까?`,
+      confirmLabel: '철회',
+      danger: true,
+    }))) return
     setWithdrawingId(request.id)
     try {
       await withdrawVehicleRegistrationRequest(request.id)
@@ -183,6 +191,8 @@ const VehicleRegistrationPage = () => {
         ※ 차량은 기사 1명당 차종별 1대씩 등록할 수 있습니다.
         관리자 승인 후 정식 차량으로 등록됩니다.
       </p>
+
+      <ConfirmModal {...confirmProps} />
     </section>
   )
 }

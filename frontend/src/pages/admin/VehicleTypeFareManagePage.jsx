@@ -5,6 +5,8 @@ import {
   getAdminVehicleTypes,
   updateAdminVehicleType,
 } from '../../api/adminTransportApi'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 
 const EMPTY_FORM = {
   code: '', name: '', maxLoadKg: '', baseFare: '',
@@ -82,6 +84,7 @@ const NumberField = ({ field, value, onChange }) => {
 }
 
 const VehicleTypeFareManagePage = () => {
+  const { confirm, confirmProps } = useConfirm()
   const [refreshKey, setRefreshKey] = useState(0)
   const [fetchState, setFetchState] = useState({ key: -1, items: [], error: '' })
   const [mode, setMode] = useState('edit')
@@ -210,7 +213,13 @@ const VehicleTypeFareManagePage = () => {
   }
 
   const toggleActive = async (item) => {
-    if (!window.confirm(`${item.name} 차종을 ${item.active ? '비활성화' : '활성화'}할까요?`)) return
+    const action = item.active ? '비활성화' : '활성화'
+    if (!(await confirm({
+      title: `차종 ${action}`,
+      message: `${item.name} 차종을 ${action}할까요?`,
+      confirmLabel: action,
+      danger: item.active,
+    }))) return
     try {
       await changeAdminVehicleTypeActive(item.id, !item.active)
       setRefreshKey((value) => value + 1)
@@ -378,6 +387,8 @@ const VehicleTypeFareManagePage = () => {
             </table>
           </div>}
       </div>
+
+      <ConfirmModal {...confirmProps} />
     </section>
   )
 }

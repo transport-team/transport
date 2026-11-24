@@ -6,6 +6,7 @@ import {
   markAdminSettlementPaid,
 } from '../../api/adminSettlementApi'
 import Pagination from '../../components/common/Pagination'
+import Modal from '../../components/common/Modal'
 
 const now = new Date()
 const THIS_MONTH = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -60,6 +61,10 @@ const AdminSettlementPage = () => {
   const [trendLoading, setTrendLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // 지급 완료 기록 창 (송금 확인 메모 입력 + 확인을 한 창에서)
+  const [payTarget, setPayTarget] = useState(null)
+  const [payReference, setPayReference] = useState('')
+  const [payError, setPayError] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [hoveredMonth, setHoveredMonth] = useState(null)
@@ -199,24 +204,35 @@ const AdminSettlementPage = () => {
     } finally { setDifferenceLoading(false) }
   }
 
-  const markPaid = async (item) => {
+  // 지급 완료 기록 창 열기 (브라우저 입력 창 · 확인 창 2단계 대신, #143)
+  const markPaid = (item) => {
     if (!paymentAvailable) { setError(`지급 예정일(${scheduledPayDate(month)})부터 완료 기록이 가능합니다.`); return }
-    const reference = window.prompt(`${item.driverName} 기사님께 ${money(item.payoutAmount)}을 실제 송금했나요?\n은행 송금 확인번호 또는 확인 메모를 입력해 주세요.\n입력해도 송금이 실행되지는 않습니다.`)
-    if (reference === null) return
-    if (!reference.trim() || reference.trim().length > 100) {
-      setError('실제 송금 확인 메모를 1~100자로 입력해 주세요.')
+    setPayTarget(item)
+    setPayReference('')
+    setPayError('')
+  }
+
+  const closePay = () => { if (!saving) setPayTarget(null) }
+
+  const submitPaid = async (event) => {
+    event.preventDefault()
+    const reference = payReference.trim()
+    if (!reference || reference.length > 100) {
+      setPayError('실제 송금 확인 메모를 1~100자로 입력해 주세요.')
       return
     }
-    if (!window.confirm(`${month} / ${item.driverName} / ${money(item.payoutAmount)}\n입력한 송금 확인내용: ${reference.trim()}\n송금 사실이 확인됐나요? 완료 기록 후 변경할 수 없습니다.`)) return
+    const item = payTarget
     setSaving(true)
+    setPayError('')
     setError('')
     setMessage('')
     try {
-      await markAdminSettlementPaid(item.id, reference.trim())
+      await markAdminSettlementPaid(item.id, reference)
+      setPayTarget(null)
       setMessage(`${item.driverName} 기사님의 지급 확인자와 송금 확인 내용을 기록했습니다.`)
       reload()
     } catch (err) {
-      setError(err.response?.data?.message ?? '지급 완료 기록에 실패했습니다.')
+      setPayError(err.response?.data?.message ?? '지급 완료 기록에 실패했습니다.')
     } finally { setSaving(false) }
   }
 
@@ -521,6 +537,48 @@ const AdminSettlementPage = () => {
       </div>
       {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onMove={setPage} />}
       <p className="text-xs leading-5 text-gray-500">정산 마감 후에는 기존 금액을 다시 계산하지 않습니다. 나중에 발견된 과거 배송 실적은 별도 확인이 필요합니다. 지급 완료 기록은 실제 계좌이체가 아닌 관리자 확인 기록이며, 해당 월의 다음 달 5일 이후에만 허용됩니다. 실제 지급 예정일은 팀 정책 확정이 필요합니다. 이미 확정된 과거 정산의 수수료율은 당시 값을 유지합니다.</p>
+
+      {/* 지급 완료 기록 — 실제 송금 뒤 확인 메모를 남긴다 (송금을 실행하지는 않음) */}
+      <Modal open={payTarget !== null} onClose={closePay} title="지급 완료 기록" size="sm">
+        {payTarget && (
+          <form onSubmit={submitPaid} className="space-y-4">
+            <dl className="grid grid-cols-[4.5rem_1fr] gap-y-1.5 rounded-xl bg-gray-50 p-4 text-sm">
+              <dt className="text-gray-500">정산 월</dt>
+              <dd className="font-medium text-gray-900">{month}</dd>
+              <dt className="text-gray-500">기사</dt>
+              <dd className="font-medium text-gray-900">{payTarget.driverName}</dd>
+              <dt className="text-gray-500">지급액</dt>
+              <dd className="font-bold text-gray-900">{money(payTarget.payoutAmount)}</dd>
+            </dl>
+            <label className="block text-sm font-semibold text-gray-700">
+              송금 확인번호 · 메모
+              <input
+                value={payReference}
+                onChange={(event) => setPayReference(event.target.value)}
+                maxLength={100}
+                autoFocus
+                placeholder="은행 송금 확인번호 또는 확인 메모"
+                className={`mt-2 block w-full ${INPUT}`}
+              />
+              <span className="mt-1 block text-right text-xs font-normal text-gray-400">{payReference.trim().length}/100</span>
+            </label>
+            <p className="text-xs leading-5 text-gray-500">
+              실제로 송금한 뒤에 기록해 주세요. 입력해도 송금이 실행되지는 않고, 완료 기록 후에는 바꿀 수 없습니다.
+            </p>
+            {payError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{payError}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={closePay} disabled={saving}
+                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60">
+                취소
+              </button>
+              <button type="submit" disabled={saving}
+                className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-60">
+                {saving ? '기록 중...' : '지급 완료 기록'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </section>
   )
 }

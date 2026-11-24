@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Badge from '../../components/common/Badge'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 import { getMyVehicles, getVehicleTypes, changeMyVehicleStatus, applyVehicleDeletion, getMyVehicleDeletionRequests, withdrawVehicleDeletionRequest, getMyVehicleRegistrationRequests, withdrawVehicleRegistrationRequest } from '../../api/vehicleApi'
 
 // 기사: 내 차량 관리 페이지
 const DriverVehicleManagePage = () => {
+    const { confirm, confirmProps } = useConfirm()
     const [vehicles, setVehicles] = useState([])
     const [vehicleTypes, setVehicleTypes] = useState([])
     const [loading, setLoading] = useState(true)
@@ -42,7 +45,12 @@ const DriverVehicleManagePage = () => {
     }
 
     const handleWithdrawRegistration = async (request) => {
-        if (!window.confirm(`${request.plateNo} 차량 등록 신청을 철회하시겠습니까?`)) return
+        if (!(await confirm({
+            title: '등록 신청 철회',
+            message: `${request.plateNo} 차량 등록 신청을 철회하시겠습니까?`,
+            confirmLabel: '철회',
+            danger: true,
+        }))) return
         setWithdrawingRegistrationId(request.id)
         setStatusError('')
         try {
@@ -58,7 +66,12 @@ const DriverVehicleManagePage = () => {
 
     const handleDeleteRequest = async (vehicle) => {
         if (changingVehicleId !== null) return
-        const confirmed = window.confirm(`${vehicle.plateNo} 차량의 삭제를 신청하시겠습니까?\n\n승인 대기 중에는 차량이 정비 중으로 바뀌어 배차 신청에 사용할 수 없습니다.\n관리자가 승인하면 목록에서 숨겨지며, 운송 이력은 유지됩니다.`)
+        const confirmed = await confirm({
+            title: '차량 삭제 신청',
+            message: `${vehicle.plateNo} 차량의 삭제를 신청하시겠습니까?\n\n승인 대기 중에는 차량이 정비 중으로 바뀌어 배차 신청에 사용할 수 없습니다.\n관리자가 승인하면 목록에서 숨겨지며, 운송 이력은 유지됩니다.`,
+            confirmLabel: '삭제 신청',
+            danger: true,
+        })
         if (!confirmed) return
         setChangingVehicleId(vehicle.vehicleId)
         setStatusError('')
@@ -79,7 +92,11 @@ const DriverVehicleManagePage = () => {
     }
 
     const handleWithdrawDelete = async (request) => {
-        if (!window.confirm(`${request.plateNo} 차량 삭제 신청을 철회하시겠습니까?`)) return
+        if (!(await confirm({
+            title: '삭제 신청 철회',
+            message: `${request.plateNo} 차량 삭제 신청을 철회하시겠습니까?`,
+            confirmLabel: '철회',
+        }))) return
         setChangingVehicleId(request.vehicleId)
         setStatusError('')
         try {
@@ -185,11 +202,13 @@ const DriverVehicleManagePage = () => {
         const nextStatusName =
             nextStatus === 'AVAILABLE' ? '운행 가능' : '정비 중'
 
-        const confirmed = window.confirm(
-            nextStatus === 'MAINTENANCE'
+        const confirmed = await confirm({
+            title: '차량 상태 변경',
+            message: nextStatus === 'MAINTENANCE'
                 ? `${vehicle.plateNo} 차량을 '정비 중' 상태로 변경하시겠습니까?\n\n⚠️ 정비 중으로 변경하면 해당 차량으로 배차 신청을 할 수 없습니다.`
-                : `${vehicle.plateNo} 차량을 '운행 가능' 상태로 변경하시겠습니까?`
-        )
+                : `${vehicle.plateNo} 차량을 '운행 가능' 상태로 변경하시겠습니까?`,
+            confirmLabel: `${nextStatusName}으로 변경`,
+        })
 
         if (!confirmed) {
             return
@@ -432,6 +451,8 @@ const DriverVehicleManagePage = () => {
                     </div>
                 )}
             </section>
+
+            <ConfirmModal {...confirmProps} />
         </section>
     )
 }
