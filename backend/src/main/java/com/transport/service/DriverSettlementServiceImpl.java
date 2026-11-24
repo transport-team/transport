@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.transport.domain.Driver;
+import com.transport.domain.Settlement;
+import com.transport.domain.enums.SettlementStatus;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.DriverMonthlySettlementResponseDTO;
 import com.transport.dto.DriverReviewSummaryResponseDTO;
@@ -18,6 +20,8 @@ import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.DriverRepository;
+import com.transport.repository.SettlementPeriodRepository;
+import com.transport.repository.SettlementRepository;
 import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +34,8 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
     private final ShipmentStatusHistoryRepository historyRepository;
     private final DriverRepository driverRepository;
     private final ReviewService reviewService;  // 팀원 4 약속 메서드 (평균 평점 · 리뷰 목록, driverId = driver.id)
+    private final SettlementRepository settlementRepository;  // 월 정산 행 (지급 대기 · 지급 완료)
+    private final SettlementPeriodRepository periodRepository;  // 월 마감 여부
 
     // 내 평균 평점 · 리뷰 (DRV-07) — 리뷰는 driver.id로 찾으니 로그인 회원의 기사 정보부터
     @Override
@@ -76,10 +82,32 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
                 from,
                 to);
 
+        String monthText = month.toString();
+        Settlement stored = driverRepository.findByMemberId(memberId)
+                .flatMap(driver -> settlementRepository
+                        .findByDriver_IdAndSettleMonth(driver.getId(), monthText))
+                .orElse(null);
+
+        String state = settlementState(stored, periodRepository.existsById(monthText));
+        // 마감 전 초안(구버전)의 금액은 바뀔 수 있으니 지급 대기 · 지급 완료일 때만 금액을 보낸다
+        boolean settled = "PENDING".equals(state) || "PAID".equals(state);
+
         return new DriverMonthlySettlementResponseDTO(
-                month.toString(),
+                monthText,
                 total.getCompletedCount(),
-                total.getTotalFare());
+                total.getTotalFare(),
+                state,
+                settled ? stored.getCommissionRate() : null,
+                settled ? stored.getPayoutAmount() : null,
+                settled ? stored.getPaidAt() : null);
+    }
+
+    // 그 달 정산 상태 — 마감 여부는 settlement_period, 지급 여부는 settlement 행으로 본다
+    // (이전 버전에서 마감 없이 지급한 기록이 있으면 마감 전이어도 PAID)
+    private String settlementState(Settlement stored, boolean closed) {
+        if (stored != null && stored.getStatus() == SettlementStatus.PAID) return "PAID";
+        if (!closed) return "OPEN";
+        return stored == null ? "NONE" : "PENDING";
     }
 
     // 기사별 월간 운임 상세 내역 조회

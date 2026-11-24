@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.LongStream;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -125,6 +127,30 @@ class AdminSettlementServiceImplTest {
         verify(itemRepository, org.mockito.Mockito.times(2)).save(lines.capture());
         assertThat(lines.getAllValues()).extracting(SettlementItem::getShipmentId).containsExactly(11L, 12L);
         verify(periodRepository).saveAndFlush(any(SettlementPeriod.class));
+    }
+
+    @Test
+    @DisplayName("로드맵 U 검증 예시: 42건 · 4,200,000원 · 수수료 10% → 지급액 3,780,000원")
+    void roadmapExampleFortyTwoShipments() {
+        String month = YearMonth.now().minusMonths(1).toString();
+        when(driverRepository.findAll()).thenReturn(List.of(driver));
+        // 운송 42건, 건당 100,000원
+        List<SettlementFareRepository.SettlementFareItem> fortyTwo = LongStream.rangeClosed(1, 42)
+                .mapToObj(id -> item(id, 100_000)).toList();
+        when(fareRepository.findCompletedForDriver(eq(3L), eq(ShipmentStatus.COMPLETED), any(), any()))
+                .thenReturn(fortyTwo);
+        when(settlementRepository.save(any(Settlement.class))).thenAnswer(call -> call.getArgument(0));
+
+        service.closeMonth(month);
+
+        ArgumentCaptor<Settlement> captured = ArgumentCaptor.forClass(Settlement.class);
+        verify(settlementRepository).save(captured.capture());
+        Settlement saved = captured.getValue();
+        assertThat(saved.getCompletedCount()).isEqualTo(42);
+        assertThat(saved.getTotalFare()).isEqualTo(4_200_000);
+        assertThat(saved.getCommissionRate()).isEqualTo(10);
+        assertThat(saved.getPayoutAmount()).isEqualTo(3_780_000);
+        verify(itemRepository, org.mockito.Mockito.times(42)).save(any(SettlementItem.class));  // 운송 단위 명세 42줄
     }
 
     @Test

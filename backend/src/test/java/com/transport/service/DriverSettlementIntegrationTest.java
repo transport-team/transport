@@ -15,11 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.transport.domain.CargoType;
 import com.transport.domain.Driver;
 import com.transport.domain.Member;
+import com.transport.domain.Settlement;
+import com.transport.domain.SettlementPeriod;
 import com.transport.domain.Shipment;
 import com.transport.domain.ShipmentStatusHistory;
 import com.transport.domain.VehicleType;
 import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.MemberRole;
+import com.transport.domain.enums.SettlementStatus;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.DriverSettlementItemResponseDTO;
 
@@ -110,6 +113,38 @@ class DriverSettlementIntegrationTest {
         assertThat(may.completedCount()).isZero();
         assertThat(may.totalFare()).isZero();
         assertThat(settlementService.getMonthlyItems(driverMember.getId(), "2001-05")).isEmpty();
+    }
+
+    @Test
+    void monthlySummaryReadsSettlementStateFromRealTables() {
+        // 3월: 마감 + 지급 완료 / 4월: 마감 전 / 5월: 마감했지만 실적 없음 (다른 기사는 3월도 정산 없음)
+        Driver driver = em.createQuery("select d from Driver d where d.member = :member", Driver.class)
+                .setParameter("member", driverMember)
+                .getSingleResult();
+        LocalDateTime paidAt = LocalDateTime.of(2001, 4, 10, 15, 0);
+        history(driverMember, ShipmentStatus.COMPLETED, ShipmentStatus.COMPLETED,
+                FROM.atTime(8, 0), 100_000, "3월 배송");
+        persist(new SettlementPeriod("2001-03", LocalDateTime.of(2001, 4, 1, 9, 0)));
+        persist(new SettlementPeriod("2001-05", LocalDateTime.of(2001, 6, 1, 9, 0)));
+        persist(Settlement.builder().driver(driver).settleMonth("2001-03")
+                .completedCount(1).totalFare(100_000).commissionRate(10).payoutAmount(90_000)
+                .status(SettlementStatus.PAID).paidAt(paidAt).build());
+        em.flush();
+
+        var march = settlementService.getMonthlySummary(driverMember.getId(), "2001-03");
+        var april = settlementService.getMonthlySummary(driverMember.getId(), "2001-04");
+        var may = settlementService.getMonthlySummary(driverMember.getId(), "2001-05");
+        var otherMarch = settlementService.getMonthlySummary(otherDriverMember.getId(), "2001-03");
+
+        assertThat(march.settlementStatus()).isEqualTo("PAID");
+        assertThat(march.payoutAmount()).isEqualTo(90_000);
+        assertThat(march.commissionRate()).isEqualTo(10);
+        assertThat(march.paidAt()).isEqualTo(paidAt);
+        assertThat(april.settlementStatus()).isEqualTo("OPEN");
+        assertThat(april.payoutAmount()).isNull();
+        assertThat(may.settlementStatus()).isEqualTo("NONE");
+        assertThat(otherMarch.settlementStatus()).isEqualTo("NONE");
+        assertThat(otherMarch.payoutAmount()).isNull();
     }
 
     private void history(Member actor, ShipmentStatus toStatus, ShipmentStatus currentStatus,
