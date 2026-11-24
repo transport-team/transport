@@ -20,7 +20,7 @@
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, CONCURRENT_UPDATE(409 — 같은 배송을 거의 동시에 바꿔 `@Version`이 맞지 않음, 새로고침 후 다시), TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
 | 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING |
-| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(409 — 취소할 수 없는 상태: 고객은 배차 확정 뒤, 관리자는 상차 뒤, 이미 취소) |
+| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), INACTIVE_CARGO_TYPE, CARGO_TYPE_NOT_FOUND(404), DUPLICATE_CARGO_TYPE_NAME(409), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(409 — 취소할 수 없는 상태: 고객은 배차 확정 뒤, 관리자는 상차 뒤, 이미 취소) |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS, REVIEW_NOT_ALLOWED |
 
 ## 팀원 1 — 회원 · 인증 · 운영
@@ -253,27 +253,39 @@
 |---|---|---|---|
 | GET | /api/vehicle-types | 차종 목록 | 전체 |
 | GET · POST · PUT | /api/admin/vehicle-types(/{id}) | 차종 · 요금 관리 | ADMIN |
+| PATCH | /api/admin/vehicle-types/{id}/active | 차종 사용 · 숨김 { active } | ADMIN |
 | GET · POST | /api/admin/vehicles | 차량 목록 조회 · 차량 등록 | ADMIN |
 | PUT · DELETE | /api/admin/vehicles/{id} | 차량 수정 · 비활성화 | ADMIN |
 | GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
 | GET | /api/admin/drivers/{id}/vehicles | 기사 보유 차량 (조회 전용, #124) | ADMIN |
 | GET | /api/admin/vehicle-requests, /all | 차량 등록 신청 — 승인 대기 목록 · 전체(처리 완료 포함, 신청일 최신순 #124) | ADMIN |
-| PATCH | /api/admin/vehicle-requests/{requestId}/approve · /reject | 차량 등록 신청 승인 · 거절 | ADMIN |
+| PATCH | /api/admin/vehicle-requests/{requestId}/approve · /reject | 차량 등록 신청 승인 · 거절 { rejectionReason 300자 이하 } | ADMIN |
+| GET | /api/admin/vehicle-deletion-requests | 차량 삭제 신청 전체 (최신순) | ADMIN |
+| PATCH | /api/admin/vehicle-deletion-requests/{requestId}/approve · /reject | 차량 삭제 신청 승인(차량 INACTIVE) · 거절 { rejectionReason 300자 이하 }(신청 전 상태로 되돌림) — 대기(PENDING)만, 진행 중 배차 · 대기 지원이 있으면 400 | ADMIN |
+| GET | /api/driver/vehicles | 내 차량 목록 | DRIVER |
+| PATCH | /api/driver/vehicles/{vehicleId}/status | 내 차량 상태 { status: AVAILABLE · MAINTENANCE } — 승인된 기사 · 본인 차량만, 삭제 신청 대기 중인 차량은 운행 가능으로 못 바꿈 | DRIVER |
+| GET · POST · DELETE | /api/driver/vehicles/requests, /requests { plateNo 20자 이하, vehicleTypeId }, /requests/{requestId} | 차량 등록 신청 내역(승인 · 거절 · 철회 포함) · 신청 · 철회(대기만 → WITHDRAWN) | DRIVER |
+| GET · POST · DELETE | /api/driver/vehicles/deletion-requests, /deletion-requests/{vehicleId}, /deletion-requests/{requestId} | 차량 삭제 신청 내역 · 신청(차량은 MAINTENANCE로, 진행 중 배차 · 대기 지원이 있으면 400) · 철회(신청 전 상태로) | DRIVER |
 | GET · POST · DELETE | /api/driver/schedules/off (?year&month), /off { date }, /off/{date} | 휴무일 조회 · 등록 · 취소 (오늘 이후, 확정 배차 · 대기 지원 · 완료한 날과 겹치면 400) | DRIVER |
 | GET · PUT · DELETE | /api/driver/schedules/work (?year&month), /work/{date} { startTime, endTime } | 근무 가능 시간 조회 · 등록(있으면 바꿈) · 삭제 (DRV-01) — 오늘 이후, 휴무일이면 400, 시작 = 끝이면 400, 끝 < 시작이면 자정을 넘기는 근무(`overnight: true`). 운송 요청 목록이 근무 끝 시간을 넘기는 요청에 경고를 붙인다 | DRIVER |
 | POST | /api/admin/shipments/{id}/dispatch/cancel | 배차 취소(재배차) { reason 180자 이하 } — 배차 완료(ASSIGNED)만, 접수(REQUESTED)로 되돌리고 배차 해제 · 이력 · 기사 · 고객 알림 (#124). 관리자 후보 추천 · 직접 배정은 하지 않는다(11-06 결정) | ADMIN |
-| GET | /api/driver/dispatches | 내 배차 (tab = today · upcoming · done) | DRIVER |
+| GET | /api/driver/dispatches, /{shipmentId} | 내 확정 배차 — 진행 중 목록 · 상세 | DRIVER |
+| GET | /api/driver/dispatches/history, /history/{applicationId} | 지난 신청 · 배송 내역(선택 안 됨 · 거절 · 철회 · 완료 · 취소) · 상세 | DRIVER |
 | GET | /api/driver/settlements/monthly?month, /monthly/items?month, /range?from&to, /range/items?from&to | 내 실적: 월별 · 기간별 완료 건수 · 운임 합계 · 운임 내역 (#107). `/monthly`는 그 달 정산 상태도 준다 — settlementStatus(OPEN 마감 전 · PENDING 지급 대기 · PAID 지급 완료 · NONE 마감했지만 실적이 없어 정산 없음), commissionRate · payoutAmount · paidAt(지급 대기 · 지급 완료일 때만, 아니면 null) | DRIVER |
 | GET | /api/driver/settlements/reviews | 내 평균 평점 · 리뷰 (DRV-07) — { averageRating(소수 첫째 자리, 없으면 0.0), reviewCount, reviews(최신순, 고객 이름 가림) }. `ReviewService` 약속 메서드를 `driver.id`로 부른다 | DRIVER |
-| POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
-| PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
-| GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
+| GET | /api/admin/settlements?month | 월 정산 — 기사별 건수 · 운임 · 수수료 · 지급액 · 상태(정산 전 · 지급 대기 · 지급 완료 · 마감 후 실적) | ADMIN |
+| GET | /api/admin/settlements/trend?endMonth | 끝 달까지 6개월 운임 · 수수료 추이 | ADMIN |
+| GET | /api/admin/settlements/differences?month&driverId | 마감 뒤 달라진 실적(마감 후 완료된 과거 배송) 상세 | ADMIN |
+| POST | /api/admin/settlements/{id}/paid | 지급 완료 기록 { transferReference 1~100자 } — 실제 송금은 하지 않음, 기록한 관리자 이메일을 남긴다. 마감된 달 · 지급 예정일(다음 달 5일)부터만 | ADMIN |
 | GET | /api/driver/shipments | 기사가 지원할 수 있는 배송 목록 조회 | DRIVER |
 | POST | /api/driver/shipments/{shipmentId}/applications | 기사의 배송 배차 신청 | DRIVER |
+| DELETE | /api/driver/shipments/{shipmentId}/applications/my | 배차 신청 취소 — 배차 대기(REQUESTED) 중인 내 대기 신청만, `WITHDRAWN`이 되고 다시 지원 가능 (204) | DRIVER |
+| GET | /api/customer/shipments/application-counts | 내 배송별 대기 중인 지원 기사 수 { shipmentId: 건수 } | CUSTOMER |
 | GET | /api/customer/shipments/{shipmentId}/applications | 고객의 배송별 기사 지원 목록 조회 | CUSTOMER |
 | POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/select | 고객이 지원 기사 선택 및 배차 확정 | CUSTOMER |
 | POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/reject | 고객이 개별 기사 지원 거절 | CUSTOMER |
 
+- 월 정산 마감은 API가 아니라 서버가 한다 — 매일 00:05(KST)와 서버 시작 때 지난달을 마감(`settlement_period`)하고 기사별 정산 · 정산 항목을 만든다. 수수료율 10%, 지급액 = 운임 합계 − 수수료(원 단위 반올림), 0건인 기사는 정산 행 없음
 - 배송이 완료돼도 배차(`active`)는 남겨 두고, 취소 · 재배차 때만 해제한다(`releasedAt`). 그래서 기사 지원 · 고객 선택 · 운송 요청 목록의 시간 겹침 검사와 차량 '정비 중' 검사는 **완료 · 취소된 배송의 배차를 빼고** 센다 (11-19 결정 34, #86)
 
 ### 관리자 차량 관리 API 예시
@@ -378,10 +390,11 @@
 |---|---|---|---|
 | GET | /api/cargo-types | 화물 종류 목록 | 전체 |
 | GET · POST · PUT | /api/admin/cargo-types(/{id}) | 화물 종류 관리 | ADMIN |
+| PATCH | /api/admin/cargo-types/{id}/active | 화물 종류 사용 · 숨김 { active } | ADMIN |
 | POST | /api/fares/estimate | 예상 운임 → 좌표 · 거리 · 추천 차종 · 운임 내역 (표준 운임 API) | CUSTOMER |
 | POST | /api/shipments | 신청 → 결제대기 + 결제 준비(orderId · amount) | CUSTOMER |
 | POST | /api/payments/confirm | 결제 승인 { paymentKey, orderId, amount } → 접수 | CUSTOMER |
-| POST | /api/shipments/{id}/payment/retry | 재시도 (새 orderId) | CUSTOMER |
+| POST | /api/payments/{shipmentId}/retry | 결제 재시도 (새 orderId) — 본인 배송 · 결제 대기 · 신청 30분 안만 | CUSTOMER |
 | POST | /api/local/payments/skip/{shipmentId} | 개발용 결제 건너뛰기 → PAID · 접수 (local 프로필만, 본인 배송) | CUSTOMER |
 | GET | /api/shipments/my | 내 배송 목록 (page, status, from, to) | CUSTOMER |
 | GET | /api/shipments/{id} | 상세 (본인 · 배정 기사 · 관리자) | 로그인 |
@@ -407,9 +420,11 @@
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
-| PATCH | /api/shipments/{id}/status | 상태 변경 { nextStatus, memo } — 배정 기사만 | DRIVER |
+| PATCH | /api/shipments/{id}/status | 상태 변경 { nextStatus, memo } — 배정 기사만. 상차(PICKED_UP)는 PICKUP 사진, 도착 뒤 배송 완료(`ARRIVED → DELIVERED`)는 RECEIPT(인수증) 사진이 먼저 있어야 함(없으면 400 `PHOTO_REQUIRED`). `DELIVERED → COMPLETED`는 기사가 못 하고(403) 고객 수령 확인으로만 | DRIVER |
+| POST | /api/shipments/{id}/confirm-receipt | 고객 수령 확인 → 운송 완료(`DELIVERED → COMPLETED`, 이력 · 배정 기사 알림) — 본인 배송만(403), 배송 완료(DELIVERED)가 아니면 400 `INVALID_STATUS_CHANGE` (204, #144) | CUSTOMER |
 | GET | /api/shipments/{id}/history | 상태 이력 | 로그인 |
 | POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type = PICKUP · RECEIPT · ETC, 대소문자 무관 — 다른 값은 400 INVALID_INPUT) | DRIVER |
+| GET | /api/shipments/{id}/images | 배송 사진 목록 — 관리자 · 본인 고객 · 배정 기사는 전부, 배차가 풀린 기사는 자기가 올린 사진만, 그 밖은 403 | 로그인 |
 | GET | /api/files/{fileName} | 사진 보기 (썸네일 `s_`) — `<img>` 때문에 인증 없이, UUID 파일명 | 전체 |
 | POST | /api/shipments/{id}/locations | 위치 전송 { lat, lng } — IN_TRANSIT만 | DRIVER |
 | GET | /api/shipments/{id}/locations/latest | 마지막 위치 — IN_TRANSIT일 때만, 아니거나 기록이 없으면 204 · 남의 배송은 403 | 본인 고객 · 배정 기사 · ADMIN |
