@@ -6,6 +6,8 @@ import {
 } from '../../api/vehicleApi'
 import { useOutletContext } from 'react-router-dom'
 import Badge from '../../components/common/Badge'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 
 const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
 const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절', WITHDRAWN: '기사 철회' }
@@ -15,6 +17,7 @@ const RESULT_TONE = { APPROVED: 'green', REJECTED: 'red', WITHDRAWN: 'gray' }
 // 관리자 차량 등록 신청함
 const VehicleRequestListPage = () => {
     const { refreshPendingCount } = useOutletContext()
+    const { confirm, confirmProps } = useConfirm()
     const [requests, setRequests] = useState([])
     const [loading, setLoading] = useState(true)
     const [processingId, setProcessingId] = useState(null)
@@ -46,7 +49,12 @@ const VehicleRequestListPage = () => {
 
     // 관리자 승인
     const handleApprove = async (requestId) => {
-        if (!window.confirm('이 차량 등록 신청을 승인하시겠습니까?')) return
+        const plateNo = requests.find((request) => request.id === requestId)?.plateNo
+        if (!(await confirm({
+            title: '차량 등록 승인',
+            message: `${plateNo ? `${plateNo} ` : '이 '}차량 등록 신청을 승인하시겠습니까?`,
+            confirmLabel: '승인',
+        }))) return
 
         setProcessingId(requestId)
         setMessage('')
@@ -214,6 +222,8 @@ const VehicleRequestListPage = () => {
                     </div>
                 )}
             </div>
+
+            <ConfirmModal {...confirmProps} />
         </section>
     )
 }

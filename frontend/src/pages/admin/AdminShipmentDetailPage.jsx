@@ -6,6 +6,8 @@ import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery
 import { cancelAdminShipment, cancelAdminShipmentDispatch } from '../../api/adminTransportApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 
 // 관리자 배송 취소(환불)가 되는 상태 — 서버 PaymentService.cancelByAdmin과 같게 (상차 뒤에는 409 CANNOT_CANCEL)
 const ADMIN_CANCELABLE = ['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED']
@@ -16,6 +18,7 @@ const formatFare = (value) => `${Number(value ?? 0).toLocaleString('ko-KR')}원`
 // 관리자: 고객·기사의 조작 버튼 없이 배송 정보를 조회하는 상세 화면
 const AdminShipmentDetailPage = () => {
   const { id } = useParams()
+  const { confirm, confirmProps } = useConfirm()
   const [fetchState, setFetchState] = useState({ id: null, shipment: null, error: '' })
   const loading = fetchState.id !== id
   const { shipment, error } = fetchState
@@ -40,7 +43,13 @@ const AdminShipmentDetailPage = () => {
     const confirmMessage = '이 배송을 취소하시겠습니까?\n결제된 건은 토스로 환불'
       + (assigned ? '되고, 배정 기사의 배차도 해제됩니다.' : '됩니다.')
       + '\n취소한 배송은 되돌릴 수 없습니다.'
-    if (!window.confirm(confirmMessage)) return
+    if (!(await confirm({
+      title: '배송 취소',
+      message: confirmMessage,
+      confirmLabel: '배송 취소',
+      cancelLabel: '닫기',
+      danger: true,
+    }))) return
 
     setShipmentCancelling(true)
     setShipmentCancelError('')
@@ -69,7 +78,13 @@ const AdminShipmentDetailPage = () => {
       setCancelError('180자 이내의 배차 취소 사유를 입력해 주세요.')
       return
     }
-    if (!window.confirm('선택한 배송의 배차만 해제하고 다시 배차 대기로 변경하시겠습니까?\n결제와 주문 자체는 취소되지 않습니다.')) return
+    if (!(await confirm({
+      title: '배차 취소',
+      message: '선택한 배송의 배차만 해제하고 다시 배차 대기로 변경하시겠습니까?\n결제와 주문 자체는 취소되지 않습니다.',
+      confirmLabel: '배차 취소',
+      cancelLabel: '닫기',
+      danger: true,
+    }))) return
 
     setCancelling(true)
     setCancelError('')
@@ -409,6 +424,8 @@ const AdminShipmentDetailPage = () => {
           
         </>
       )}
+
+      <ConfirmModal {...confirmProps} />
     </section>
   )
 }

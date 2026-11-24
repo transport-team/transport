@@ -3,6 +3,8 @@ import Pagination from '../../components/common/Pagination'
 import DriverReviewModal from '../../components/review/DriverReviewModal'
 import StatusBadge from '../../components/common/StatusBadge'
 import Badge from '../../components/common/Badge'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyShipments, getShipment } from '../../api/shipmentApi'
 import {
@@ -22,6 +24,7 @@ const getErrorMessage = (error, fallback) =>
 // 배차 대기 중인 배송의 지원 기사 목록 및 확정/거절
 const DispatchApplicantDetails = ({ shipmentId }) => {
   const navigate = useNavigate()
+  const { confirm, confirmProps } = useConfirm()
   const [reload, setReload] = useState(0)
   const [fetchState, setFetchState] = useState({ key: '', shipment: null, applicants: [], error: '' })
   const [workingId, setWorkingId] = useState(null)
@@ -59,7 +62,11 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
   }, [shipmentId, requestKey])
 
   const handleSelect = async (application) => {
-    if (!window.confirm(`${application.driverName || `기사 #${application.driverId}`}님으로 배차를 확정할까요?\n확정하면 다른 기사들의 대기 중 신청은 자동 마감됩니다.`)) return
+    if (!(await confirm({
+      title: '배차 확정',
+      message: `${application.driverName || `기사 #${application.driverId}`}님으로 배차를 확정할까요?\n확정하면 다른 기사들의 대기 중 신청은 자동 마감됩니다.`,
+      confirmLabel: '배차 확정',
+    }))) return
 
     setWorkingId(application.applicationId)
     setActionError('')
@@ -77,7 +84,12 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
   }
 
   const handleReject = async (application) => {
-    if (!window.confirm(`${application.driverName || `기사 #${application.driverId}`}님의 배차 신청을 거절할까요?\n거절하면 해당 기사는 이 배송에 다시 지원할 수 없습니다.`)) return
+    if (!(await confirm({
+      title: '배차 신청 거절',
+      message: `${application.driverName || `기사 #${application.driverId}`}님의 배차 신청을 거절할까요?\n거절하면 해당 기사는 이 배송에 다시 지원할 수 없습니다.`,
+      confirmLabel: '거절',
+      danger: true,
+    }))) return
 
     setWorkingId(application.applicationId)
     setActionError('')
@@ -192,6 +204,7 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
         </div>
       )}
       {reviewDriver && <DriverReviewModal driverId={reviewDriver.id} driverName={reviewDriver.name} onClose={() => setReviewDriver(null)} />}
+      <ConfirmModal {...confirmProps} />
     </div>
   )
 }

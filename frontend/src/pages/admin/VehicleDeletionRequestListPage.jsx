@@ -2,6 +2,8 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { getAllVehicleDeletionRequests, approveVehicleDeletion, rejectVehicleDeletion } from '../../api/vehicleApi'
 import { useOutletContext } from 'react-router-dom'
 import Badge from '../../components/common/Badge'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 
 const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
 const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절', WITHDRAWN: '기사 철회' }
@@ -11,6 +13,7 @@ const RESULT_TONE = { APPROVED: 'green', REJECTED: 'red', WITHDRAWN: 'gray' }
 // 관리자 차량 삭제 신청함: 차량 등록 신청함과 동일한 표 및 필터 구성
 const VehicleDeletionRequestListPage = () => {
   const { refreshPendingDeletionCount } = useOutletContext()
+  const { confirm, confirmProps } = useConfirm()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -39,7 +42,12 @@ const VehicleDeletionRequestListPage = () => {
   }).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '') || b.id - a.id), [requests, filters])
 
   const handleApprove = async (request) => {
-    if (!window.confirm(`${request.plateNo} 차량의 삭제를 승인하시겠습니까?\n차량 DB 기록은 보존되며 운행만 중단됩니다.`)) return
+    if (!(await confirm({
+      title: '차량 삭제 승인',
+      message: `${request.plateNo} 차량의 삭제를 승인하시겠습니까?\n차량 DB 기록은 보존되며 운행만 중단됩니다.`,
+      confirmLabel: '삭제 승인',
+      danger: true,
+    }))) return
     setProcessingId(request.id)
     setError('')
     setMessage('')
@@ -176,6 +184,8 @@ const VehicleDeletionRequestListPage = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal {...confirmProps} />
     </section>
   )
 }

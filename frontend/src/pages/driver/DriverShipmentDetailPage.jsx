@@ -3,10 +3,13 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { getAvailableShipments, applyDispatch, cancelDispatch } from '../../api/dispatchApi'
 import { getMyVehicles } from '../../api/vehicleApi'
 import { DriverRouteCard, DriverCargoCard, DriverMemoCard } from '../../components/driver/DriverDetailCards'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import useConfirm from '../../hooks/useConfirm'
 
 // 기사: 운송 요청 상세 페이지
 const DriverShipmentDetailPage = () => {
     const { shipmentId } = useParams()
+    const { confirm, confirmProps } = useConfirm()
     const [searchParams] = useSearchParams()
 
     // 어느 목록에서 상세 페이지로 들어왔는지 확인
@@ -136,9 +139,13 @@ const DriverShipmentDetailPage = () => {
             return
         }
 
-        const confirmed = window.confirm(
-            '배차 신청을 취소하시겠습니까?\n배차 확정 전까지만 취소할 수 있습니다.'
-        )
+        const confirmed = await confirm({
+            title: '배차 신청 취소',
+            message: '배차 신청을 취소하시겠습니까?\n배차 확정 전까지만 취소할 수 있습니다.',
+            confirmLabel: '신청 취소',
+            cancelLabel: '닫기',
+            danger: true,
+        })
 
         if (!confirmed) return
 
@@ -438,6 +445,8 @@ const DriverShipmentDetailPage = () => {
 
                 </div>
             )}
+
+            <ConfirmModal {...confirmProps} />
         </section>
     )
 }
