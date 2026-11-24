@@ -12,21 +12,26 @@
 | PICKED_UP | 상차완료 | 화물 적재 (상차 사진) | 배정된 기사 |
 | IN_TRANSIT | 운송중 | 이동 중 — 이때만 위치 공유 | 배정된 기사 |
 | ARRIVED | 도착 | 도착, 인계 전 | 배정된 기사 |
-| COMPLETED | 배송완료 | 인계 완료 (인수증 필수), 이후 변경 불가, 리뷰 가능 | 배정된 기사 |
+| DELIVERED | 배송완료 | 기사가 인계하고 인수증 사진을 올림, 고객 수령 확인 대기 (이때부터 사진 잠금) | 배정된 기사 |
+| COMPLETED | 운송완료 | 고객이 수령 확인 → 최종 완료, 이후 변경 불가, 리뷰 가능 · 정산 대상 | 고객 (수령 확인) |
 | CANCELED | 취소 | 결제대기·접수·배차완료에서 취소 (결제된 건은 자동 환불) | 고객·관리자·시스템 |
 
-화면에 보이는 이름 · 배지 색은 `frontend/src/util/shipmentStatusUtil.js` 한 곳에서 정한다. 위 한글 이름을 띄어 쓰고, 고객이 알기 쉽게 접수는 "배차 대기", 취소는 "취소됨"으로 보여 준다 (2026-11-23)
+화면에 보이는 이름 · 배지 색은 `frontend/src/util/shipmentStatusUtil.js` 한 곳에서 정한다. 위 한글 이름을 띄어 쓰고, 고객이 알기 쉽게 접수는 "배차 대기", 배송완료는 "수령 확인 대기", 운송완료는 "운송 완료", 취소는 "취소됨"으로 보여 준다 (2026-11-23)
+
+`DELIVERED`(기사 배송 완료 → 고객 수령 확인)는 #144에서 코드에 먼저 들어갔고, 2026-11-24 팀장 결정으로 이 문서에 반영했다 (다음 주간 회의에서 다시 확인)
 
 ## 흐름
 
 ```
-PENDING_PAYMENT → REQUESTED → ASSIGNED → PICKED_UP → IN_TRANSIT → ARRIVED → COMPLETED
+PENDING_PAYMENT → REQUESTED → ASSIGNED → PICKED_UP → IN_TRANSIT → ARRIVED → DELIVERED → COMPLETED
        │              │  ↑         │
        │              │  └─배차 해제┘
        ↓              ↓            ↓
     CANCELED       CANCELED     CANCELED
  (고객 취소·30분)  (환불)       (관리자, 환불)
 ```
+
+`ARRIVED → DELIVERED`는 배정 기사(인수증 사진 필요), `DELIVERED → COMPLETED`는 고객 수령 확인으로만 바뀐다.
 
 ## 전이 규칙
 
@@ -40,7 +45,8 @@ PENDING_PAYMENT → REQUESTED → ASSIGNED → PICKED_UP → IN_TRANSIT → ARRI
 | 배차완료 → 상차완료 | 배정 기사 | 상차 사진 1장 이상 | 고객 알림 | 4 |
 | 상차완료 → 운송중 | 배정 기사 | — | 위치 공유 시작, 고객 알림 | 4 |
 | 운송중 → 도착 | 배정 기사 | — | 위치 공유 중지, 고객 알림 | 4 |
-| 도착 → 배송완료 | 배정 기사 | 인수증 사진 1장 이상 | 고객 알림(리뷰 요청) | 4 |
+| 도착 → 배송완료(DELIVERED) | 배정 기사 | 인수증(RECEIPT) 사진 1장 이상 | 사진 잠금, 고객 알림(수령 확인 요청) | 4 |
+| 배송완료 → 운송완료(COMPLETED) | 고객 (`POST /api/shipments/{id}/confirm-receipt`) | 본인 배송. 기사는 이 전이를 할 수 없음(403) | 배정 기사 알림, 리뷰 가능, 월 정산 대상 | 4 |
 | 접수 → 취소 | 고객·관리자 | 사유 입력 | 결제 취소(환불), 알림 | 3 |
 | 배차완료 → 취소 | 관리자 | 사유 입력 | dispatch 비활성화, 환불, 고객·기사 알림 | 3 |
 
@@ -52,7 +58,7 @@ PENDING_PAYMENT → REQUESTED → ASSIGNED → PICKED_UP → IN_TRANSIT → ARRI
 
 ```java
 public enum ShipmentStatus {
-    PENDING_PAYMENT, REQUESTED, ASSIGNED, PICKED_UP, IN_TRANSIT, ARRIVED, COMPLETED, CANCELED;
+    PENDING_PAYMENT, REQUESTED, ASSIGNED, PICKED_UP, IN_TRANSIT, ARRIVED, DELIVERED, COMPLETED, CANCELED;
 
     // 상태별로 갈 수 있는 다음 상태 (COMPLETED, CANCELED는 끝 상태)
     private static final Map<ShipmentStatus, Set<ShipmentStatus>> NEXT = Map.of(
@@ -61,7 +67,8 @@ public enum ShipmentStatus {
         ASSIGNED,        Set.of(PICKED_UP, REQUESTED, CANCELED),
         PICKED_UP,       Set.of(IN_TRANSIT),
         IN_TRANSIT,      Set.of(ARRIVED),
-        ARRIVED,         Set.of(COMPLETED)
+        ARRIVED,         Set.of(DELIVERED),
+        DELIVERED,       Set.of(COMPLETED)
     );
 
     public boolean canChangeTo(ShipmentStatus next) {
