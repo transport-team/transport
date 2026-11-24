@@ -13,6 +13,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,10 +21,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.transport.domain.Shipment;
 import com.transport.dto.PageRequestDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 
+import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
@@ -107,6 +110,18 @@ class GlobalExceptionHandlerTest {
 	}
 
 	@Test
+	void optimisticLockConflictIs409() throws Exception {
+		// 같은 배송을 거의 동시에 바꿔 @Version이 맞지 않으면 500이 아니라 409 CONCURRENT_UPDATE
+		mockMvc.perform(get("/test/version-conflict"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("CONCURRENT_UPDATE"))
+				.andExpect(jsonPath("$.message").value(ErrorCode.CONCURRENT_UPDATE.getMessage()));
+		mockMvc.perform(get("/test/jpa-version-conflict"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("CONCURRENT_UPDATE"));
+	}
+
+	@Test
 	void accessDeniedIsLeftToSpringSecurity() {
 		assertThatThrownBy(() -> mockMvc.perform(get("/test/denied")))
 				.hasCauseInstanceOf(AccessDeniedException.class);
@@ -141,6 +156,16 @@ class GlobalExceptionHandlerTest {
 		@GetMapping("/test/denied")
 		void denied() {
 			throw new AccessDeniedException("denied");
+		}
+
+		@GetMapping("/test/version-conflict")
+		void versionConflict() {
+			throw new ObjectOptimisticLockingFailureException(Shipment.class, 1L);
+		}
+
+		@GetMapping("/test/jpa-version-conflict")
+		void jpaVersionConflict() {
+			throw new OptimisticLockException("version mismatch");
 		}
 	}
 
