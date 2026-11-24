@@ -5,9 +5,28 @@ import {
     getDriverSettlementRange,
     getDriverSettlementRangeItems,
 } from '../../api/dispatchApi'
+import Badge from '../../components/common/Badge'
 
 // 리뷰 카드에 처음 보여 줄 개수 (나머지는 '모두 보기')
 const REVIEW_PREVIEW_COUNT = 3
+
+// 월 정산 상태 → 배지 · 설명 (서버 settlementStatus: OPEN · PENDING · PAID · NONE)
+const getPayoutInfo = (item) => {
+    switch (item.settlementStatus) {
+        case 'PAID':
+            return {
+                label: '지급 완료',
+                tone: 'green',
+                detail: `${item.paidAt ? item.paidAt.slice(5, 10) : ''} 지급 · 수수료 ${item.commissionRate}%`,
+            }
+        case 'PENDING':
+            return { label: '지급 대기', tone: 'amber', detail: `수수료 ${item.commissionRate}%를 뺀 지급 예정액` }
+        case 'NONE':
+            return { label: '정산 없음', tone: 'gray', detail: '완료한 배송이 없어 정산하지 않았어요' }
+        default:
+            return { label: '마감 전', tone: 'gray', detail: '관리자가 월 마감을 하면 지급액이 나와요' }
+    }
+}
 
 // 현재 월을 YYYY-MM 형식으로 반환
 const getCurrentMonth = () => {
@@ -127,6 +146,11 @@ const DriverSettlementPage = () => {
                     months.map((value, index) => ({
                         month: value,
                         totalFare: Number(summaries[index]?.totalFare ?? 0),
+                        // 그 달 정산 상태 · 지급액 (관리자 월 마감 뒤)
+                        settlementStatus: summaries[index]?.settlementStatus ?? 'OPEN',
+                        commissionRate: summaries[index]?.commissionRate ?? null,
+                        payoutAmount: summaries[index]?.payoutAmount ?? null,
+                        paidAt: summaries[index]?.paidAt ?? null,
                     }))
                 )
             })
@@ -549,6 +573,35 @@ const DriverSettlementPage = () => {
                             })}
                         </svg>
 
+                        {/* 월별 지급 상태 — 관리자 월 마감 뒤 수수료를 뺀 지급액 · 지급일 */}
+                        {monthlyTrend.length > 0 && (
+                            <div className="mt-4 border-t border-gray-100 pt-4">
+                                <h3 className="text-sm font-semibold text-gray-700">월별 지급 상태</h3>
+                                <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                    {monthlyTrend.map((item) => {
+                                        const info = getPayoutInfo(item)
+
+                                        return (
+                                            <li key={item.month} className="rounded-xl bg-gray-50 p-3">
+                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                    <span className="text-sm font-semibold text-gray-900">
+                                                        {item.month.replace('-', '.')}
+                                                    </span>
+                                                    <Badge tone={info.tone} size="sm">{info.label}</Badge>
+                                                </div>
+                                                <p className="mt-2 text-base font-bold text-gray-900">
+                                                    {item.payoutAmount != null
+                                                        ? `${Number(item.payoutAmount).toLocaleString('ko-KR')}원`
+                                                        : '—'}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-gray-500">{info.detail}</p>
+                                            </li>
+                                        )
+                                    })}
+                                </ul>
+                            </div>
+                        )}
+
                     </div>
 
                     {/* 월별 운임 상세 내역 */}
@@ -605,7 +658,7 @@ const DriverSettlementPage = () => {
 
                     <p className="px-1 text-xs leading-5 text-gray-500">
                         ※ 표시된 운임 합계는 수수료 차감 전 금액입니다.
-                        실제 기사 지급액 및 지급 상태는 정산 정책 적용 후 제공됩니다.
+                        실제 지급액과 지급일은 관리자가 월 마감을 한 뒤 위 '월별 지급 상태'에서 확인할 수 있습니다.
                     </p>
 
                 </div>
