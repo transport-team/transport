@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import Badge from '../../components/common/Badge'
 import { getMyVehicles, getVehicleTypes, changeMyVehicleStatus, applyVehicleDeletion, getMyVehicleDeletionRequests, withdrawVehicleDeletionRequest, getMyVehicleRegistrationRequests, withdrawVehicleRegistrationRequest } from '../../api/vehicleApi'
 
 // 기사: 내 차량 관리 페이지
@@ -26,7 +27,7 @@ const DriverVehicleManagePage = () => {
             setDeletionRequests(Array.isArray(data) ? data : [])
             setDeletionError('')
         } catch (err) {
-            setDeletionError(`삭제 신청 내역 조회 실패 (${err.response?.status || '네트워크 오류'}).`)
+            setDeletionError(err.response?.data?.message || '삭제 신청 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
         }
     }
 
@@ -36,7 +37,7 @@ const DriverVehicleManagePage = () => {
             setRegistrationRequests(Array.isArray(data) ? data : [])
             setRegistrationError('')
         } catch (err) {
-            setRegistrationError(`등록 신청 내역 조회 실패 (${err.response?.status || '네트워크 오류'}).`)
+            setRegistrationError(err.response?.data?.message || '등록 신청 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
         }
     }
 
@@ -104,18 +105,18 @@ const DriverVehicleManagePage = () => {
             .catch((err) => {
                 if (!active) return
                 console.error('내 차량 목록 조회 실패:', err)
-                setError(`차량 목록 조회 실패 (${err.response?.status || '네트워크 오류'}): ${err.response?.data?.message || err.response?.data?.msg || '서버 연결을 확인해 주세요.'}`)
+                setError(err.response?.data?.message || '차량 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
             })
             .finally(() => { if (active) setLoading(false) })
         getVehicleTypes()
             .then((data) => { if (active) setVehicleTypes(Array.isArray(data) ? data : []) })
-            .catch((err) => { if (active) setTypeError(`차종 정보 조회 실패 (${err.response?.status || '네트워크 오류'}). 차종 번호로 표시합니다.`) })
+            .catch(() => { if (active) setTypeError('차종 이름을 불러오지 못해 차종 번호로 보여 드려요.') })
         getMyVehicleDeletionRequests()
             .then((data) => { if (active) setDeletionRequests(Array.isArray(data) ? data : []) })
-            .catch((err) => { if (active) setDeletionError(`삭제 신청 내역 조회 실패 (${err.response?.status || '네트워크 오류'}).`) })
+            .catch((err) => { if (active) setDeletionError(err.response?.data?.message || '삭제 신청 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.') })
         getMyVehicleRegistrationRequests()
             .then((data) => { if (active) setRegistrationRequests(Array.isArray(data) ? data : []) })
-            .catch((err) => { if (active) setRegistrationError(`등록 신청 내역 조회 실패 (${err.response?.status || '네트워크 오류'}).`) })
+            .catch((err) => { if (active) setRegistrationError(err.response?.data?.message || '등록 신청 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.') })
         return () => { active = false }
     }, [])
 
@@ -126,7 +127,7 @@ const DriverVehicleManagePage = () => {
             const data = await getMyVehicles()
             setVehicles(Array.isArray(data) ? data : [])
         } catch (err) {
-            setError(`차량 목록 조회 실패 (${err.response?.status || '네트워크 오류'}): ${err.response?.data?.message || err.response?.data?.msg || '서버 연결을 확인해 주세요.'}`)
+            setError(err.response?.data?.message || '차량 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
         } finally {
             setLoading(false)
         }
@@ -151,20 +152,20 @@ const DriverVehicleManagePage = () => {
         if (status === 'AVAILABLE') {
             return {
                 label: '운행 가능',
-                className: 'bg-green-100 text-green-700',
+                tone: 'green',
             }
         }
 
         if (status === 'MAINTENANCE') {
             return {
                 label: '정비 중',
-                className: 'bg-amber-100 text-amber-700',
+                tone: 'amber',
             }
         }
 
         return {
-            label: status || '상태 확인 필요',
-            className: 'bg-gray-100 text-gray-600',
+            label: status === 'INACTIVE' ? '비활성' : status || '상태 확인 필요',
+            tone: 'gray',
         }
     }
 
@@ -306,11 +307,9 @@ const DriverVehicleManagePage = () => {
                                         </h2>
                                     </div>
 
-                                    <span
-                                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${statusInfo.className}`}
-                                    >
+                                    <Badge tone={statusInfo.tone}>
                                         {statusInfo.label}
-                                    </span>
+                                    </Badge>
                                 </div>
 
                                 {/* 차량 정보 */}

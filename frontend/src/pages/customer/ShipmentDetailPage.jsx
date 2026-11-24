@@ -81,7 +81,7 @@ const ShipmentDetailPage = () => {
       .catch((err) => {
         if (!active) return
         setApplicantCount(null)
-        setApplicantError(`지원자 수 조회 실패 (${err.response?.status || '네트워크 오류'})`)
+        setApplicantError(err.response?.data?.message || '지원한 기사 수를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
       })
     return () => { active = false }
   }, [id, refreshCount])

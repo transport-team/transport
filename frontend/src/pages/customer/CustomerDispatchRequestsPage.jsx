@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Pagination from '../../components/common/Pagination'
 import DriverReviewModal from '../../components/review/DriverReviewModal'
 import StatusBadge from '../../components/common/StatusBadge'
+import Badge from '../../components/common/Badge'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyShipments, getShipment } from '../../api/shipmentApi'
 import {
@@ -158,7 +159,7 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
                     <p className="mt-1 text-xs text-gray-500">면허 {application.licenseType || '-'} · 경력 {application.careerYears ?? 0}년</p>
                   </div>
                 </div>
-                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">선택 대기</span>
+                <Badge tone="amber">선택 대기</Badge>
               </div>
               <div className="mt-4 grid gap-3 rounded-xl bg-gray-50 p-4 text-sm sm:grid-cols-2">
                 <div><span className="text-gray-500">차량번호 </span><span className="font-semibold text-gray-900">{application.plateNo || '-'}</span></div>
