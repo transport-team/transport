@@ -2,6 +2,8 @@
 
 알파벳(A~Z)은 의존 순서이고, 시간 순서는 아래 주차표를 따른다. 체크 항목은 GitHub 이슈로 옮겨 쓴다.
 
+체크는 2026-11-23 저녁 develop(`9618ecf`, #144까지) 기준으로 코드 · 문서 · PR에서 확인한 것만 했다 (리뷰 중인 #145 · #146 · #147은 줄 끝에 적음). 일부만 된 항목은 줄 끝에 남은 것을 적었다. 남은 일 전체는 #94
+
 ## 주차표
 
 | 주차 | 팀원 1 (공통·인증·운영) | 팀원 2 (기사·배차·정산) | 팀원 3 (배송·운임·결제) | 팀원 4 (진행·실시간·리뷰) | 완료 기준 |
@@ -11,141 +13,151 @@
 | 3 | 가입 · 약관 · JWT (J), 레이아웃 · 로그인 (K) | Driver · Vehicle · VehicleType + 관리자 API (L) | Shipment · CargoType 공유, 거리 · 운임 계산 (M) | 알림 엔티티 · SSE 구독, 이력, FileStorage | 역할별 로그인, 운임 테스트 통과 |
 | 4 | 공지 · FAQ · 문의 (V), 마이페이지, 회원 · 약관 관리 | 차종 · 차량 · 기사 화면, 근무 일정 (L) | 신청 화면 · 신청 API → 결제대기 (N) | 상태 변경 · 이력 · 타임라인 (P) | 신청 → 결제대기 저장 |
 | 5 | 공통 컴포넌트 · 권한 정리, 대시보드 쿼리 설계 | 배차 후보 · 배정 · 해제 (O) | 토스 결제 승인 · 재시도 · 자동 취소 (N) | 기사 처리 화면, 사진 (Q) | 결제 → 접수 → 배차 |
-| 6 | 통합 이슈 · 보안 점검 | 재배차 · 일정 조건 검증 | 취소 · 환불, 내 배송 목록 · 상세 | 알림 연결 (R) | **MVP: 신청 → 완료 통합** |
+| 6 | 통합 이슈 · 보안 점검, 관리자 기사 승인 · 중지 화면 (ADM-05, 11-19부터 팀원 1) | 재배차 · 일정 조건 검증 | 취소 · 환불, 내 배송 목록 · 상세 | 알림 연결 (R) | **MVP: 신청 → 완료 통합** |
 | 7 | 대시보드 · 통계 (T) | 월 정산 (U), 기사 실적 | 관리자 검색 · 결제 내역 (S) | 실시간 위치 (R) | 지도에서 기사 이동 |
-| 8 | 1차 배포 · HTTPS (Y) | 평점 정렬 반영 | 더미 데이터, N+1 점검 | 리뷰 · 평점 (Q) | 배포 URL 전체 흐름 |
-| 9 | 전원 W~Y: 테스트, UI 통일(팀원 4 주도), 최종 배포 | ← | ← | ← | 배포 URL 시연 통과 |
+| 8 | 기능 마감 점검 | 평점 정렬 반영 | 더미 데이터, N+1 점검 | 리뷰 · 평점 (Q) | **기능 마감 (발표 2주 전)**: 화면으로 전체 흐름 |
+| 9 | 전원 W~Y: 테스트, UI 통일(팀원 4 주도), 배포 · HTTPS (Y, 팀원 1) · 시연 리허설 — 발표 1주 전 | ← | ← | ← | 배포 URL 시연 통과 |
 | 10 | 전원 Z: README · 트러블슈팅 · 발표 · 시연 영상, 버퍼 | ← | ← | ← | 제출물 완성 |
+
+주차표는 2026-11-19 회의로 고쳤다: 기능 마감은 발표 2주 전(8주차), 배포 · 시연 리허설은 발표 1주 전(9주차). 제출일 · 발표일이 정해지면 주차마다 날짜를 넣는다 (decisions.md)
 
 밀릴 때 미루는 순서: 공지·FAQ → 정산 → 리뷰 → 통계 → 위치 추적 (지도 · 운임 · 결제 · 알림은 지킨다)
 
 ## Phase 1 · 기획 (1주차 · 전원)
 
 ### A. 팀 구성 · 목표 · 범위 — 전원
-- [ ] README 팀 표에 이름 채우기
-- [ ] 포함 · 제외 범위 확정 (requirements.md 상단)
-- [ ] collaboration.md 규칙 합의 (리뷰 짝, 회의 시간, 메신저 채널)
-- [ ] 제출일 · 발표일 확인, 주차표 조정
+- [x] README 팀 표에 이름 채우기
+- [x] 포함 · 제외 범위 확정 (requirements.md 상단)
+- [ ] collaboration.md 규칙 합의 (리뷰 짝, 회의 시간, 메신저 채널) — 리뷰 짝은 적혀 있음, 회의 시간 · 메신저 채널은 아직
+- [ ] 제출일 · 발표일 확인, 주차표 조정 — 주차표는 11-19 회의로 조정함(기능 마감 발표 2주 전 · 배포 1주 전), 날짜 확인이 남음
 
 ### B. 요구사항 — 전원, 취합 팀원 1
-- [ ] 각자 도메인 요구사항 검토 · 보완 (requirements.md)
-- [ ] 예외 상황 정리
+- [x] 각자 도메인 요구사항 검토 · 보완 (requirements.md)
+- [x] 예외 상황 정리 (requirements.md '예외 상황 체크')
 
 ### C. 배송 상태 — 전원
-- [ ] status.md 상태 8개 · 전이 규칙 확정
+- [x] status.md 상태 8개 · 전이 규칙 확정 (`ShipmentStatus.canChangeTo()`)
 - [ ] 고객 · 관리자 · 기사 역할을 나눠 말로 시연
 
 ### D. 화면 목록 · 와이어프레임 — 전원
-- [ ] 화면 목록 · 담당 확정, 와이어프레임
-- [ ] 화면마다 호출 API 메모, 기사 화면은 모바일 기준
+- [x] 화면 목록 · 담당 확정 (README '기능' 표 · requirements 담당 칸), ~~와이어프레임~~ → 해당 없음 (화면을 바로 만듦)
+- [x] ~~화면마다 호출 API 메모~~ → 해당 없음 (api.md와 화면별 `api/` 파일로 대신), 기사 화면은 모바일 기준(하단 탭) — 휴대폰 폭 점검은 W 테스트에서
 
 ## Phase 2 · 설계 · 준비 (2주차)
 
 ### E. ERD — 전원, 취합 팀원 2
 - [ ] erd.md 기준 ERDCloud 작성, FK · UQ · enum 확정
-- [ ] data.sql 검토
+- [x] data.sql 검토
 
 ### F. API 명세 — 전원, 취합 팀원 3
-- [ ] api.md 요청 / 응답 예시 보강, 에러 코드 확정
-- [ ] Swagger(springdoc, Boot 버전에 맞는 버전), Postman 팀 워크스페이스
-- [ ] collaboration.md 약속 메서드 이름 · 파라미터 확정
+- [x] api.md 요청 / 응답 예시 보강, 에러 코드 확정
+- [ ] Swagger(springdoc, Boot 버전에 맞는 버전), Postman 팀 워크스페이스 — Swagger는 됨, Postman은 확인 필요
+- [x] collaboration.md 약속 메서드 이름 · 파라미터 확정
 
 ### G. 외부 서비스 — 팀원 3 · 4
-- [ ] (3) 카카오 팀 앱 1개, JS SDK 도메인 http://localhost:5173, 카카오맵 활성화(무료 쿼터는 계정당 첫 앱), 키 공유
-- [ ] (3) 토스페이먼츠 개발자센터 가입 → 테스트 API 개별 연동 키(클라이언트 · 시크릿)
-- [ ] (3) 카카오모빌리티 길찾기 사용 조건 · 쿼터 확인
+- [x] (3) 카카오 팀 앱 1개, JS SDK 도메인 http://localhost:5173, 카카오맵 활성화(무료 쿼터는 계정당 첫 앱), 키 공유 — 도메인 등록이 빠져 있던 것을 11-20 시연 때 찾아 다시 등록함 (`127.0.0.1`은 등록 안 함)
+- [x] (3) 토스페이먼츠 개발자센터 가입 → 테스트 API 개별 연동 키(클라이언트 · 시크릿)
+- [x] (3) 카카오모빌리티 길찾기 사용 조건 · 쿼터 확인
 - [ ] (4) HTTPS 터널 도구로 휴대폰 위치 권한 확인
 
 ### H. 개발 환경 · 저장소 — 팀원 1, Git 팀원 2
-- [ ] (1) backend/ Spring Initializr, frontend/ Vite React
-- [ ] (2) 저장소 · 초대 · develop 기본 브랜치 · Projects 보드 · 라벨
-- [ ] (전원) clone → docker compose up → 설정 파일 복사 → 실행 → 5173에서 8080 호출 성공
-- [ ] (전원) 연습 PR 1개씩
+- [x] (1) backend/ Spring Initializr, frontend/ Vite React
+- [x] (2) 저장소 · 초대 · develop 기본 브랜치 — 됨. ~~Projects 보드 · 라벨~~ → 쓰지 않음 (이슈 · PR · #94 계획으로 관리)
+- [x] (전원) clone → docker compose up → 설정 파일 복사 → 실행 → 5173에서 8080 호출 성공
+- [x] (전원) 연습 PR 1개씩
 
 ## Phase 3 · 공통 기반 (2~3주차 · 팀원 1)
 
 ### I. 백엔드 공통 골격 — 팀원 1 (2주차)
-- [ ] BaseEntity(JPA Auditing), PageRequestDTO / PageResponseDTO
-- [ ] CustomException + 도메인별 구역 ErrorCode + GlobalExceptionHandler
-- [ ] CORS, 시간대, Swagger 기본, 임시 전체 허용 보안
+- [x] BaseEntity(JPA Auditing), PageRequestDTO / PageResponseDTO
+- [x] CustomException + 도메인별 구역 ErrorCode + GlobalExceptionHandler
+- [x] CORS, 시간대, Swagger 기본, 임시 전체 허용 보안
 
 ### J. 회원 · 인증 · 약관 — 팀원 1 (3주차)
-- [ ] Member · Term · TermAgreement, 가입(필수 약관 검사, BCrypt)
-- [ ] 기사 가입 시 팀원 2의 DriverService로 Driver(PENDING) 생성
-- [ ] 로그인 · 재발급 · JWTCheckFilter, URL 권한 + @PreAuthorize
-- [ ] 임시 전체 허용 → 실제 권한 전환일 미리 공지
+- [x] Member · Term · TermAgreement, 가입(필수 약관 검사, BCrypt)
+- [x] 기사 가입 시 팀원 2의 DriverService로 Driver(PENDING) 생성
+- [x] 로그인 · 재발급 · JWTCheckFilter, URL 권한 + @PreAuthorize
+- [x] 임시 전체 허용 → 실제 권한 전환일 미리 공지
 
 ### K. 프론트 공통 — 팀원 1 + UI 팀원 4 (3주차)
-- [ ] (1) 레이아웃 4종, 보호 라우트, loginSlice + 쿠키, axios 인터셉터
-- [ ] (1) 로그인 · 가입(약관) 화면
-- [ ] (4) 공통 컴포넌트: Button · Input · Modal · Table · Pagination · Loading · StatusBadge
+- [x] (1) 레이아웃 4종, 보호 라우트, loginSlice + 쿠키, axios 인터셉터
+- [x] (1) 로그인 · 가입(약관) 화면
+- [x] (4) 공통 컴포넌트: Button · Input · Modal · Table · Pagination · Loading · StatusBadge
 
 ## Phase 4 · 핵심 기능 (3~6주차)
 
 ### L. 차종 · 차량 · 기사 · 근무 일정 — 팀원 2
-- [ ] Driver · Vehicle · VehicleType (VehicleType 먼저 공유)
-- [ ] 관리자: 기사 승인 · 중지, 차종 · 요금, 차량 · 담당 기사
-- [ ] DriverSchedule 달력 화면
+- [x] Driver · Vehicle · VehicleType (VehicleType 먼저 공유)
+- [x] 관리자: 기사 승인 · 중지, 차종 · 요금, 차량 · 담당 기사 — 차량 · 담당 기사, 기사 승인 · 중지 화면(#110, 11-19 회의로 팀원 1), 차종 · 요금 관리(#138, `/admin/vehicle-type-fares`)
+- [x] DriverSchedule 달력 화면 (#97 기사 홈 달력 · 휴무)
+- [x] 기사 '근무 일정' 탭: 기사 홈의 달력(`/driver#schedule`)으로 연결 (#115, 팀원 2 — 11-19 회의의 두 안 대신). 근무 가능 시간 등록(DRV-01의 나머지)도 됨(#133)
 
 ### M. 화물 종류 · 거리 · 운임 — 팀원 3
-- [ ] Shipment · CargoType · ShipmentStatus 먼저 공유
-- [ ] KakaoLocalClient, KakaoDirectionsClient (실패 시 하버사인 × 1.3)
-- [ ] FareCalculator + fare.md 예시 3개 테스트, POST /api/fares/estimate
+- [x] Shipment · CargoType · ShipmentStatus 먼저 공유
+- [x] KakaoLocalClient, KakaoDirectionsClient (실패 시 하버사인 × 1.3) (`KakaoDistanceService` 하나로)
+- [x] 같은 구간 거리 재사용: 주소는 24시간, 구간은 30분 동안 다시 쓴다 (각각 최대 1,000개, 길찾기 실패 결과는 저장 안 함 · #108, 비기능 '성능')
+- [x] FareCalculator + fare.md 예시 3개 테스트, POST /api/fares/estimate — 예시 테스트는 `FareServiceTest`(#137)
+- [x] 길찾기가 실패하면 예상 시간도 거리 ÷ 40km/h로 채우기 — 최소 1분, 빈 값 없음 (#112, #87 · 11-19 회의)
 
 ### N. 배송 신청 · 지도 · 결제 — 팀원 3
-- [ ] POST /api/shipments → PENDING_PAYMENT + payment READY
-- [ ] 신청 화면: 우편번호 팝업, 지도 마커(JS SDK services), 차종 추천, 0.5초 디바운스 예상 운임
-- [ ] 토스 결제창 → success 페이지 → /api/payments/confirm (금액 비교) → REQUESTED
-- [ ] fail 페이지 · 재시도, @Scheduled 30분 자동 취소, 승인 후 저장 실패 시 결제 취소
-- [ ] local 전용 결제 건너뛰기 API
+- [x] POST /api/shipments → PENDING_PAYMENT + payment READY
+- [x] 신청 화면: 우편번호 팝업, 지도 마커(JS SDK services), 차종 추천, 0.5초 디바운스 예상 운임 — 지도 마커(#136)
+- [x] 토스 결제창 → success 페이지 → /api/payments/confirm (금액 비교) → REQUESTED
+- [x] fail 페이지 · 재시도, @Scheduled 30분 자동 취소, 승인 후 저장 실패 시 결제 취소 — 재시도(주문번호 다시 발급) · 30분 자동 취소 #104, 실패 · 배송 상세 화면의 재시도 버튼 #106
+- [x] local 전용 결제 건너뛰기 API (`POST /api/local/payments/skip/{shipmentId}`, #101)
 
 ### O. 배차 — 팀원 2
-- [ ] 후보: ACTIVE + 근무 일정 안 + 차량 AVAILABLE + 적재량 ≥ 무게 + 요청 차종 이상 + 당일 < 3건
-- [ ] 정렬: 당일 건수 → 적재 여유 → (8주차) 평점
-- [ ] 배정 / 해제, @Version 충돌 처리, getActiveDriver 제공, 기사 배차 목록
+- [x] ~~후보: ACTIVE + 근무 일정 안 + 차량 AVAILABLE + 적재량 ≥ 무게 + 요청 차종 이상 + 당일 < 3건~~ → 11-06 결정으로 기사 지원 · 고객 선택으로 바뀜. 지원할 때 승인 · 휴무 · 차량 · 차종 · 시간 겹침을 검사 (#93)
+- [x] ~~정렬: 당일 건수 → 적재 여유 → (8주차) 평점~~ → 해당 없음 (고객이 지원자 중에서 고름)
+- [ ] 배정 / 해제, @Version 충돌 처리, getActiveDriver 제공, 기사 배차 목록 — 배정(고객 선택) · getActiveDriver · 기사 배차 목록(#93)은 됨. 해제(#86) — 11-19 회의: 완료 때는 그대로, 취소 · 재배차 때만 해제, 시간 겹침 검사에서 완료 · 취소 배송 제외 → 해제 메서드(#123) · 관리자 배차 취소(재배차, #124) · 겹침 · 차량 정비 검사에서 끝난 배송 제외(11-23)는 됨. 관리자 배송 취소 때 해제는 ADM-02(S 단계)와 함께. `Shipment`에 `@Version`은 처음부터 있음(#1). 충돌 때 409로 바꾸는 처리는 남음 (지금은 500)
 
 ### P. 상태 변경 · 이력 — 팀원 4
-- [ ] StatusHistoryService.record 먼저 공유
-- [ ] PATCH /status: 배정 기사 확인 → canChangeTo → 변경 → 이력
-- [ ] 타임라인 컴포넌트, 기사 화면 “다음 단계” 버튼, JUnit 테스트
+- [x] StatusHistoryService.record 먼저 공유
+- [x] PATCH /status: 배정 기사 확인 → canChangeTo → 변경 → 이력
+- [x] 타임라인 컴포넌트, 기사 화면 “다음 단계” 버튼, JUnit 테스트
+- [x] 고객 수령 확정: 도착 → 기사 배송 완료(`DELIVERED`, 인수증 필수) → 고객 수령 확정 → `COMPLETED` (#144, 11-23 저녁 임시 서버에서 흐름 전체 확인)
+- [ ] 새 상태 `DELIVERED`를 `docs/status.md` · `CLAUDE.md` 도메인 규칙 · `docs/api.md`에 반영 — 회의 합의 뒤 (status.md는 회의 합의 후 고치는 문서)
 
 ## Phase 5 · 확장 기능 (4~8주차)
 
 ### Q. 사진 · 리뷰 — 팀원 4
-- [ ] ShipmentImage, CustomFileUtil, FileStorage 인터페이스(로컬 / S3)
-- [ ] PICKUP · RECEIPT 필수 검사, `<input accept="image/*" capture="environment">`
-- [ ] (8주차) Review: 완료 건 1회, 평균 평점 메서드 제공
+- [ ] ShipmentImage, CustomFileUtil, FileStorage 인터페이스(로컬 / S3) — 로컬은 됨, S3 구현은 배포(Y) 때
+- [x] PICKUP · RECEIPT 필수 검사, `<input accept="image/*" capture="environment">`
+- [x] (8주차) Review: 완료 건 1회, 평균 평점 메서드 제공
+- [x] 리뷰 목록의 고객 이름 가리기(예: 김*수), 열람은 지금처럼 로그인 사용자 (11-19 회의) — 서버 응답에서 가림(`MaskingUtil`), 배송 리뷰 · 배송 상세 · 관리자 화면도 같이
 
 ### R. 실시간 알림 · 위치 — 팀원 4
-- [ ] SseEmitter 관리 · heartbeat, event-source-polyfill
-- [ ] 알림 저장 + 전송, @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-- [ ] useLocationShare: IN_TRANSIT만 watchPosition, 30초 전송, clearWatch
-- [ ] 서버 location 이벤트 → 고객 지도 마커, “n초 전”, 30일 삭제 스케줄러
+- [x] SseEmitter 관리 · heartbeat, event-source-polyfill — 회원당 여러 탭(최대 5개) · heartbeat 예외 처리(#139)
+- [x] 알림 저장 + 전송, @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+- [x] useLocationShare: IN_TRANSIT만 watchPosition, 30초 전송, clearWatch
+- [x] 서버 location 이벤트 → 고객 지도 마커, “n초 전”, 30일 삭제 스케줄러 — 고객 배송 상세에 붙임(#118, 팀원 4 휴가로 팀원 1이 대신). 11-20 시연 · 임시 서버에서 30초 갱신 확인
 
 ### S. 검색 · 결제 내역 — 팀원 3 (+ 전원 N+1 점검)
-- [ ] 관리자 통합 검색(QueryDSL), 결제 · 환불 내역, 화물 종류 관리
+- [x] 관리자 통합 검색(QueryDSL), 결제 · 환불 내역, 화물 종류 관리 — 배송 검색(상태 · 기간 · 키워드: 배송번호 · 화물 · 주소 · 고객 · 받는 사람), 결제 · 환불 내역, 화물 종류 관리 화면은 됨(#108, QueryDSL 대신 JPQL). 관리자 배송 상세도 됨(#124). 기사로 검색(기사명 · ID)도 됨(#137)
+- [x] 관리자 배송 취소(ADM-02): 배차된 건은 배차 해제 · 기사 알림 · 환불을 함께 (11-19 회의, #86) — `POST /api/admin/shipments/{id}/cancel`, 관리자 배송 상세의 '배송 취소' (11-23)
 - [ ] (전원) 자기 목록 N+1 · 정렬 · 페이징 · URL 쿼리스트링
 
 ### T. 대시보드 · 통계 — 팀원 1
-- [ ] KPI(오늘 건수, 이번 달 매출, 평균 평점), 일별 · 차종별 차트
-- [ ] 다른 도메인 데이터는 담당자 조회 메서드로
+- [x] KPI(오늘 건수, 이번 달 매출, 평균 평점), 일별 · 차종별 차트 (#47 · #96)
+- [x] 다른 도메인 데이터는 담당자 조회 메서드로
 
 ### U. 월 정산 — 팀원 2
-- [ ] COMPLETED(환불 제외) 기사별 합산 → 수수료 → 지급액, 중복 생성 방지, 지급 처리
-- [ ] 검증: 42건, 4,200,000원, 수수료 10% → 3,780,000원
+- [x] COMPLETED(환불 제외) 기사별 합산 → 수수료 → 지급액, 중복 생성 방지, 지급 처리 — 월 마감 스케줄러 · 수수료 10% · 같은 달 · 같은 배송 중복 검사 · 지급 확인(`/admin/settlements`, #138)
+- [ ] 검증: 42건, 4,200,000원, 수수료 10% → 3,780,000원 — 이 숫자 그대로의 테스트는 아직 없음 (#138 정산 테스트는 있음)
+- [ ] 기사 실적 · 정산 조회(DRV-07): 월별 · 기간별 완료 건수 · 운임 합계 API와 화면(`/driver/settlements`, 기사 홈 버튼 · 하단 탭 '실적'에서 들어감)은 됨(#107, 탭 연결은 팀원 1). 평균 평점 · 리뷰도 됨(11-23, 실적 화면 '평점 · 리뷰' 카드 — 팀원 1이 대신). 관리자 월 정산(ADM-09)은 #138로 됨 → 기사 실적 화면의 정산 상태 표시만 남음
 
 ### V. 공지 · FAQ · 문의 — 팀원 1
-- [ ] 공지 · FAQ · 약관 관리, 문의 답변 → 알림
+- [x] 공지 · FAQ · 약관 관리, 문의 답변 → 알림
 
 ## Phase 6 · 마무리 (8~10주차)
 
 ### W. 테스트 — 전원
-- [ ] 도메인별 단위 테스트, 신청 → 완료 → 리뷰 통합 테스트
-- [ ] 결제: 성공 · 실패 · 창 닫기 · 30분 만료 · 환불 / 권한 403
+- [x] 도메인별 단위 테스트, 신청 → 완료 → 리뷰 통합 테스트 (통합 테스트 #100)
+- [ ] 결제: 성공 · 실패 · 창 닫기 · 30분 만료 · 환불 / 권한 403 — 권한 403은 11-19 오후 새 API 13개까지 다시 점검 (뚫린 곳 없음). 결제는 11-19 시험 통과: 금액 위조 · 남의 주문 · 가짜 결제 키 · 중복 승인 · 30분 자동 취소 · 토스 '결제 취소' → 실패 페이지 · 다시 결제 · 화면 취소. 실제 토스 승인 · 환불(카드사 인증 필요)과 PC 결제창 닫기 안내 문구(#106 댓글)가 남음
 - [ ] 실제 휴대폰 포함 역할별 시연
 
 ### X. UI 다듬기 — 전원, 주도 팀원 4
-- [ ] 화면 점검표 → 각자 수정, 로딩 · 빈 목록 · 에러 · 금액 · 배지 통일
+- [ ] 화면 점검표 → 각자 수정, 로딩 · 빈 목록 · 에러 · 금액 · 배지 통일 — 점검표 #143(11-23). 배송 상태 배지 통일 #142 · 공통 Modal #141은 병합, 헤더 알림 창 #145 · 공통 Badge · 리뷰 창 #146 · 팀원 1 칸 #147은 리뷰 중. 팀원 2 · 3 칸과 배송 외 상태 배지 적용이 남음
 
 ### Y. 배포 — 팀원 1
 - [ ] AWS 계정(무료 플랜 6개월) · Budgets, RDS · S3, EC2 prod 프로필(ddl-auto validate)
@@ -153,5 +165,5 @@
 - [ ] 카카오 도메인 · 토스 success/fail URL · CORS를 배포 주소로
 
 ### Z. 문서 · 발표 — 전원, 취합 팀원 1
-- [ ] README, 각자 트러블슈팅 2개+, decisions.md 정리
+- [ ] README, 각자 트러블슈팅 2개+, decisions.md 정리 — 트러블슈팅은 팀원 1만 씀(8개 — 팀원 4 몫을 대신 고친 2개 포함)
 - [ ] 발표: 1 구조 · 보안 · 배포 / 3 신청 · 결제 / 2 배차 · 정산 / 4 실시간 · 리뷰, 시연 영상

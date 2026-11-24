@@ -1,0 +1,37 @@
+import { useEffect, useState } from 'react'
+import { getMyInfo } from '../../api/memberApi'
+import { ROLE_NAME } from '../../util/roleUtil'
+
+// 내 정보 카드: 로그인 토큰으로 /api/members/me를 불러온다 (jwtAxios · 자동 재발급 확인용)
+const MyInfoCard = () => {
+  const [member, setMember] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    getMyInfo()
+      .then(setMember)
+      .catch((err) => setError(err.response?.data?.message ?? '내 정보를 불러오지 못했어요.'))
+  }, [])
+
+  if (error) {
+    return <p role="alert" className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>
+  }
+  if (!member) {
+    return <p className="text-sm text-gray-500">내 정보 불러오는 중...</p>
+  }
+
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-lg border border-gray-200 bg-white p-4 text-sm">
+      <dt className="text-gray-500">이름</dt>
+      <dd>{member.name}</dd>
+      <dt className="text-gray-500">이메일</dt>
+      <dd className="break-all">{member.email}</dd>
+      <dt className="text-gray-500">연락처</dt>
+      <dd>{member.phone}</dd>
+      <dt className="text-gray-500">역할</dt>
+      <dd>{ROLE_NAME[member.role]}</dd>
+    </dl>
+  )
+}
+
+export default MyInfoCard

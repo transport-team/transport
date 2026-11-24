@@ -1,0 +1,359 @@
+import ShipmentProgress from '../../components/tracking/ShipmentProgress'
+import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
+// 기사 배송 처리 화면 (팀원 4 — 5-3 + 5-4)
+// 경로: /driver/dispatches/:shipmentId (배차 지원용 상세와 역할이 다르다 — 팀원2 화면은 /driver/shipments/:id)
+// 데이터: 기사 본인의 확정 배차 상세 (getMyAssignedDispatch)
+// API: 상태 변경 PATCH /{id}/status · 사진 업로드 POST /{id}/images (PHOTO_REQUIRED는 사람 말로 안내)
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { changeShipmentStatus, getShipment, uploadShipmentImages } from '../../api/shipmentApi'
+import RouteMap from '../../components/tracking/RouteMap'
+import { getMyAssignedDispatch } from '../../api/dispatchApi'
+import StatusBadge from '../../components/common/StatusBadge'
+import useLocationShare from '../../hooks/useLocationShare'
+import Button from '../../components/common/Button'
+import { DriverRouteCard, DriverCargoCard, DriverMemoCard } from '../../components/driver/DriverDetailCards'
+
+// 현재 상태에서 기사가 할 "다음 단계" — docs/status.md 전이표 (기사 몫만)
+const NEXT_STEP = {
+    ASSIGNED: { next: 'PICKED_UP', label: '상차 완료 처리', photoType: 'PICKUP', photoLabel: '상차 사진' },
+    PICKED_UP: { next: 'IN_TRANSIT', label: '운송 시작' },
+    IN_TRANSIT: { next: 'ARRIVED', label: '도착 처리' },
+    ARRIVED: { next: 'DELIVERED', label: '배송 완료 등록 · 고객 수령 확인 요청', photoType: 'RECEIPT', photoLabel: '인수증 사진' },
+}
+
+// PHOTO_REQUIRED 등 에러 코드 → 사람이 읽는 문장 (UI 점검표: 에러 코드 그대로 X)
+const ERROR_MESSAGES = {
+    PHOTO_REQUIRED: '사진이 필요해요. 아래에서 사진을 먼저 올려주세요.',
+    NOT_ASSIGNED_DRIVER: '이 배송의 배정 기사가 아니에요.',
+    INVALID_STATUS_CHANGE: '지금 상태에서는 이 작업을 할 수 없어요. 새로고침 후 다시 시도해 주세요.',
+}
+
+const toMessage = (err) => {
+    const code = err.response?.data?.code
+    return ERROR_MESSAGES[code] || err.response?.data?.message || '요청에 실패했어요. 잠시 후 다시 시도해 주세요.'
+}
+
+// 선택하거나 업로드한 사진의 썸네일
+const PhotoThumbnail = ({ file, alt }) => {
+    const [previewUrl, setPreviewUrl] = useState('')
+
+    useEffect(() => {
+        let isActive = true
+        const url = URL.createObjectURL(file)
+
+        Promise.resolve().then(() => {
+            if (isActive) setPreviewUrl(url)
+        })
+
+        return () => {
+            isActive = false
+            URL.revokeObjectURL(url)
+        }
+    }, [file])
+
+    if (!previewUrl) return null
+
+    return (
+        <img
+            src={previewUrl}
+            alt={alt}
+            className="h-24 w-full rounded-lg border border-gray-200 object-cover"
+        />
+    )
+}
+
+const DriverDispatchProcessPage = () => {
+    const { shipmentId } = useParams()
+    const [shipment, setShipment] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState('')
+
+    const [changing, setChanging] = useState(false)
+    const [actionError, setActionError] = useState('')
+
+    // 사진 업로드 상태 (5-4)
+    const [photos, setPhotos] = useState([])        // File 목록 (미리보기용)
+    const [uploadedPhotos, setUploadedPhotos] = useState([]) // 업로드 성공한 사진
+    const [uploading, setUploading] = useState(false)
+    const [uploadError, setUploadError] = useState('')
+    const [uploadedCount, setUploadedCount] = useState(0)
+
+    const step = shipment ? NEXT_STEP[shipment.status] : null
+
+    // 위치 공유 (7-2) — IN_TRANSIT일 때만 watchPosition + 30초 간격 전송
+    const { sharing, secondsAgo, error: locationError } = useLocationShare(shipmentId, shipment?.status)
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                // 로그인한 기사 본인의 확정 배차 상세 조회
+                const data = await getMyAssignedDispatch(shipmentId)
+                setShipment(data)
+            } catch (err) {
+                setLoadError(toMessage(err))
+            } finally {
+                setLoading(false)
+            }
+        }
+        load()
+    }, [shipmentId])
+
+    // 경로 지도 좌표 (DRV-03): 배차 상세에는 좌표가 없어 배송 상세 API(배정 기사도 조회 가능)로 받는다.
+    // 실패해도 화면은 그대로 — 지도 없이 주소 글자만 보인다
+    const [route, setRoute] = useState(null)
+    useEffect(() => {
+        let active = true
+        getShipment(shipmentId)
+            .then((detail) => {
+                if (!active) return
+                setRoute({
+                    origin: { lat: detail.originLat, lng: detail.originLng, label: detail.originAddress },
+                    dest: { lat: detail.destLat, lng: detail.destLng, label: detail.destAddress },
+                })
+            })
+            .catch(() => {})
+        return () => { active = false }
+    }, [shipmentId])
+
+    // 파일 선택 → 기존 사진에 새 사진 추가
+    const handleSelectFiles = (e) => {
+        setUploadError('')
+
+        const selectedFiles = Array.from(e.target.files || [])
+
+        setPhotos((prev) => [...prev, ...selectedFiles])
+
+        // 같은 파일을 다시 선택해도 onChange가 작동하도록 초기화
+        e.target.value = ''
+    }
+
+    // 업로드 전 선택한 사진 한 장 삭제
+    const handleRemovePhoto = (indexToRemove) => {
+        setPhotos((prev) =>
+            prev.filter((_, index) => index !== indexToRemove)
+        )
+    }
+
+    const handleUpload = async () => {
+        if (!step?.photoType || photos.length === 0 || uploading) return
+        setUploading(true)
+        setUploadError('')
+        try {
+            const saved = await uploadShipmentImages(shipmentId, photos, step.photoType)
+            setUploadedCount((prev) => prev + saved.length)
+            setUploadedPhotos((prev) => [...prev, ...photos.slice(0, saved.length)])
+            setPhotos([])
+            clearPhotoInput()
+        } catch (err) {
+            setUploadError(toMessage(err))
+        } finally {
+            setUploading(false)
+        }
+    }
+
+    // input 값을 비우기 위한 헬퍼 (같은 파일 재선택 가능하게)
+    const clearPhotoInput = () => {
+        const el = document.getElementById('photo-input')
+        if (el) el.value = ''
+    }
+
+    // "다음 단계" 버튼 → 상태 변경
+    const handleNextStep = async () => {
+        if (!step || changing) return
+        setChanging(true)
+        setActionError('')
+        try {
+            await changeShipmentStatus(shipmentId, step.next)
+            // 성공: 화면 데이터의 상태를 바로 갱신 (상세 API 머지 후에는 재조회로 교체)
+            setShipment((prev) => ({ ...prev, status: step.next }))
+            setPhotos([])
+            setUploadedPhotos([])
+            setUploadedCount(0)
+            clearPhotoInput()
+        } catch (err) {
+            setActionError(toMessage(err))
+        } finally {
+            setChanging(false)
+        }
+    }
+
+    if (loading) return <p className="p-6 text-gray-500">불러오는 중...</p>
+
+    if (loadError) {
+        return (
+            <section className="grid gap-4 p-4">
+                <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800">← 배차 확정 목록으로</Link>
+                <p className="rounded-2xl bg-white p-6 text-gray-600 shadow-sm">{loadError}</p>
+            </section>
+        )
+    }
+
+    return (
+        <section className="mx-auto min-h-screen w-full max-w-[640px] space-y-4 bg-gray-50 px-5 pb-24 pt-5">
+            <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800">← 배차 확정 목록으로</Link>
+
+            {/* 제목 + 상태 배지 */}
+            <div className="flex items-center justify-between gap-3">
+                <h1 className="text-lg font-bold text-gray-900">배송 처리 #{shipment.shipmentId}</h1>
+                <StatusBadge status={shipment.status} />
+            </div>
+
+            <ShipmentProgress status={shipment.status} />
+
+            {/* 화물 정보 */}
+            <DriverCargoCard
+                cargoName={shipment.cargoName}
+                cargoWeightKg={shipment.cargoWeightKg}
+                vehicleTypeLabel={shipment.vehicleTypeId != null ? `차종 ${shipment.vehicleTypeId}` : undefined}
+                fare={shipment.fare}
+            />
+
+            {/* 경로: 지도(좌표가 있을 때) + 주소 */}
+            {route && <RouteMap origin={route.origin} dest={route.dest} />}
+            <DriverRouteCard
+                originAddress={shipment.originAddress}
+                originDetail={shipment.originDetail}
+                destAddress={shipment.destAddress}
+                destDetail={shipment.destDetail}
+                pickupAt={shipment.pickupAt}
+                durationMin={shipment.durationMin}
+            />
+
+            {/* 고객 요청사항 */}
+            <DriverMemoCard memo={shipment.memo} />
+
+            {/* 수령인 — 전화 걸기 (tel:) */}
+            <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <p className="text-xs font-semibold text-emerald-600">
+                    CONTACTS
+                </p>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+                        <div>
+                            <p className="text-xs text-gray-500">수령인</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                {shipment.receiverName || '정보 없음'}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p className="text-xs text-gray-500">연락처</p>
+                            <p className="mt-1 text-sm text-gray-700">
+                                {shipment.receiverPhone || '연락처 없음'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <a
+                        href={`tel:${shipment.receiverPhone}`}
+                        className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                    >
+                        📞 전화 걸기
+                    </a>
+                </div>
+            </div>
+
+            {/* 사진 업로드 (5-4) — 필요한 단계에서만 노출 */}
+            {step?.photoType && (
+                <div className="grid gap-3 rounded-2xl bg-white p-5 shadow-sm">
+                    <p className="text-sm font-bold text-gray-800">
+                        {step.photoLabel} 업로드 <span className="text-red-500">(필수)</span>
+                    </p>
+                    <input
+                        id="photo-input"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        multiple
+                        onChange={handleSelectFiles}
+                        className="w-full text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-emerald-700 file:transition-colors file:hover:bg-emerald-100"
+                    />
+                    {/* 업로드 전 미리보기 */}
+                    {photos.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                            {photos.map((file, i) => (
+                                <div key={i} className="relative">
+                                    <PhotoThumbnail
+                                        file={file}
+                                        alt={`미리보기 ${i + 1}`}
+                                    />
+
+                                    {/* 선택한 사진 삭제 */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemovePhoto(i)}
+                                        disabled={uploading}
+                                        aria-label={`사진 ${i + 1} 삭제`}
+                                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-lg font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <Button onClick={handleUpload} loading={uploading} disabled={photos.length === 0} size="sm" className="!bg-emerald-600 hover:!bg-emerald-700">
+                        {photos.length > 0 ? `${photos.length}장 업로드` : '사진을 선택해 주세요'}
+                    </Button>
+
+                    {/* 업로드 성공한 사진 */}
+                    {uploadedCount > 0 && (
+                        <div className="grid gap-3">
+                            <p className="text-sm font-semibold text-green-700">
+                                ✓ 사진 {uploadedCount}장 저장 완료!
+                            </p>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                {uploadedPhotos.map((file, i) => (
+                                    <PhotoThumbnail
+                                        key={i}
+                                        file={file}
+                                        alt={`업로드 완료 사진 ${i + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {uploadError && <p className="text-sm font-semibold text-red-600">{uploadError}</p>}
+                </div>
+            )}
+
+            {/* 이미 서버에 저장된 사진: 새로고침 후에도 조회 가능, 읽기 전용 */}
+            <ShipmentPhotoGallery shipmentId={shipmentId} refreshKey={uploadedCount} />
+
+            {/* 다음 단계 버튼 (현재 상태에 맞는 버튼 하나) */}
+            {step ? (
+                <Button onClick={handleNextStep} loading={changing} size="lg" className="w-full !rounded-xl !bg-emerald-600 hover:!bg-emerald-700">
+                    {step.label}
+                </Button>
+            ) : (
+                <p className="rounded-2xl bg-gray-100 p-4 text-center text-sm text-gray-600">
+                    {shipment.status === 'DELIVERED'
+                        ? '배송 완료를 등록했어요. 고객 수령 확정을 기다리는 중입니다.'
+                        : '이 배송은 처리할 단계가 없어요. (완료 · 취소됨)'}
+                </p>
+            )}
+
+            {/* 위치 공유 상태 표시 (7-2) — 운송중에만 */}
+            {shipment?.status === 'IN_TRANSIT' && (
+                <div className={`rounded-2xl border p-4 text-sm ${locationError ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-green-200 bg-green-50 text-green-800'}`}>
+                    {locationError ? (
+                        <p>📍 {locationError}</p>
+                    ) : sharing ? (
+                        <p>📍 공유 중 · {secondsAgo}초 전 전송</p>
+                    ) : (
+                        <p>📍 위치 신호를 기다리는 중...</p>
+                    )}
+                </div>
+            )}
+            {actionError && (
+                <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-600">{actionError}</p>
+            )}
+        </section>
+    )
+}
+
+export default DriverDispatchProcessPage

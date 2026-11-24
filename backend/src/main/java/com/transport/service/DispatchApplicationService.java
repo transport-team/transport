@@ -1,0 +1,37 @@
+package com.transport.service;
+
+import java.util.List;
+import java.util.Map;
+
+import com.transport.domain.Shipment;
+import com.transport.dto.DispatchApplicantResponseDTO;
+import com.transport.dto.DriverShipmentListResponseDTO;
+
+public interface DispatchApplicationService {
+
+    // 고객 소유 배송별 아직 처리 전인 기사 지원 수
+    Map<Long, Long> getPendingApplicantCounts(Long memberId);
+
+
+    // 기사: 원하는 운송 요청에 차량을 선택해서 지원
+    Long apply(Long memberId, Long shipmentId, Long vehicleId);
+
+    // 기사: 배차 확정 전 신청 취소
+    void withdrawApplication(Long memberId, Long shipmentId);
+
+    // 고객이 자신의 배송에 지원한 기사 목록 조회
+    List<DispatchApplicantResponseDTO> getApplicants(Long memberId, Long shipmentId);
+
+    // 고객이 지원 기사 한 명을 선택하여 배차 확정
+    Long selectApplicant(Long memberId, Long shipmentId, Long applicationId);
+
+    // 고객이 지원한 기사를 개별적으로 거절
+    void rejectApplicant(Long memberId, Long shipmentId, Long applicationId);
+
+    // 기사: 배차 대기 중인 운송 요청 목록 조회
+    List<DriverShipmentListResponseDTO> getAvailableShipments(Long memberId);
+
+    // 배송이 취소되면 대기 중인 지원을 모두 자동 마감(NOT_SELECTED)한다
+    // 약속 메서드 (collaboration.md): 팀원 3 결제 취소가 같은 트랜잭션에서 부른다
+    void closePendingApplications(Shipment shipment);
+}

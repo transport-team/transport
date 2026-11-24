@@ -5,35 +5,247 @@
 ## 공통 규칙
 - 기본 경로 `/api` · 관리자 `/api/admin/**` · 기사 `/api/driver/**`
 - 인증 `Authorization: Bearer {accessToken}` — 401 = 로그인 필요(없음·만료), 403 = 권한 없음
-- 목록: 수업의 `PageRequestDTO`(page, size) / `PageResponseDTO`. 검색 파라미터 이름 `status, from, to, keyword`
+  - 401 `UNAUTHORIZED` 토큰 없음 · `TOKEN_EXPIRED` 만료 → `/api/auth/refresh`로 재발급 후 다시 요청 · `INVALID_TOKEN` 다시 로그인
+  - 2026-11-09 권한 전환부터: 공개 API 외에는 모두 로그인이 필요하다. `/api/admin/**`는 ADMIN, `/api/driver/**`는 DRIVER만 (SecurityConfig URL 규칙)
+  - 공개 API(아래 표의 권한 "전체"): `/api/auth/**` · GET `/api/health` · `/api/terms` · `/api/notices`(`/{id}`) · `/api/faqs` · `/api/vehicle-types` · `/api/cargo-types` · `/api/files/{fileName}` · Swagger. 새로 공개할 API는 팀원 1에게 요청
+  - 그 밖의 역할(예: 배송 신청은 CUSTOMER)은 각 컨트롤러의 `@PreAuthorize`로 검사한다. 공개 API에도 잘못되거나 만료된 토큰을 보내면 401
+- 목록: 수업의 `PageRequestDTO`(page는 1부터 · size 기본 10 · 최대 100) / `PageResponseDTO`(dtoList, pageNumList, prev · next, prevPage · nextPage, totalCount, totalPage, current). 검색 파라미터 이름 `status, from, to, keyword`
 - 에러 응답: `{ "code": "INVALID_STATUS_CHANGE", "message": "배차완료 상태에서만 상차 처리할 수 있습니다." }`
 
 ## 에러 코드 (ErrorCode — 도메인별 구역에 각자 추가)
 
+사용: `throw new CustomException(ErrorCode.NOT_FOUND)` → HTTP 상태 · 기본 메시지는 ErrorCode에 둔다. 상황별 문구는 `new CustomException(ErrorCode.X, "문구")`. `@Valid` 실패는 `INVALID_INPUT` + DTO에 적은 message
+
 | 구역 | 코드 예시 |
 |---|---|
-| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, TERMS_REQUIRED, DUPLICATE_EMAIL, DRIVER_NOT_APPROVED |
-| 배차 (2) | ALREADY_DISPATCHED, NO_AVAILABLE_VEHICLE, OUT_OF_SCHEDULE, OVER_DAILY_LIMIT, SETTLEMENT_EXISTS |
-| 배송·결제 (3) | ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, OVER_MAX_WEIGHT, PAYMENT_AMOUNT_MISMATCH, PAYMENT_FAILED, CANNOT_CANCEL |
-| 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS |
+| 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, CONCURRENT_UPDATE(409 — 같은 배송을 거의 동시에 바꿔 `@Version`이 맞지 않음, 새로고침 후 다시), TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
+| 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING |
+| 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), INACTIVE_CARGO_TYPE, CARGO_TYPE_NOT_FOUND(404), DUPLICATE_CARGO_TYPE_NAME(409), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(409 — 취소할 수 없는 상태: 고객은 배차 확정 뒤, 관리자는 상차 뒤, 이미 취소) |
+| 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS, REVIEW_NOT_ALLOWED |
 
 ## 팀원 1 — 회원 · 인증 · 운영
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
+| GET | /api/health | 서버 동작 확인 → `{"status":"ok"}` | 전체 |
 | POST | /api/auth/signup | 회원가입 (필수 약관 동의, 기사는 PENDING) | 전체 |
 | POST | /api/auth/login | 로그인 → 토큰 · 역할 | 전체 |
 | POST | /api/auth/refresh | 토큰 재발급 | 전체 |
-| GET · PUT | /api/members/me | 내 정보 조회 · 수정 | 로그인 |
-| GET | /api/terms | 가입 화면 약관 목록 | 전체 |
+| GET · PUT | /api/members/me | 내 정보 조회 · 수정(연락처) | 로그인 |
+| PATCH | /api/members/me/password | 비밀번호 변경 (현재 비밀번호 확인) | 로그인 |
+| GET · PUT · DELETE | /api/members/me/default-address | 기본 배송지 조회 · 저장/수정 · 삭제 | CUSTOMER |
+| GET | /api/members/me/recent-address | 저장된 배송지 목록 (최근 수정 순, 없으면 `[]`) — 배송 신청 화면의 '최근 주소' | 로그인 |
+| GET | /api/terms | 가입 화면 약관 목록 (필수 먼저 → 등록 순) | 전체 |
 | GET | /api/notices, /api/notices/{id} | 공지 목록 · 상세 | 전체 |
 | GET | /api/faqs | FAQ (category) | 전체 |
-| POST · GET | /api/inquiries, /api/inquiries/my | 문의 등록 · 내 문의 | 로그인 |
-| GET | /api/admin/dashboard | KPI | ADMIN |
-| GET | /api/admin/stats/daily | 일별 건수 · 매출 (from, to) | ADMIN |
+| POST · GET | /api/inquiries, /api/inquiries/my | 1:1 문의 등록 · 내 문의 (관리자는 403) | 고객 · 기사 |
+| GET | /api/admin/dashboard | 대시보드: 오늘 접수 · 완료, 배차 대기 · 진행 중, 이번 달 매출, 평균 평점, 처리할 일, 이번 달 차종별 · 기사 순위 | ADMIN |
+| GET | /api/admin/stats/daily | 일별 결제 완료 건수 · 매출 (from, to — 기본 오늘까지 14일, 최대 92일) | ADMIN |
 | GET · PATCH | /api/admin/members, /{id}/enabled | 회원 검색 · 비활성화 | ADMIN |
-| POST · PUT · DELETE | /api/admin/notices · /faqs · /terms (/{id}) | 공지 · FAQ · 약관 관리 | ADMIN |
-| PATCH | /api/admin/inquiries/{id}/answer | 문의 답변 (알림) | ADMIN |
+| POST · PUT · DELETE | /api/admin/notices · /faqs (/{id}) | 공지 · FAQ 관리 | ADMIN |
+| GET | /api/admin/faqs | FAQ 전체 (숨긴 것 포함) | ADMIN |
+| GET · POST | /api/admin/terms | 약관 전체 (지난 버전 · 동의 수 포함) · 새 약관 | ADMIN |
+| POST | /api/admin/terms/{id}/revisions | 새 버전으로 개정 (이전 버전은 사용 중지) — 약관 내용 수정(PUT)은 없음 | ADMIN |
+| PATCH · DELETE | /api/admin/terms/{id}/active, /api/admin/terms/{id} | 사용 중지 · 다시 사용, 삭제 (동의한 회원이 없을 때만) | ADMIN |
+| GET | /api/admin/inquiries | 문의 목록 (status, page) | ADMIN |
+| PATCH | /api/admin/inquiries/{id}/answer | 답변 등록 · 수정 (첫 답변이면 작성자에게 알림) | ADMIN |
+| DELETE | /api/admin/inquiries/{id} | 문의 삭제 (스팸 정리) | ADMIN |
+
+### 회원가입 예시
+
+```jsonc
+// GET /api/terms → 가입 화면 약관 (required = 필수 동의)
+[{ "id": 1, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.0" }]
+
+// POST /api/auth/signup — 고객
+{ "email": "kim@test.com", "password": "password1!", "name": "김고객", "phone": "010-1234-5678",
+  "role": "CUSTOMER", "agreedTermIds": [1, 2] }
+// POST /api/auth/signup — 기사: licenseType · careerYears 필수 → 승인 대기(PENDING)로 가입, 관리자 승인 후 로그인
+{ "email": "lee@test.com", "password": "password1!", "name": "이기사", "phone": "010-2222-3333",
+  "role": "DRIVER", "agreedTermIds": [1, 2], "licenseType": "1종 보통", "careerYears": 5 }
+// 201
+{ "memberId": 4 }
+// 409 DUPLICATE_EMAIL · 400 TERMS_REQUIRED(필수 약관 빠짐) · 400 INVALID_INPUT(형식 오류 · 없거나 사용 중지된 약관(가입 화면을 연 뒤 개정됨) · ADMIN 가입 · 기사 정보 빠짐)
+```
+- 비밀번호 8~64자, 연락처 `010-0000-0000` 형식, 면허 종류 20자 이하, 경력 0~60년
+
+### 로그인 · 재발급 예시
+
+```jsonc
+// POST /api/auth/login (시드 계정: admin · customer · driver @transport.test / 1234)
+{ "email": "customer@transport.test", "password": "1234" }
+// 200 — role로 역할별 첫 화면 이동
+{ "accessToken": "eyJ…", "refreshToken": "eyJ…", "memberId": 2, "email": "customer@transport.test", "name": "테스트고객", "role": "CUSTOMER" }
+// 401 LOGIN_FAILED(없는 이메일 · 틀린 비밀번호 같은 응답) · 403 ACCOUNT_DISABLED(비활성 계정 · 중지된 기사) · 403 DRIVER_NOT_APPROVED(승인 대기 기사)
+
+// POST /api/auth/refresh — 액세스 토큰이 TOKEN_EXPIRED일 때. 응답은 로그인과 같은 모양 (두 토큰 모두 새로 발급)
+{ "refreshToken": "eyJ…" }
+// 401 TOKEN_EXPIRED · INVALID_TOKEN → 로그인 화면으로
+
+// GET /api/members/me (Authorization: Bearer {accessToken})
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-0000-0002", "role": "CUSTOMER",
+  "enabled": true, "createdAt": "2026-11-02T10:00:00" }
+```
+- 토큰 유효 시간: 액세스 30분 · 리프레시 1일 (`application.yml`의 `app.jwt.*`)
+
+### 내 정보 수정 예시
+
+```jsonc
+// PUT /api/members/me — 연락처만 바꿀 수 있다 (이름 · 이메일 · 역할은 그대로)
+{ "phone": "010-9999-8888" }
+// 200 바뀐 내 정보
+{ "id": 2, "email": "customer@transport.test", "name": "테스트고객", "phone": "010-9999-8888", "role": "CUSTOMER",
+  "enabled": true, "createdAt": "2026-11-02T10:00:00" }
+// 400 INVALID_INPUT(연락처 형식)
+
+// PATCH /api/members/me/password
+{ "currentPassword": "1234", "newPassword": "newPassword1!" }
+// 204 (본문 없음) · 400 WRONG_PASSWORD(현재 비밀번호 틀림) · 400 INVALID_INPUT(새 비밀번호 8~64자 · 지금과 같은 비밀번호)
+```
+- 비밀번호를 바꿔도 이미 받은 토큰은 만료될 때까지 쓸 수 있다 (로그아웃시키지 않음)
+
+### 기본 배송지
+
+```jsonc
+// GET /api/members/me/default-address — 저장된 배송지가 없으면 204
+{
+  "id": 1, "label": "우리 집",
+  "originAddress": "서울시 마포구 ...", "originDetail": "101동 1001호",
+  "destAddress": "경기도 고양시 ...", "destDetail": "상세주소"
+}
+
+// PUT /api/members/me/default-address
+{
+  "label": "우리 집",
+  "originAddress": "서울시 마포구 ...", "originDetail": "101동 1001호",
+  "destAddress": "경기도 고양시 ...", "destDetail": "상세주소"
+}
+// 200 저장된 기본 배송지 · 400 INVALID_INPUT(이름·주소 누락)
+// DELETE /api/members/me/default-address → 204
+```
+
+### 회원 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/members?role=CUSTOMER&enabled=false&keyword=김&page=1 — role · enabled · keyword는 빼도 된다, 최신 가입 순
+{ "dtoList": [{ "id": 4, "email": "kim@test.com", "name": "김고객", "phone": "010-1234-5678", "role": "CUSTOMER",
+                "enabled": false, "createdAt": "2026-11-03T16:58:01" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// PATCH /api/admin/members/{id}/enabled — 비활성화 false · 다시 활성화 true
+{ "enabled": false }
+// 200 바뀐 회원 정보 · 400 INVALID_INPUT(enabled 빠짐 · 관리자 계정) · 404 NOT_FOUND · 403 FORBIDDEN(관리자 아님)
+```
+- 비활성화된 회원은 로그인 · 토큰 재발급이 403 `ACCOUNT_DISABLED` (이미 받은 액세스 토큰은 최대 30분 남는다)
+- 기사 승인 · 중지는 `/api/admin/drivers`(Driver.status), 이건 계정 자체 사용 중지
+
+### 공지 예시
+
+```jsonc
+// GET /api/notices?keyword=오픈&page=1 — 로그인 없이, 제목 검색 · 최신순 (keyword는 빼도 된다)
+{ "dtoList": [{ "id": 1, "title": "서비스 오픈 안내", "content": "운송서비스 운용 사이트가 열렸습니다.", "writerName": "관리자",
+                "viewCount": 3, "createdAt": "2026-11-02T10:00:00", "updatedAt": "2026-11-02T10:00:00" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// GET /api/notices/{id} — 로그인 없이, 볼 때마다 viewCount + 1 · 404 NOT_FOUND
+
+// POST /api/admin/notices (PUT /api/admin/notices/{id}도 같은 본문) — 작성자는 로그인한 관리자
+{ "title": "추석 연휴 배송 안내", "content": "9/28 ~ 10/1은 배차가 늦어질 수 있어요." }
+// POST 201 { "noticeId": 2 } · PUT 200 바뀐 공지 · DELETE 204 · 400 INVALID_INPUT(제목 100자 · 내용 5,000자 이하) · 404 · 403(관리자 아님)
+```
+- 관리자 화면 목록 · 수정도 공개 목록 API를 같이 쓴다 (상세를 열면 조회수가 오르니까 목록에 내용까지 담는다)
+
+### FAQ 예시
+
+```jsonc
+// GET /api/faqs?category=결제 — 로그인 없이, 노출 중인 것만 sortOrder → id 순 (category는 빼도 된다, 페이지 없음)
+[{ "id": 1, "category": "결제", "question": "결제하지 않으면 어떻게 되나요?", "answer": "신청 후 30분 안에 …", "sortOrder": 1, "active": true }]
+
+// GET /api/admin/faqs — 관리자, 숨긴 것(active: false)까지 같은 모양
+
+// POST /api/admin/faqs (PUT /api/admin/faqs/{id}도 같은 본문) — 숨기기는 active: false
+{ "category": "회원", "question": "비밀번호를 바꾸려면?", "answer": "내 정보 화면에서 바꿀 수 있어요.", "sortOrder": 3, "active": true }
+// POST 201 { "faqId": 3 } · PUT 200 바뀐 FAQ · DELETE 204 · 400 INVALID_INPUT(분류는 배송 · 결제 · 회원, 질문 255자 · 답변 5,000자, 순서 0 이상) · 404 · 403(관리자 아님)
+```
+
+### 약관 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/terms — 사용 중(가입 화면 순서) → 지난 버전 · 사용 중지 순, agreementCount = 그 버전에 동의한 회원 수
+[{ "id": 4, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.1", "active": true, "agreementCount": 0, "createdAt": "2026-11-05T10:00:00" },
+ { "id": 1, "title": "서비스 이용약관", "content": "…", "required": true, "version": "v1.0", "active": false, "agreementCount": 12, "createdAt": "2026-11-02T10:00:00" }]
+
+// POST /api/admin/terms (새 약관) — POST /api/admin/terms/{id}/revisions (개정)도 같은 본문
+{ "title": "서비스 이용약관", "content": "제1조 …", "required": true, "version": "v1.1" }
+// 201 { "termId": 4 } — 개정이면 새 버전이 사용 중, 이전 버전은 사용 중지 (이전 버전 내용 · 동의 이력은 그대로)
+// 400 INVALID_INPUT: 이름 100자 · 내용 15,000자 · 버전 20자 이하, 같은 이름의 약관이 이미 사용 중,
+//                    개정은 사용 중인 약관만 · 새 버전은 지금 버전과 달라야 함 · 404 · 403(관리자 아님)
+
+// PATCH /api/admin/terms/{id}/active — 사용 중지 false · 다시 사용 true
+{ "active": false }
+// 200 바뀐 약관 (목록과 같은 모양) · 400(다시 사용하려는데 같은 이름의 약관이 이미 사용 중)
+
+// DELETE /api/admin/terms/{id} — 204 · 400(동의한 회원이 있으면 삭제 대신 사용 중지) · 404
+```
+- 약관 내용은 고치지 않는다(PUT 없음). 바꾸려면 개정 → 회원이 동의한 버전(term_agreement가 가리키는 행)이 그대로 남는다
+- 개정해도 기존 회원에게 다시 동의를 받지 않는다 (공지로 안내) — docs/decisions.md
+
+### 1:1 문의 예시
+
+```jsonc
+// POST /api/inquiries — 고객 · 기사 (관리자는 403), 작성자는 로그인한 회원
+{ "title": "배차가 늦어요", "content": "어제 신청한 배송이 아직 배차 전이에요." }
+// 201 { "inquiryId": 7 } · 400 INVALID_INPUT(제목 100자 · 내용 5,000자 이하)
+
+// GET /api/inquiries/my?page=1 — 내 문의만, 최신순 (답변 전이면 answer · answeredAt은 null)
+{ "dtoList": [{ "id": 7, "title": "배차가 늦어요", "content": "…", "answer": "오늘 오후에 배차돼요.", "answeredAt": "2026-11-05T15:00:00",
+                "status": "ANSWERED", "createdAt": "2026-11-05T10:00:00",
+                "memberId": 2, "memberName": "테스트고객", "memberEmail": "customer@transport.test", "memberRole": "CUSTOMER" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// GET /api/admin/inquiries?status=WAITING&page=1 — 관리자, status(WAITING · ANSWERED)는 빼도 된다, 최신순, 같은 모양
+
+// PATCH /api/admin/inquiries/{id}/answer — 답변 등록 · 수정
+{ "answer": "오늘 오후에 배차돼요." }
+// 200 바뀐 문의 (status ANSWERED, answeredAt = 저장한 때) · 400 INVALID_INPUT(답변 5,000자 이하) · 404
+
+// DELETE /api/admin/inquiries/{id} — 204 · 404
+```
+- 첫 답변이면 `NotificationService.send(작성자, INQUIRY_ANSWERED, "1:1 문의에 답변이 등록됐어요: {제목}", null)` (팀원 4). 답변을 고칠 때는 알림 없음
+- 작성한 문의는 고치거나 지울 수 없다 (COM-07: 등록 · 내 문의 · 답변 확인). 삭제는 관리자만 (스팸 정리)
+
+### 대시보드 예시 (관리자)
+
+```jsonc
+// GET /api/admin/dashboard — 기준일은 서버 날짜, 접수 · 매출은 결제 완료(PAID) 기준
+{ "baseDate": "2026-11-06",
+  "todayReceivedCount": 3, "todayRevenue": 150000,       // 오늘 결제가 끝난 건수 · 금액
+  "todayCompletedCount": 4,                               // 오늘 배송완료(COMPLETED)로 바뀐 건수 (상태 이력)
+  "waitingDispatchCount": 2,                              // 지금 REQUESTED
+  "inProgressCount": 5,                                   // 지금 ASSIGNED · PICKED_UP · IN_TRANSIT · ARRIVED
+  "monthPaidCount": 42, "monthRevenue": 4200000,         // 이번 달 1일 0시 ~ 지금
+  "vehicleTypeStats": [{ "vehicleTypeId": 1, "vehicleTypeName": "소형 (다마스 · 라보)", "count": 0, "revenue": 0 },
+                       { "vehicleTypeId": 2, "vehicleTypeName": "1톤", "count": 40, "revenue": 4000000 }],
+  "driverRanks": [{ "rank": 1, "driverId": 3, "driverName": "김기사", "completedCount": 7, "averageRating": 4.8 },
+                  { "rank": 1, "driverId": 5, "driverName": "이기사", "completedCount": 7, "averageRating": 0.0 },
+                  { "rank": 3, "driverId": 1, "driverName": "박기사", "completedCount": 3, "averageRating": 4.0 }],
+  "averageRating": 4.6, "reviewCount": 12,               // 전체 기간 리뷰
+  "pendingDriverCount": 1, "pendingVehicleRequestCount": 0, "waitingInquiryCount": 2 }
+
+// GET /api/admin/stats/daily?from=2026-11-01&to=2026-11-03 — from · to 포함, 결제가 없는 날은 0
+[{ "date": "2026-11-01", "count": 0, "revenue": 0 },
+ { "date": "2026-11-02", "count": 2, "revenue": 30000 },
+ { "date": "2026-11-03", "count": 0, "revenue": 0 }]
+// to가 없으면 오늘, from이 없으면 to까지 14일
+// 400 INVALID_INPUT: 날짜 형식(YYYY-MM-DD) · 시작일이 종료일보다 늦음 · 92일 초과 · 403(관리자 아님)
+```
+- 환불돼 CANCELED가 된 결제는 매출 · 건수에서 빠진다. 월 정산(U)은 완료(COMPLETED) 기준이라 대시보드 매출과 다를 수 있다
+- 차종별: 사용 중인 차종은 결제가 없어도 0으로, 사용 중지된 차종은 결제가 있을 때만 (차종 id 순)
+- 처리할 일: 기사 승인 대기(`DriverService.getDrivers`), 차량 등록 신청 대기(`VehicleRegistrationService.getPendingRequests`), 답변 대기 문의
+- 오늘 완료: 상태 이력에서 오늘 0시 ~ 지금 COMPLETED로 바뀐 건수 (`StatusHistoryService.countCompleted`)
+- 기사 순위(`driverRanks`): 이번 달 COMPLETED 이력의 변경자(배정 기사)별 건수가 많은 5명, 같으면 기사 id 순으로 자른다. 건수가 같으면 같은 순위(1 · 1 · 3). 평점은 `ReviewService.getAverageRating`(전체 기간, 리뷰가 없으면 0.0). 이번 달 완료가 없으면 빈 목록
+- 평균 평점: 전체 기간 리뷰 평균(소수 첫째 자리, 리뷰가 없으면 0.0)과 리뷰 수 (`ReviewService.getRatingStat`)
+- 오늘 완료 · 평균 평점 · 기사 순위는 2단계 (완료 처리 · 리뷰 · 배차 기능이 생긴 뒤 — docs/collaboration.md 약속 표)
 
 ## 팀원 2 — 기사 · 차량 · 배차 · 정산
 
@@ -41,49 +253,188 @@
 |---|---|---|---|
 | GET | /api/vehicle-types | 차종 목록 | 전체 |
 | GET · POST · PUT | /api/admin/vehicle-types(/{id}) | 차종 · 요금 관리 | ADMIN |
-| GET · POST · PUT · DELETE | /api/admin/vehicles(/{id}) | 차량 관리 (DELETE = 비활성화) | ADMIN |
+| PATCH | /api/admin/vehicle-types/{id}/active | 차종 사용 · 숨김 { active } | ADMIN |
+| GET · POST | /api/admin/vehicles | 차량 목록 조회 · 차량 등록 | ADMIN |
+| PUT · DELETE | /api/admin/vehicles/{id} | 차량 수정 · 비활성화 | ADMIN |
 | GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
-| GET · POST · DELETE | /api/driver/schedules(/{id}) | 내 근무 일정 (month) | DRIVER |
-| GET | /api/admin/dispatches/candidates | 배차 후보 (shipmentId) | ADMIN |
-| POST | /api/admin/dispatches | 배차 { shipmentId, driverId, vehicleId } | ADMIN |
-| PATCH | /api/admin/dispatches/{id}/release | 배차 해제 | ADMIN |
-| GET | /api/driver/dispatches | 내 배차 (tab = today · upcoming · done) | DRIVER |
-| GET | /api/driver/stats | 내 실적 · 평점 (month) | DRIVER |
-| POST · GET | /api/admin/settlements | 월 정산 생성 · 목록 (month) | ADMIN |
-| PATCH | /api/admin/settlements/{id}/pay | 지급 완료 | ADMIN |
-| GET | /api/admin/stats/drivers | 기사별 실적 (month) | ADMIN |
+| GET | /api/admin/drivers/{id}/vehicles | 기사 보유 차량 (조회 전용, #124) | ADMIN |
+| GET | /api/admin/vehicle-requests, /all | 차량 등록 신청 — 승인 대기 목록 · 전체(처리 완료 포함, 신청일 최신순 #124) | ADMIN |
+| PATCH | /api/admin/vehicle-requests/{requestId}/approve · /reject | 차량 등록 신청 승인 · 거절 { rejectionReason 300자 이하 } | ADMIN |
+| GET | /api/admin/vehicle-deletion-requests | 차량 삭제 신청 전체 (최신순) | ADMIN |
+| PATCH | /api/admin/vehicle-deletion-requests/{requestId}/approve · /reject | 차량 삭제 신청 승인(차량 INACTIVE) · 거절 { rejectionReason 300자 이하 }(신청 전 상태로 되돌림) — 대기(PENDING)만, 진행 중 배차 · 대기 지원이 있으면 400 | ADMIN |
+| GET | /api/driver/vehicles | 내 차량 목록 | DRIVER |
+| PATCH | /api/driver/vehicles/{vehicleId}/status | 내 차량 상태 { status: AVAILABLE · MAINTENANCE } — 승인된 기사 · 본인 차량만, 삭제 신청 대기 중인 차량은 운행 가능으로 못 바꿈 | DRIVER |
+| GET · POST · DELETE | /api/driver/vehicles/requests, /requests { plateNo 20자 이하, vehicleTypeId }, /requests/{requestId} | 차량 등록 신청 내역(승인 · 거절 · 철회 포함) · 신청 · 철회(대기만 → WITHDRAWN) | DRIVER |
+| GET · POST · DELETE | /api/driver/vehicles/deletion-requests, /deletion-requests/{vehicleId}, /deletion-requests/{requestId} | 차량 삭제 신청 내역 · 신청(차량은 MAINTENANCE로, 진행 중 배차 · 대기 지원이 있으면 400) · 철회(신청 전 상태로) | DRIVER |
+| GET · POST · DELETE | /api/driver/schedules/off (?year&month), /off { date }, /off/{date} | 휴무일 조회 · 등록 · 취소 (오늘 이후, 확정 배차 · 대기 지원 · 완료한 날과 겹치면 400) | DRIVER |
+| GET · PUT · DELETE | /api/driver/schedules/work (?year&month), /work/{date} { startTime, endTime } | 근무 가능 시간 조회 · 등록(있으면 바꿈) · 삭제 (DRV-01) — 오늘 이후, 휴무일이면 400, 시작 = 끝이면 400, 끝 < 시작이면 자정을 넘기는 근무(`overnight: true`). 운송 요청 목록이 근무 끝 시간을 넘기는 요청에 경고를 붙인다 | DRIVER |
+| POST | /api/admin/shipments/{id}/dispatch/cancel | 배차 취소(재배차) { reason 180자 이하 } — 배차 완료(ASSIGNED)만, 접수(REQUESTED)로 되돌리고 배차 해제 · 이력 · 기사 · 고객 알림 (#124). 관리자 후보 추천 · 직접 배정은 하지 않는다(11-06 결정) | ADMIN |
+| GET | /api/driver/dispatches, /{shipmentId} | 내 확정 배차 — 진행 중 목록 · 상세 | DRIVER |
+| GET | /api/driver/dispatches/history, /history/{applicationId} | 지난 신청 · 배송 내역(선택 안 됨 · 거절 · 철회 · 완료 · 취소) · 상세 | DRIVER |
+| GET | /api/driver/settlements/monthly?month, /monthly/items?month, /range?from&to, /range/items?from&to | 내 실적: 월별 · 기간별 완료 건수 · 운임 합계 · 운임 내역 (#107). `/monthly`는 그 달 정산 상태도 준다 — settlementStatus(OPEN 마감 전 · PENDING 지급 대기 · PAID 지급 완료 · NONE 마감했지만 실적이 없어 정산 없음), commissionRate · payoutAmount · paidAt(지급 대기 · 지급 완료일 때만, 아니면 null) | DRIVER |
+| GET | /api/driver/settlements/reviews | 내 평균 평점 · 리뷰 (DRV-07) — { averageRating(소수 첫째 자리, 없으면 0.0), reviewCount, reviews(최신순, 고객 이름 가림) }. `ReviewService` 약속 메서드를 `driver.id`로 부른다 | DRIVER |
+| GET | /api/admin/settlements?month | 월 정산 — 기사별 건수 · 운임 · 수수료 · 지급액 · 상태(정산 전 · 지급 대기 · 지급 완료 · 마감 후 실적) | ADMIN |
+| GET | /api/admin/settlements/trend?endMonth | 끝 달까지 6개월 운임 · 수수료 추이 | ADMIN |
+| GET | /api/admin/settlements/differences?month&driverId | 마감 뒤 달라진 실적(마감 후 완료된 과거 배송) 상세 | ADMIN |
+| POST | /api/admin/settlements/{id}/paid | 지급 완료 기록 { transferReference 1~100자 } — 실제 송금은 하지 않음, 기록한 관리자 이메일을 남긴다. 마감된 달 · 지급 예정일(다음 달 5일)부터만 | ADMIN |
+| GET | /api/driver/shipments | 기사가 지원할 수 있는 배송 목록 조회 | DRIVER |
+| POST | /api/driver/shipments/{shipmentId}/applications | 기사의 배송 배차 신청 | DRIVER |
+| DELETE | /api/driver/shipments/{shipmentId}/applications/my | 배차 신청 취소 — 배차 대기(REQUESTED) 중인 내 대기 신청만, `WITHDRAWN`이 되고 다시 지원 가능 (204) | DRIVER |
+| GET | /api/customer/shipments/application-counts | 내 배송별 대기 중인 지원 기사 수 { shipmentId: 건수 } | CUSTOMER |
+| GET | /api/customer/shipments/{shipmentId}/applications | 고객의 배송별 기사 지원 목록 조회 | CUSTOMER |
+| POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/select | 고객이 지원 기사 선택 및 배차 확정 | CUSTOMER |
+| POST | /api/customer/shipments/{shipmentId}/applications/{applicationId}/reject | 고객이 개별 기사 지원 거절 | CUSTOMER |
+
+- 월 정산 마감은 API가 아니라 서버가 한다 — 매일 00:05(KST)와 서버 시작 때 지난달을 마감(`settlement_period`)하고 기사별 정산 · 정산 항목을 만든다. 수수료율 10%, 지급액 = 운임 합계 − 수수료(원 단위 반올림), 0건인 기사는 정산 행 없음
+- 배송이 완료돼도 배차(`active`)는 남겨 두고, 취소 · 재배차 때만 해제한다(`releasedAt`). 그래서 기사 지원 · 고객 선택 · 운송 요청 목록의 시간 겹침 검사와 차량 '정비 중' 검사는 **완료 · 취소된 배송의 배차를 빼고** 센다 (11-19 결정 34, #86)
+
+### 관리자 차량 관리 API 예시
+
+**차량 등록 요청 — POST /api/admin/vehicles**
+
+```json
+{
+  "plateNo": "12가3456",
+  "vehicleTypeId": 2,
+  "status": "AVAILABLE",
+  "driverId": null
+}
+```
+
+**차량 등록 성공 응답**
+
+- HTTP 상태: `200 OK`
+- 응답 본문: 등록된 차량 ID (`Long`)
+
+예시:
+
+```json
+5
+```
+
+
+**주요 오류 응답**
+
+| HTTP 상태 | 에러 코드 | 설명 |
+|---|---|---|
+| 400 | INVALID_INPUT | 입력값 검증 실패 |
+| 404 | NOT_FOUND | 차종 또는 기사 정보 없음 |
+| 409 | DUPLICATE_VEHICLE_PLATE | 차량번호 중복 |
+| 409 | DUPLICATE_DRIVER_VEHICLE_TYPE | 그 기사에게 같은 차종 차량이 이미 있음 (차종당 1대) |
+
+### 기사 관리 예시 (관리자)
+
+```jsonc
+// GET /api/admin/drivers?status=PENDING&keyword=김&page=1 — status · keyword(이름 · 이메일 일부)는 빼도 된다, 최신 가입 순
+{ "dtoList": [{ "id": 2, "memberId": 5, "name": "김기사", "email": "kim@test.com", "phone": "010-2222-3333",
+                "licenseType": "1종 보통", "careerYears": 5, "status": "PENDING", "approvedAt": null, "createdAt": "2026-11-03T16:58:01" }],
+  "totalCount": 1, "current": 1, "totalPage": 1, "pageNumList": [1], "prev": false, "next": false, … }
+
+// PATCH /api/admin/drivers/{id}/status — 승인 ACTIVE · 중지 INACTIVE (PENDING으로는 되돌릴 수 없음)
+{ "status": "ACTIVE" }
+// 200 바뀐 기사 정보 (처음 승인할 때 approvedAt 기록) · 400 INVALID_INPUT · 404 NOT_FOUND · 403 FORBIDDEN(관리자 아님)
+```
 
 ## 팀원 3 — 배송 접수 · 운임 · 결제
+
+### 결제 승인
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| POST | /api/payments/confirm | 토스 결제 승인 및 배송 접수 확정 | CUSTOMER |
+
+```jsonc
+// POST /api/payments/confirm
+{ "paymentKey": "tgen_...", "orderId": "transport-...", "amount": 35000 }
+
+// 200
+{
+  "shipmentId": 10, "orderId": "transport-...", "paymentKey": "tgen_...",
+  "amount": 35000, "paymentStatus": "PAID", "shipmentStatus": "REQUESTED"
+}
+```
+
+- 서버는 로그인 고객 본인의 결제인지, 결제 상태가 `READY`이고 배송 상태가 `PENDING_PAYMENT`인지 먼저 확인한다.
+- 요청 금액은 Payment와 Shipment의 서버 운임 모두와 일치해야 하며, 이후 Toss 승인 API를 호출한다.
+- Toss 승인 성공 후 Payment를 `PAID`, 배송을 `REQUESTED`로 변경하고 `shipment_status_history`에 이력을 기록한다.
+- 이미 승인된 결제는 `409 PAYMENT_ALREADY_COMPLETED`, 상태·금액 오류는 `400`, Toss 승인 거절은 `502 PAYMENT_FAILED`로 응답한다.
+- 백엔드는 `TOSS_SECRET_KEY` 환경변수를 우선 사용하고, 없으면 `app.toss.secret-key` 설정을 사용한다. 프론트에는 공개 키인 `VITE_TOSS_CLIENT_KEY`만 설정한다.
+
+### 배송 취소 · 환불 (고객, CUS-06)
+
+| 메서드 | URL | 설명 | 권한 |
+|---|---|---|---|
+| POST | /api/payments/{shipmentId}/cancel | 배차 전(결제 대기 · 접수) 배송 취소, 결제 완료 건은 토스 자동 환불 | CUSTOMER |
+
+```jsonc
+// POST /api/payments/10/cancel
+{ "cancelReason": "일정이 바뀌었어요" }   // 1~500자
+
+// 200 (승인 응답과 같은 모양)
+{ "shipmentId": 10, "orderId": "transport-...", "paymentKey": "tgen_...",
+  "amount": 35000, "paymentStatus": "CANCELED", "shipmentStatus": "CANCELED" }
+```
+
+- 본인 고객만(아니면 403), 배송이 `PENDING_PAYMENT` · `REQUESTED`일 때만 취소할 수 있다. 그 밖은 `409 CANNOT_CANCEL` — 배차 완료 뒤는 "배차가 확정된 배송은 관리자에게 취소를 요청해 주세요.", 운송 중 · 완료는 "운송이 시작된 배송은 취소할 수 없습니다.", 이미 취소는 "이미 취소된 배송입니다."
+- 배차 완료 뒤 취소는 관리자 몫이다 (배차 해제 · 기사 알림과 함께, ADM-02 · #86) → 아래 '관리자 취소'
+- 처리 순서: 결제 · 배송 `CANCELED`, 이력("고객 취소: 사유"), 대기 중인 기사 지원 자동 마감(`NOT_SELECTED`)을 먼저 저장하고 토스 환불을 마지막에 부른다. 환불이 실패하면 `502 PAYMENT_FAILED`이고 아무것도 바뀌지 않는다
+- 결제 완료 건만 환불한다. 결제 대기(`READY`) 건과 개발용 결제 건너뛰기(`LOCAL_SKIP_…`) 건은 토스를 부르지 않는다
+- 환불된 결제(`CANCELED`)는 관리자 대시보드 매출 · 접수 건수에서 빠진다
+
+**관리자 취소** `POST /api/admin/shipments/{id}/cancel` { cancelReason 500자 이하 } (ADMIN, ADM-02 · 11-19 결정 34) — 응답은 고객 취소와 같은 모양
+- 결제 대기 · 접수 · **배차 완료**일 때만. 상차 뒤(운송 중 · 도착 · 완료)와 이미 취소는 `409 CANNOT_CANCEL`
+- 처리 순서는 고객 취소와 같다: 결제 · 배송 `CANCELED`, 이력("관리자 취소: 사유", 처리자 = 관리자), 대기 지원 자동 마감, 배차된 건은 **배차 해제**(`DispatchService.releaseDispatch`)를 먼저 저장하고, 고객 · 배정 기사에게 알림(`STATUS_CHANGED`) 뒤 토스 환불을 마지막에 부른다. 환불이 실패하면 `502 PAYMENT_FAILED`이고 아무것도 바뀌지 않는다(알림도 안 나감)
+- 배차만 풀고 다시 배차 대기로 돌리는 것은 `POST /api/admin/shipments/{id}/dispatch/cancel` (팀원 2 칸)
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
 | GET | /api/cargo-types | 화물 종류 목록 | 전체 |
 | GET · POST · PUT | /api/admin/cargo-types(/{id}) | 화물 종류 관리 | ADMIN |
-| POST | /api/fares/estimate | 예상 운임 → 좌표 · 거리 · 추천 차종 · 운임 내역 | CUSTOMER |
+| PATCH | /api/admin/cargo-types/{id}/active | 화물 종류 사용 · 숨김 { active } | ADMIN |
+| POST | /api/fares/estimate | 예상 운임 → 좌표 · 거리 · 추천 차종 · 운임 내역 (표준 운임 API) | CUSTOMER |
 | POST | /api/shipments | 신청 → 결제대기 + 결제 준비(orderId · amount) | CUSTOMER |
 | POST | /api/payments/confirm | 결제 승인 { paymentKey, orderId, amount } → 접수 | CUSTOMER |
-| POST | /api/shipments/{id}/payment/retry | 재시도 (새 orderId) | CUSTOMER |
-| POST | /api/dev/shipments/{id}/skip-payment | 개발용 결제 건너뛰기 (local 프로필만) | 로그인 |
+| POST | /api/payments/{shipmentId}/retry | 결제 재시도 (새 orderId) — 본인 배송 · 결제 대기 · 신청 30분 안만 | CUSTOMER |
+| POST | /api/local/payments/skip/{shipmentId} | 개발용 결제 건너뛰기 → PAID · 접수 (local 프로필만, 본인 배송) | CUSTOMER |
 | GET | /api/shipments/my | 내 배송 목록 (page, status, from, to) | CUSTOMER |
 | GET | /api/shipments/{id} | 상세 (본인 · 배정 기사 · 관리자) | 로그인 |
-| PATCH | /api/shipments/{id}/cancel | 취소 { reason } → 자동 환불 | CUSTOMER · ADMIN |
+| POST | /api/payments/{shipmentId}/cancel | 고객 취소 { cancelReason } → 결제 완료 건은 자동 환불 (배차 전만, 위 '배송 취소 · 환불') | CUSTOMER |
+| POST | /api/admin/shipments/{id}/cancel | 관리자 취소 { cancelReason } — 상차 전(배차 완료 포함), 결제 건은 자동 환불 · 배차 해제 · 고객 · 기사 알림 (위 '관리자 취소') | ADMIN |
 | GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
 | GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
+
+`/api/shipments/calculate-fare`는 사용하지 않으며, 운임 미리보기와 배송 신청 내부 재계산 모두 `FareService`를 통해 처리합니다. 카카오 주소 검색 실패는 `400 ADDRESS_NOT_FOUND`로 반환하고, 주소 좌표를 확보한 뒤 길찾기만 실패하면 하버사인 직선거리 × 1.3으로 대체 계산합니다. 대체 경로의 `durationMin`은 `null`입니다.
+
+### 화물 종류 목록 예시
+
+`GET /api/cargo-types`는 현재 사용 중인 화물 종류만 반환합니다.
+
+```json
+[
+  { "id": 1, "name": "일반", "extraFee": 0, "handlingNote": null, "active": true },
+  { "id": 2, "name": "파손주의", "extraFee": 5000, "handlingNote": "완충재 포장 확인, 적재 시 위에 다른 짐 금지", "active": true }
+]
+```
 
 ## 팀원 4 — 배송 진행 · 실시간 · 리뷰
 
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
-| PATCH | /api/shipments/{id}/status | 상태 변경 { nextStatus, memo } — 배정 기사만 | DRIVER |
+| PATCH | /api/shipments/{id}/status | 상태 변경 { nextStatus, memo } — 배정 기사만. 상차(PICKED_UP)는 PICKUP 사진, 도착 뒤 배송 완료(`ARRIVED → DELIVERED`)는 RECEIPT(인수증) 사진이 먼저 있어야 함(없으면 400 `PHOTO_REQUIRED`). `DELIVERED → COMPLETED`는 기사가 못 하고(403) 고객 수령 확인으로만 | DRIVER |
+| POST | /api/shipments/{id}/confirm-receipt | 고객 수령 확인 → 운송 완료(`DELIVERED → COMPLETED`, 이력 · 배정 기사 알림) — 본인 배송만(403), 배송 완료(DELIVERED)가 아니면 400 `INVALID_STATUS_CHANGE` (204, #144) | CUSTOMER |
 | GET | /api/shipments/{id}/history | 상태 이력 | 로그인 |
-| POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type) | DRIVER |
+| POST | /api/shipments/{id}/images | 사진 업로드 (multipart: files, type = PICKUP · RECEIPT · ETC, 대소문자 무관 — 다른 값은 400 INVALID_INPUT) | DRIVER |
+| GET | /api/shipments/{id}/images | 배송 사진 목록 — 관리자 · 본인 고객 · 배정 기사는 전부, 배차가 풀린 기사는 자기가 올린 사진만, 그 밖은 403 | 로그인 |
 | GET | /api/files/{fileName} | 사진 보기 (썸네일 `s_`) — `<img>` 때문에 인증 없이, UUID 파일명 | 전체 |
 | POST | /api/shipments/{id}/locations | 위치 전송 { lat, lng } — IN_TRANSIT만 | DRIVER |
-| GET | /api/shipments/{id}/locations/latest | 마지막 위치 | 로그인 |
-| GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트) | 로그인 |
-| GET · PATCH | /api/notifications, /{id}/read | 알림 목록 · 읽음 | 로그인 |
-| POST | /api/shipments/{id}/review | 리뷰 (배송완료 · 1회) | CUSTOMER |
-| GET | /api/drivers/{id}/reviews | 기사 리뷰 · 평균 평점 | 로그인 |
+| GET | /api/shipments/{id}/locations/latest | 마지막 위치 — IN_TRANSIT일 때만, 아니거나 기록이 없으면 204 · 남의 배송은 403 | 본인 고객 · 배정 기사 · ADMIN |
+| GET | /api/notifications/subscribe | SSE 구독 (알림 · location 이벤트 — 알림 본문은 목록 한 건과 같은 모양). 회원당 탭 여러 개가 동시에 받는다 (최대 5개, 넘으면 가장 오래된 탭을 닫음 · 30초마다 heartbeat로 끊긴 탭 정리) | 로그인 |
+| GET · PATCH | /api/notifications, /{id}/read | 알림 목록 (한 건: id · type · message · shipmentId · isRead · createdAt) · 읽음 | 로그인 |
+| POST | /api/shipments/{id}/review | 리뷰 { rating 1~5, content 500자 이하 } — 본인 배송 · 배송완료 · 1회 (이미 있으면 409 `REVIEW_EXISTS`) | CUSTOMER |
+| GET | /api/shipments/{id}/review | 배송의 리뷰 (아직 없으면 204) · 고객 이름은 가림 | 로그인 |
+| GET | /api/drivers/{id}/reviews | 기사 리뷰 목록(최신순) · 평균 평점(리뷰가 없으면 0.0) · 고객 이름은 가림 | 로그인 |
+
+- 리뷰 응답의 `customerName`은 처음 · 마지막 글자만 남기고 가린다: 김민수 → `김*수`, 남궁현석 → `남**석`, 이민 → `이*`, 한 글자 → `*` (11-19 결정 4). 리뷰 작성 응답 · 배송 상세의 `review`도 같다 (모두 `ReviewResponseDTO.from` → `MaskingUtil.maskName`). 관리자에게도 가린 이름을 준다
 
 ## 결제 흐름
 
@@ -100,10 +451,11 @@
   "destAddress": "경기도 수원시 영통구 OO로 34", "destDetail": "B동 창고",
   "cargoTypeId": 2, "cargoName": "유리 진열장", "cargoWeightKg": 600, "vehicleTypeId": 2,
   "pickupAt": "2026-12-03T09:00:00",
+  "senderName": "김보내", "senderPhone": "010-1111-2222",
   "receiverName": "김수령", "receiverPhone": "010-0000-0000", "memo": "엘리베이터 없음"
 }
 // 201 — 1톤 · 38.4km · 평일 오전 · 파손주의 → 98,500원 (fare.md 예시 ③)
-{ "id": 1024, "status": "PENDING_PAYMENT", "orderId": "SHP-1024-7f3a", "orderName": "1톤 운송 · 유리 진열장", "amount": 98500 }
+{ "shipmentId": 1024, "status": "PENDING_PAYMENT", "orderId": "SHP-1024-7f3a", "amount": 98500 }
 
 // POST /api/payments/confirm
 { "paymentKey": "{토스가 넘겨준 값}", "orderId": "SHP-1024-7f3a", "amount": 98500 }

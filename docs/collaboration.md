@@ -27,18 +27,39 @@
 | 3주차 초 | 1 → 전원 | 로그인 사용자 꺼내는 방법(예: @AuthenticationPrincipal), 역할별 URL 규칙 |
 | 3주차 중 | 3 → 2·4 | Shipment 엔티티 · ShipmentStatus · Repository |
 | 3주차 중 | 2 → 3 | VehicleType 엔티티 · 초기 데이터 |
+| 3주차 중 | 2 → 1 | `DriverService.register(member, licenseType, careerYears)` · `getStatus(memberId)` (팀원 2 부재 중 팀원 1이 작성) |
 | 4주차 | 4 → 전원 | `NotificationService.send(receiver, type, message, shipment)` (처음엔 로그만) |
 | 4주차 | 4 → 2·3 | `StatusHistoryService.record(shipment, from, to, changedBy, memo)` |
-| 5주차 | 2 → 4 | `DispatchService.getActiveDriver(shipmentId)` |
+| 5주차 | 2 → 4 | `DispatchService.getActiveDriver(shipmentId)` → 배정 기사의 **회원 ID**(`member.id`, `driver.id` 아님), 배정이 없으면 `null` (상태 변경 · 이력 조회가 로그인 회원 ID와 비교한다). 실구현 PR에서 `DispatchServiceMock`을 지운다 (#60) |
 | 5주차 | 3 → 전원 | 개발용 결제 건너뛰기 API (local 프로필만) |
-| 8주차 | 4 → 2 | `ReviewService.getAverageRating(driverId)` |
+| 8주차 | 4 → 2 | `ReviewService.getAverageRating(driverId)` — `driverId`는 `driver.id` (Review가 Driver를 가리킨다. 위 `getActiveDriver`의 회원 ID와 다름) |
+| 7주차 (T) | 3 → 1 | 대시보드 집계(읽기 전용): `ShipmentService.countByStatus()` · `PaymentService.getPaidStat(from, to)` · `getDailyPaidStats(fromDate, toDate)` · `getPaidStatsByVehicleType(from, to)` (팀원 1이 작성, 팀원 3 리뷰) |
+| 보안 점검 후속 | 1 → 전원 | `MemberService.findById(memberId)` → `Optional<Member>` (회원 엔티티가 필요할 때 `MemberRepository` 대신, 예: 배송 신청 고객 연결) |
+| 배차 해제 (#123) | 2 → 3 | `DispatchService.releaseDispatch(shipmentId)` — 그 배송의 활성 배차를 해제(`active = false`, `releasedAt` 기록), 활성 배차가 없으면 아무것도 안 함. 배송 완료 때는 부르지 않고 취소 · 재배차 때만 부른다 (11-19 결정 34, #86) |
+| 저장소 직접 사용 정리 (11-23) | 3 → 전원 · 2 → 4 | `ShipmentService.getShipment(shipmentId)` → 배송 엔티티(없으면 `SHIPMENT_NOT_FOUND`, 같은 트랜잭션이라 상태를 바꾸면 그대로 저장) · `DriverService.findByMemberId(memberId)` → `Optional<Driver>`(위치 · 리뷰처럼 기사 엔티티를 연결할 때). 위치 · 리뷰 · 사진 · 상태 변경 서비스가 다른 도메인 저장소 대신 쓴다 (#94) |
+| 7주차 (T 2단계) | 4 → 1 | 대시보드 집계(읽기 전용): `StatusHistoryService.countCompleted(from, to)` · `getCompletedCountsByDriver(from, to, limit)` · `ReviewService.getRatingStat()` (팀원 1이 작성, 팀원 4 리뷰). 기사 순위도 상태 이력의 완료 변경자(배정 기사)로 세서, 예정했던 팀원 2의 기사별 완료 건수 메서드는 필요 없어졌다 (2026-11-13) |
+| #102 후속 | 2 → 3 | `DispatchApplicationService.closePendingApplications(shipment)` — 배송이 취소되면 대기 중인 지원을 모두 자동 마감(`NOT_SELECTED`). 결제 취소가 같은 트랜잭션에서 부른다 (팀원 1 작성, 팀원 2 리뷰, 2026-11-19) |
 
 다른 도메인은 위 Service 메서드로만 호출한다. 다른 사람의 Repository를 직접 쓰지 않는다. 약속이 늦어지면 데일리 스크럼에서 바로 공유한다.
 
+### 로그인 사용자 꺼내기 (3주차 초 약속)
+
+```java
+@GetMapping("/my")
+@PreAuthorize("hasRole('CUSTOMER')")  // 로그인만 필요하면 isAuthenticated(), 관리자는 hasRole('ADMIN')
+public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember loginMember, @Valid PageRequestDTO pageRequestDTO) {
+	return shipmentService.getMyList(loginMember.getId(), pageRequestDTO);  // getId() · getEmail() · getRole()
+}
+```
+- `LoginMember`는 액세스 토큰 안의 값이라 DB를 다시 조회하지 않는다. 회원 정보가 더 필요하면 `MemberService.getMember(id)`
+- 2026-11-09 권한 전환부터 공개 API가 아니면 토큰 없이 부를 수 없다(401) → `loginMember`는 null이 아니다
+- `/api/admin/**` · `/api/driver/**`는 URL 규칙이 역할까지 검사한다. 그 밖의 주소에서 역할이 정해진 API(예: 고객만 배송 신청)는 `@PreAuthorize`를 꼭 붙인다
+- 로그인 없이 써야 하는 API를 새로 만들면 SecurityConfig 공개 목록에 넣어 달라고 팀원 1에게 요청한다 (api.md 권한 "전체")
+
 ## Git
 
-- `main`: 발표 · 배포용. 직접 push 금지. 주차 완료 기준을 통과한 develop만 팀원 2가 병합
-- `develop`: 통합 브랜치(기본 브랜치). PR로만 병합. 빌드가 깨지면 최우선으로 고친다
+- `main`: 발표 · 배포용. 직접 push 금지. MVP가 화면으로 끝까지 될 때 한 번, 배포 직전에 한 번 팀원 2가 develop을 병합 (2026-11-19)
+- `develop`: 통합 브랜치(기본 브랜치). PR로만 병합 — 승인 1개와 CI(`백엔드 테스트` · `프론트 빌드 · lint`) 통과가 있어야 병합된다 (GitHub 규칙 `protect-main-develop`, main도 같음). 빌드가 깨지면 최우선으로 고친다
 - 작업 브랜치: `feature/{도메인}-{기능}` (예: feature/dispatch-candidate), `fix/...`
 - 하루 1번 이상 `git pull origin develop`으로 충돌을 작게 유지
 - 커밋: `feat: 배차 후보 조회 API (#12)` · `fix:` · `refactor:` · `docs:` · `test:` · `chore:`

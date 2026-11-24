@@ -1,7 +1,7 @@
-# ERD — 테이블 20개
+# ERD — 테이블 26개
 
 - 관리자: 팀원 2 (테이블 변경은 팀원 2에게 요청 → 주간 회의에서 확정 → 이 문서 수정)
-- 공통: 모든 테이블은 `id BIGINT PK AUTO_INCREMENT`, `created_at`, `updated_at`(BaseEntity)
+- 공통: 모든 테이블은 `id BIGINT PK AUTO_INCREMENT`, `created_at`, `updated_at`(BaseEntity) — 예외: `settlement_item`은 `id`만, `settlement_period`는 정산월이 PK
 - enum은 `@Enumerated(EnumType.STRING)`, 연관관계는 `@ManyToOne(fetch = LAZY)` 단방향 기본
 
 ## 주요 관계
@@ -11,9 +11,15 @@
 | member 1 : 0..1 driver | 기사 회원만 driver 정보를 가짐 |
 | member 1 : N shipment | 고객이 신청한 배송 |
 | member 1 : N term_agreement N : 1 term | 약관 동의 이력 |
+| member 1 : 0..1 customer_address | 고객 기본 배송지 |
 | member 1 : N inquiry / notice / notification | 문의 작성자 / 공지 작성 관리자 / 알림 수신자 |
-| driver 1 : 0..1 vehicle | 담당 차량 |
-| driver 1 : N driver_schedule / dispatch / settlement / review | 근무 일정 / 배차 / 정산 / 받은 리뷰 |
+| driver 1 : N vehicle | 기사 1명이 여러 차량 등록 가능 (같은 차종은 1대만) |
+| driver 1 : N driver_schedule / dispatch / dispatch_application / settlement / review | 근무 일정 / 확정 배차 / 배차 신청 / 정산 / 받은 리뷰 |
+| shipment 1 : N dispatch_application | 배송 1건에 여러 기사가 지원 가능 |
+| vehicle 1 : N dispatch_application | 차량 1대로 여러 배송에 지원한 이력 보존 |
+| driver 1 : N vehicle_registration_request / vehicle_deletion_request | 차량 등록 신청 / 차량 삭제 신청 (vehicle 1 : N vehicle_deletion_request) |
+| settlement 1 : N settlement_item | 월 정산에 들어간 배송별 운임 (배송 1건은 한 번만 정산) |
+| settlement_period | 월 마감 기록 (다른 테이블과 FK 없음, 정산월이 PK) |
 | vehicle_type 1 : N vehicle / shipment | 차종 (shipment는 요청 차종) |
 | cargo_type 1 : N shipment | 화물 종류 |
 | shipment 1 : 1 payment | 배송당 결제 1건 |
@@ -38,6 +44,7 @@
 | distance_km / duration_min | DOUBLE / INT | 도로 거리 / 예상 소요(분) |
 | cargo_name / cargo_weight_kg | VARCHAR / INT | 화물명 / 무게 |
 | pickup_at | DATETIME | 희망 상차 일시 (할증 기준) |
+| sender_name / sender_phone | VARCHAR | 보내는 사람 |
 | receiver_name / receiver_phone | VARCHAR | 수령인 |
 | memo / cancel_reason | VARCHAR(500) | 요청사항 / 취소 사유 |
 | fare | INT | 운임 = 결제 금액 (서버 계산) |
@@ -88,6 +95,14 @@
 | term_id (FK) | BIGINT | 약관 |
 | agreed_at | DATETIME | 동의 시각 |
 
+### customer_address (고객 기본 배송지)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| member_id (FK, UQ) | BIGINT | 고객 회원 |
+| label | VARCHAR(50) | 배송지 이름 |
+| origin_address / origin_detail | VARCHAR / VARCHAR | 출발지 주소 / 상세 |
+| dest_address / dest_detail | VARCHAR / VARCHAR | 도착지 주소 / 상세 |
+
 ### notice
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
@@ -136,7 +151,36 @@
 | plate_no (UQ) | VARCHAR(20) | 차량번호 |
 | vehicle_type_id (FK) | BIGINT | 차종 |
 | status | VARCHAR(20) | AVAILABLE · MAINTENANCE · INACTIVE |
-| driver_id (FK, UQ, NULL) | BIGINT | 담당 기사 |
+| driver_id (FK, NULL) | BIGINT | 차량 소유 기사 (미배정 시 NULL) |
+
+- 제약조건: `UNIQUE(driver_id, vehicle_type_id)` — 기사별 동일 차종 중복 등록 방지
+- 차량번호 `plate_no`는 전체 차량에서 UNIQUE
+
+### vehicle_registration_request (기사 차량 등록 신청)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| driver_id (FK) | BIGINT | 신청한 기사 |
+| vehicle_type_id (FK) | BIGINT | 신청한 차종 |
+| plate_no | VARCHAR(20) | 신청한 차량번호 |
+| status | VARCHAR(20) | PENDING · APPROVED · REJECTED · WITHDRAWN |
+| rejection_reason (NULL) | VARCHAR(300) | 거절 사유 |
+| reviewed_at (NULL) | DATETIME | 관리자가 승인 · 거절한 시각 |
+
+- 기사가 신청하면 `PENDING`, 관리자가 승인하면 `vehicle`에 차량이 생기고 `APPROVED`, 거절하면 사유와 함께 `REJECTED`
+- 승인 · 거절 전에 기사가 철회하면 `WITHDRAWN`
+
+### vehicle_deletion_request (기사 차량 삭제 신청)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| driver_id (FK) | BIGINT | 신청한 기사 |
+| vehicle_id (FK) | BIGINT | 삭제할 차량 |
+| previous_status | VARCHAR(20) | 신청 직전 차량 상태 (AVAILABLE · MAINTENANCE) — 거절 · 철회 때 되돌림 |
+| status | VARCHAR(20) | PENDING · APPROVED · REJECTED · WITHDRAWN (등록 신청과 같은 값) |
+| rejection_reason (NULL) | VARCHAR(300) | 거절 사유 |
+| reviewed_at (NULL) | DATETIME | 관리자가 승인 · 거절한 시각 |
+
+- 차량 행은 지우지 않는다 — 신청하면 차량이 `MAINTENANCE`(배차 지원 불가), 승인하면 `INACTIVE`, 거절 · 철회하면 `previous_status`로 되돌림
+- 진행 중인 배차나 대기 중인 배차 지원이 있는 차량은 신청 · 승인할 수 없다
 
 ### driver_schedule (driver + work_date UQ)
 | 컬럼 | 타입 | 설명 |
@@ -151,9 +195,26 @@
 |---|---|---|
 | shipment_id (FK) | BIGINT | 배송 |
 | driver_id / vehicle_id (FK) | BIGINT | 배정 기사 / 차량 |
-| assigned_by (FK) | BIGINT | 배차한 관리자 |
+| assigned_by (FK) | BIGINT | 배차를 확정한 회원 (고객 선택 시 해당 고객) |
 | active | BOOLEAN | 현재 유효 배차 (배송당 1건) |
 | assigned_at / released_at | DATETIME | 배정 / 해제 |
+
+### dispatch_application (기사 배차 지원 내역)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id (PK) | BIGINT | 배차 신청 ID |
+| shipment_id (FK) | BIGINT | 지원한 배송 요청 |
+| driver_id (FK) | BIGINT | 지원한 기사 |
+| vehicle_id (FK) | BIGINT | 지원 시 사용할 차량 |
+| status | VARCHAR(20) | PENDING · SELECTED · REJECTED · NOT_SELECTED · WITHDRAWN |
+
+- 배송 1건에 여러 기사가 지원할 수 있음
+- 기사가 지원하면 `PENDING`
+- 고객이 선택한 지원은 `SELECTED`
+- 고객이 개별 거절한 지원은 `REJECTED`
+- 다른 기사가 선택되어 자동 마감된 지원은 `NOT_SELECTED`
+- 기사가 배차 확정 전에 스스로 취소한 지원은 `WITHDRAWN` (같은 배송에 다시 지원할 수 있음)
+- 확정된 배차 정보는 별도의 `dispatch` 테이블에 저장
 
 ### settlement (driver + settle_month UQ)
 | 컬럼 | 타입 | 설명 |
@@ -164,6 +225,31 @@
 | total_fare / payout_amount | INT | 운임 합계 / 지급액 |
 | commission_rate | INT | 수수료율(%) |
 | status / paid_at | VARCHAR / DATETIME | PENDING · PAID / 지급일 |
+| paid_by_admin_email (NULL) | VARCHAR(100) | 지급 완료를 기록한 관리자 (과거 기록은 NULL) |
+| transfer_reference (NULL) | VARCHAR(100) | 실제 송금 확인번호 · 메모 (은행 자동 연동 아님) |
+
+- 지급액 = 운임 합계 − 수수료(운임 합계 × 수수료율, 원 단위 반올림)
+
+### settlement_item (정산 항목, shipment UQ)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| settlement_id (FK) | BIGINT | 월 정산 |
+| shipment_id (UQ) | BIGINT | 정산에 넣은 배송 (FK 없이 id만 — 다른 도메인 테이블을 직접 잇지 않음) |
+| fare | INT | 마감 때 고정한 운임 |
+| completed_at | DATETIME | 운송 완료 시각 |
+
+- 월 마감 때 배송별 운임을 고정해 두고, `shipment_id` UNIQUE로 같은 배송이 두 번 정산되지 않게 막는다
+- BaseEntity를 쓰지 않아 `created_at` · `updated_at`이 없다 (`id`만)
+
+### settlement_period (월 마감 기록)
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| settle_month (PK) | CHAR(7) | 마감한 정산월 (예: 2026-10) — BaseEntity를 쓰지 않아 `id`가 없음 |
+| closed_at | DATETIME | 마감 시각 |
+
+- 서버가 매일 00:05(KST)와 서버 시작 때 지난달을 자동 마감한다 (`AdminSettlementScheduler`, 관리자 수동 마감 API 없음)
+- 한 번 마감한 달은 다시 집계하지 않는다. 마감 뒤에 완료된 과거 배송은 관리자 화면에 "마감 후 실적"으로 따로 보여 준다
+- 0건인 기사는 정산 행을 만들지 않는다 (기사 화면에서는 "정산 없음")
 
 ## 팀원 4 — 진행 · 실시간 · 리뷰
 
@@ -204,7 +290,7 @@
 |---|---|---|
 | receiver_id (FK) | BIGINT | 받는 회원 |
 | shipment_id (FK, NULL) | BIGINT | 관련 배송 |
-| type | VARCHAR(30) | DISPATCHED · STATUS_CHANGED · INQUIRY_ANSWERED · REVIEW_REQUEST |
+| type | VARCHAR(30) | DISPATCHED · STATUS_CHANGED · INQUIRY_ANSWERED · REVIEW_REQUEST · APPLICATION_REJECTED(지원 거절 → 기사) · DRIVER_STATUS_CHANGED(승인 · 가입 거절 · 중지 · 다시 활성화 → 기사, shipment_id 없음) |
 | message / is_read | VARCHAR(255) / BOOLEAN | 문구 / 읽음 |
 
 ## 설계 메모

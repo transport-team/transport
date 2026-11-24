@@ -1,0 +1,61 @@
+package com.transport.controller;
+
+import java.util.List;
+
+import com.transport.dto.ShipmentStatusHistoryResponseDTO;
+import com.transport.dto.StatusChangeRequestDTO;
+import com.transport.security.LoginMember;
+import com.transport.service.StatusService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+// 배송 상태 변경 API (팀원 4) — PATCH /api/shipments/{id}/status
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/shipments")
+public class ShipmentStatusController {
+
+	private final StatusService statusService;
+
+	/**
+	 * 배송 상태 변경 (배정 기사만)
+	 * @param id 배송 ID
+	 * @param request { nextStatus, memo }
+	 */
+	@PatchMapping("/{id}/status")
+	@PreAuthorize("hasRole('DRIVER')")
+	public ResponseEntity<Void> changeStatus(
+			@PathVariable Long id,
+			@Valid @RequestBody StatusChangeRequestDTO request,
+			@AuthenticationPrincipal LoginMember loginMember
+	) {
+		statusService.changeStatus(id, request.getNextStatus(), request.getMemo(), loginMember.getId());
+		return ResponseEntity.noContent().build();
+	}
+
+    /** 고객 본인의 배송만 수령 확정 (기사 배송 완료 및 사진 업로드 후). */
+    @PostMapping("/{id}/confirm-receipt")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<Void> confirmReceipt(
+            @PathVariable Long id, @AuthenticationPrincipal LoginMember loginMember) {
+        statusService.confirmReceipt(id, loginMember.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+	/**
+	 * 배송 상태 이력 조회 (본인 고객 · 배정 기사 · 관리자만 — 검사는 서비스에서)
+	 * @param id 배송 ID
+	 * @return 이력 목록 (오래된 순)
+	 */
+	@GetMapping("/{id}/history")
+	public ResponseEntity<List<ShipmentStatusHistoryResponseDTO>> getHistory(
+			@PathVariable Long id,
+			@AuthenticationPrincipal LoginMember loginMember
+	) {
+		return ResponseEntity.ok(statusService.getHistory(id, loginMember.getId(), loginMember.getRole()));
+	}
+}

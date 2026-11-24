@@ -56,4 +56,5 @@ public int calculate(VehicleType type, CargoType cargo,
 - 주소 → 좌표: 카카오 로컬 API `GET https://dapi.kakao.com/v2/local/search/address.json?query=주소`, 헤더 `Authorization: KakaoAK {REST_API_KEY}` (응답의 x = 경도, y = 위도)
 - 도로 거리 · 소요시간: 카카오모빌리티 자동차 길찾기 API (요청 형식 · 무료 쿼터는 카카오모빌리티 디벨로퍼스 문서 확인)
 - 길찾기 실패 시: 하버사인 직선거리 × 1.3 (예시 보정 계수)
+- 길찾기 실패 또는 예상 소요시간이 0분 이하인 경우: 보정 거리 ÷ 평균 속도 40km/h × 60으로 예상 운송 시간(분)을 올림 계산하며, 최소 1분을 보장한다. 40km/h는 임시 기준으로 팀 협의 후 조정할 수 있다.
 - 같은 출발 · 도착 구간 결과는 재사용해 쿼터 절약. 외부 API는 서버에서만 호출

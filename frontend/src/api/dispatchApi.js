@@ -1,0 +1,170 @@
+import jwtAxios from '../util/jwtUtil'
+
+// 기사: 배차 대기 중인 운송 요청 목록 조회
+export const getAvailableShipments = async () => {
+  const res = await jwtAxios.get('/api/driver/shipments')
+
+  return res.data
+}
+
+// 기사: 운송 요청에 지원
+export const applyDispatch = async (shipmentId, vehicleId) => {
+  const res = await jwtAxios.post(
+    `/api/driver/shipments/${shipmentId}/applications`,
+    { vehicleId }
+  )
+
+  return res.data
+}
+
+// 기사: 배차 확정 전 본인의 배차 신청 취소
+export const cancelDispatch = async (shipmentId) => {
+  await jwtAxios.delete(
+    `/api/driver/shipments/${shipmentId}/applications/my`
+  )
+
+  return true
+}
+
+// 기사: 본인의 배차 확정 목록 조회
+export const getMyAssignedDispatches = async () => {
+  const res = await jwtAxios.get('/api/driver/dispatches')
+
+  return res.data
+}
+
+// 기사: 본인의 확정 배차 상세 조회
+export const getMyAssignedDispatch = async (shipmentId) => {
+  const res = await jwtAxios.get(`/api/driver/dispatches/${shipmentId}`)
+
+  return res.data
+}
+
+// 고객: 자신의 배송에 지원한 기사 목록 조회
+export const getDispatchApplicants = async (shipmentId) => {
+  const res = await jwtAxios.get(
+    `/api/customer/shipments/${shipmentId}/applications`
+  )
+
+  return res.data
+}
+
+// 고객: 지원 기사 선택 및 배차 확정
+export const selectDispatchApplicant = async (shipmentId, applicationId) => {
+  const res = await jwtAxios.post(
+    `/api/customer/shipments/${shipmentId}/applications/${applicationId}/select`
+  )
+
+  return res.data
+}
+
+// 고객: 지원 기사 거절
+export const rejectDispatchApplicant = async (shipmentId, applicationId) => {
+  await jwtAxios.post(
+    `/api/customer/shipments/${shipmentId}/applications/${applicationId}/reject`
+  )
+
+  return true
+}
+
+// 기사: 본인의 지난 배차 신청 및 배송 내역 조회
+export const getMyDispatchHistory = async () => {
+  const res = await jwtAxios.get('/api/driver/dispatches/history')
+
+  return res.data
+}
+
+// 기사: 지난 배차 내역 상세 조회
+export const getMyDispatchHistoryDetail = async (applicationId) => {
+  const res = await jwtAxios.get(
+    `/api/driver/dispatches/history/${applicationId}`
+  )
+
+  return res.data
+}
+
+// 기사: 월별 휴무일 조회
+export const getDriverOffDays = async (year, month) => {
+  const res = await jwtAxios.get('/api/driver/schedules/off', {
+    params: { year, month },
+  })
+
+  return res.data
+}
+
+// 기사: 휴무일 등록
+export const registerDriverOffDay = async (date) => {
+  await jwtAxios.post('/api/driver/schedules/off', { date })
+}
+
+// 기사: 휴무일 취소
+export const cancelDriverOffDay = async (date) => {
+  await jwtAxios.delete(`/api/driver/schedules/off/${date}`)
+}
+
+// 기사: 월별 근무 가능 시간 조회 (DRV-01) — [{ date, startTime, endTime, overnight }]
+export const getDriverWorkHours = async (year, month) => {
+  const res = await jwtAxios.get('/api/driver/schedules/work', {
+    params: { year, month },
+  })
+
+  return res.data
+}
+
+// 기사: 근무 가능 시간 등록 · 수정 (끝이 시작보다 이르면 자정을 넘기는 근무)
+export const saveDriverWorkHours = async (date, startTime, endTime) => {
+  const res = await jwtAxios.put(`/api/driver/schedules/work/${date}`, { startTime, endTime })
+  return res.data
+}
+
+// 기사: 근무 가능 시간 삭제
+export const deleteDriverWorkHours = async (date) => {
+  await jwtAxios.delete(`/api/driver/schedules/work/${date}`)
+}
+
+// 기사: 월별 정산 요약 조회
+export const getDriverMonthlySettlement = async (month) => {
+  const res = await jwtAxios.get('/api/driver/settlements/monthly', {
+    params: { month },
+  })
+
+  return res.data
+}
+
+// 기사: 월별 배송 완료 운임 상세 내역 조회
+export const getDriverMonthlySettlementItems = async (month) => {
+  const res = await jwtAxios.get('/api/driver/settlements/monthly/items', {
+    params: { month },
+  })
+
+  return res.data
+}
+
+// 기사: 기간별 정산 요약 조회
+export const getDriverSettlementRange = async (from, to) => {
+  const res = await jwtAxios.get('/api/driver/settlements/range', {
+    params: { from, to },
+  })
+
+  return res.data
+}
+
+// 기사: 기간별 운임 상세 내역 조회
+export const getDriverSettlementRangeItems = async (from, to) => {
+  const res = await jwtAxios.get('/api/driver/settlements/range/items', {
+    params: { from, to },
+  })
+
+  return res.data
+}
+
+// 기사: 내 평균 평점 · 리뷰 (DRV-07) — { averageRating, reviewCount, reviews(최신순, 고객 이름 가림) }
+export const getDriverMyReviews = async () => {
+  const res = await jwtAxios.get('/api/driver/settlements/reviews')
+  return res.data
+}
+// 고객 소유 배송별 아직 처리되지 않은 기사 지원 수
+export const getDispatchApplicantCounts = async () => {
+  const res = await jwtAxios.get('/api/customer/shipments/application-counts')
+  return res.data
+}
