@@ -12,7 +12,7 @@
 ## 문서 (작업 전에 필요한 문서만 읽을 것)
 - docs/requirements.md  요구사항 (기능 ID · 담당)
 - docs/status.md        배송 상태 · 전이 규칙 (가장 중요한 규칙)
-- docs/erd.md           테이블 23개
+- docs/erd.md           테이블 26개
 - docs/api.md           API 명세 · 에러 코드
 - docs/fare.md          운임 계산 규칙
 - docs/collaboration.md 역할 분담 · 도메인 간 약속 · Git 규칙
@@ -28,7 +28,8 @@
 - 프론트: api/, components/(common은 공통), layouts/, pages/{역할}/, router/, slices/, hooks/, util/
 
 ## 도메인 규칙
-- 배송 상태: PENDING_PAYMENT → REQUESTED → ASSIGNED → PICKED_UP → IN_TRANSIT → ARRIVED → COMPLETED, 취소 CANCELED
+- 배송 상태: PENDING_PAYMENT → REQUESTED → ASSIGNED → PICKED_UP → IN_TRANSIT → ARRIVED → DELIVERED → COMPLETED, 취소 CANCELED
+  (DELIVERED = 기사 배송 완료 · 인수증 사진, COMPLETED = 고객 수령 확인으로만)
 - 상태 변경은 ShipmentStatus.canChangeTo()로만 검사하고, 변경마다 shipment_status_history에 기록한다
 - 운임은 서버의 FareCalculator로만 계산한다. 화면이 보낸 금액은 믿지 않는다
 - 결제 승인 전 payment에 저장된 금액과 요청 금액을 비교한다

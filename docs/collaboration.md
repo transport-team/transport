@@ -58,7 +58,8 @@ public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember logi
 
 ## Git
 
-- `main`: 발표 · 배포용. 직접 push 금지. MVP가 화면으로 끝까지 될 때 한 번, 배포 직전에 한 번 팀원 2가 develop을 병합 (2026-11-19)
+- `main`: 발표 · 배포용. 직접 push 금지. MVP가 화면으로 끝까지 될 때 한 번, 배포 직전에 한 번 팀원 2가 develop을 병합 (2026-11-19). MVP 병합은 11-24 완료(#158)
+- **develop ↔ main 병합은 "Create a merge commit"** (squash 금지). squash로 합치면 두 브랜치 기록이 갈라져, 다음 병합 때 같은 파일이 충돌하고 develop에서 지운 파일이 main에 되살아난다 (2026-11-24, #158 ~ #161)
 - `develop`: 통합 브랜치(기본 브랜치). PR로만 병합 — 승인 1개와 CI(`백엔드 테스트` · `프론트 빌드 · lint`) 통과가 있어야 병합된다 (GitHub 규칙 `protect-main-develop`, main도 같음). 빌드가 깨지면 최우선으로 고친다
 - 작업 브랜치: `feature/{도메인}-{기능}` (예: feature/dispatch-candidate), `fix/...`
 - 하루 1번 이상 `git pull origin develop`으로 충돌을 작게 유지
@@ -68,7 +69,7 @@ public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember logi
 
 - PR 하나에 기능 하나, 300줄 안팎. 큰 기능은 "엔티티 · API" → "화면"으로 나눈다
 - 짝 리뷰: 1 ↔ 3, 2 ↔ 4. 공통 파일을 건드리면 그 파일 관리자도 승인
-- 리뷰는 24시간 안에. Squash merge 후 브랜치 삭제
+- 리뷰는 24시간 안에. 기능 PR은 Squash merge 후 브랜치 삭제 (develop ↔ main만 merge commit — 위 Git 참고)
 - AI로 만든 부분은 PR에 표시. 본인이 설명할 수 있는 코드만 올린다
 
 ## 공통 파일 (PR + 관리자 승인)
