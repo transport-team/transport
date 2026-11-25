@@ -44,8 +44,10 @@ public interface VehicleRegistrationRequestRepository
     @EntityGraph(attributePaths = {"driver", "driver.member", "vehicleType"})
     List<VehicleRegistrationRequest> findAllByOrderByCreatedAtDescIdDesc();
 
-    // 관리자: 승인 대기 중인 차량 신청을 최신순으로 조회
-    List<VehicleRegistrationRequest> findByStatusOrderByCreatedAtDesc(
+    // 관리자: 승인 대기 중인 차량 신청을 최신순으로 조회 (같은 시각이면 id 역순)
+    // 기사 · 회원 · 차종을 함께 가져온다 — 행마다 따로 조회하던 것(N+1) 정리 (11-25 목록 점검)
+    @EntityGraph(attributePaths = {"driver", "driver.member", "vehicleType"})
+    List<VehicleRegistrationRequest> findByStatusOrderByCreatedAtDescIdDesc(
             VehicleRegistrationStatus status
     );
 }

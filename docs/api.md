@@ -19,7 +19,7 @@
 | 구역 | 코드 예시 |
 |---|---|
 | 공통·인증 (1) | INVALID_INPUT, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, METHOD_NOT_ALLOWED, FILE_TOO_LARGE, INTERNAL_SERVER_ERROR, CONCURRENT_UPDATE(409 — 같은 배송을 거의 동시에 바꿔 `@Version`이 맞지 않음, 새로고침 후 다시), TERMS_REQUIRED, DUPLICATE_EMAIL, LOGIN_FAILED, TOKEN_EXPIRED, INVALID_TOKEN, ACCOUNT_DISABLED, DRIVER_NOT_APPROVED, WRONG_PASSWORD |
-| 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING |
+| 배차 (2) | DUPLICATE_VEHICLE_PLATE, DUPLICATE_DRIVER_VEHICLE_TYPE, DUPLICATE_DISPATCH_APPLICATION, DISPATCH_TIME_CONFLICT, SHIPMENT_NOT_REQUESTED, DISPATCH_APPLICATION_NOT_PENDING, DRIVER_HAS_ACTIVE_SHIPMENT(409 — 배정 ~ 도착 중인 배송이 있는 기사를 중지하려 함) |
 | 배송·결제 (3) | DISTANCE_CALCULATION_FAILED, ADDRESS_NOT_FOUND, ROUTE_NOT_FOUND, UNSUPPORTED_CARGO_WEIGHT(최대 무게 초과 포함), INACTIVE_CARGO_TYPE, CARGO_TYPE_NOT_FOUND(404), DUPLICATE_CARGO_TYPE_NAME(409), PAYMENT_AMOUNT_MISMATCH, PAYMENT_NOT_ALLOWED, PAYMENT_ALREADY_COMPLETED, PAYMENT_FAILED, SHIPMENT_NOT_FOUND, CANNOT_CANCEL(409 — 취소할 수 없는 상태: 고객은 배차 확정 뒤, 관리자는 상차 뒤, 이미 취소) |
 | 진행 (4) | INVALID_STATUS_CHANGE, NOT_ASSIGNED_DRIVER, PHOTO_REQUIRED, NOT_IN_TRANSIT, REVIEW_EXISTS, REVIEW_NOT_ALLOWED |
 
@@ -256,7 +256,7 @@
 | PATCH | /api/admin/vehicle-types/{id}/active | 차종 사용 · 숨김 { active } | ADMIN |
 | GET · POST | /api/admin/vehicles | 차량 목록 조회 · 차량 등록 | ADMIN |
 | PUT · DELETE | /api/admin/vehicles/{id} | 차량 수정 · 비활성화 | ADMIN |
-| GET · PATCH | /api/admin/drivers, /{id}/status | 기사 목록 · 승인/중지 | ADMIN |
+| GET · PATCH | /api/admin/drivers, /{id}/status { status } | 기사 목록 · 승인/중지. 중지(INACTIVE): 배정 ~ 도착(ASSIGNED · PICKED_UP · IN_TRANSIT · ARRIVED) 중인 배송이 있으면 409 `DRIVER_HAS_ACTIVE_SHIPMENT`(먼저 배차 취소 · 재배차), 통과하면 그 기사의 대기 중 지원을 자동 마감(`NOT_SELECTED`). 배송완료(수령 확인 대기)는 막지 않음 | ADMIN |
 | GET | /api/admin/drivers/{id}/vehicles | 기사 보유 차량 (조회 전용, #124) | ADMIN |
 | GET | /api/admin/vehicle-requests, /all | 차량 등록 신청 — 승인 대기 목록 · 전체(처리 완료 포함, 신청일 최신순 #124) | ADMIN |
 | PATCH | /api/admin/vehicle-requests/{requestId}/approve · /reject | 차량 등록 신청 승인 · 거절 { rejectionReason 300자 이하 } | ADMIN |

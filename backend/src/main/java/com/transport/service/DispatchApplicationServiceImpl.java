@@ -1,10 +1,13 @@
 package com.transport.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Set;
 
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.transport.domain.Dispatch;
 import com.transport.domain.DispatchApplication;
 import com.transport.domain.Driver;
+import com.transport.domain.DriverSchedule;
 import com.transport.domain.Shipment;
 import com.transport.domain.Vehicle;
 import com.transport.domain.enums.DispatchApplicationStatus;
@@ -436,6 +440,9 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 		// 3. REQUESTED 상태의 배송 조회
 		List<Shipment> shipments = shipmentService.getRequestedShipments();
 
+		// 기사 근무 일정은 요청들의 상차일 범위를 한 번에 읽어 날짜로 찾는다 (요청마다 조회하던 N+1 정리, 11-25)
+		Map<LocalDate, DriverSchedule> schedulesByDate = loadSchedules(driver.getId(), shipments);
+
 		// 4. 배송별 신청 가능 조건 검사
 		return shipments.stream().map(shipment -> {
 
@@ -483,24 +490,35 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 				blockReasons.add("요청한 차종의 차량이 운행 가능한 상태가 아닙니다.");
 			}
 
-			// 기록이 없는 평일·토요일도 기본 근무시간을 적용한다.
-			var schedule = driverScheduleRepository.findByDriver_IdAndWorkDate(
-					driver.getId(), shipment.getPickupAt().toLocalDate());
-			if (DriverWorkSchedulePolicy.isOff(shipment.getPickupAt().toLocalDate(), schedule)) {
+			// 기사 근무 일정 확인 (상차 예정일 기준)
+			// 등록된 일정이 없으면 월~토 09:00~18:00, 일요일 휴무 적용
+			var pickupDate = shipment.getPickupAt().toLocalDate();
+			var schedule = Optional.ofNullable(schedulesByDate.get(pickupDate));
+
+			if (DriverWorkSchedulePolicy.isOff(pickupDate, schedule)) {
 				blockReasons.add("상차 예정일이 기사 휴무일입니다.");
 			} else {
 				var startTime = DriverWorkSchedulePolicy.start(schedule);
 				var endTime = DriverWorkSchedulePolicy.end(schedule);
+
 				if (startTime != null && endTime != null) {
-					LocalDateTime workStart = LocalDateTime.of(shipment.getPickupAt().toLocalDate(), startTime);
-					LocalDateTime workEnd = LocalDateTime.of(shipment.getPickupAt().toLocalDate(), endTime);
+					LocalDateTime workStart = LocalDateTime.of(pickupDate, startTime);
+					LocalDateTime workEnd = LocalDateTime.of(pickupDate, endTime);
+
+					// 자정을 넘기는 근무시간 처리
 					if (endTime.isBefore(startTime)) {
 						workEnd = workEnd.plusDays(1);
 					}
-					LocalDateTime deliveryEnd = shipment.getPickupAt().plusMinutes(durationOrZero(shipment));
+
+					LocalDateTime deliveryEnd = shipment.getPickupAt()
+							.plusMinutes(durationOrZero(shipment));
+
+					// 근무 시작 시간보다 빠르면 경고
 					if (shipment.getPickupAt().isBefore(workStart)) {
 						warningMessages.add("상차 예정 시간이 근무 시작 시간보다 빠릅니다.");
 					}
+
+					// 근무 종료 시간보다 늦으면 경고
 					if (deliveryEnd.isAfter(workEnd)) {
 						warningMessages.add("예상 운송 종료 시간이 근무 종료 시간을 초과합니다.");
 					}
@@ -574,6 +592,17 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 	public void closePendingApplications(Shipment shipment) {
 		applicationRepository.findByShipmentAndStatusOrderByCreatedAtAsc(shipment, DispatchApplicationStatus.PENDING)
 				.forEach(DispatchApplication::notSelect);
+	}
+
+	// 기사의 근무 일정 중 배송들의 상차일 범위만 읽어 날짜별로 (배송이 없으면 조회하지 않는다)
+	private Map<LocalDate, DriverSchedule> loadSchedules(Long driverId, List<Shipment> shipments) {
+		if (shipments.isEmpty()) {
+			return Map.of();
+		}
+		LocalDate first = shipments.stream().map(s -> s.getPickupAt().toLocalDate()).min(Comparator.naturalOrder()).orElseThrow();
+		LocalDate last = shipments.stream().map(s -> s.getPickupAt().toLocalDate()).max(Comparator.naturalOrder()).orElseThrow();
+		return driverScheduleRepository.findByDriver_IdAndWorkDateBetweenOrderByWorkDateAsc(driverId, first, last).stream()
+				.collect(Collectors.toMap(DriverSchedule::getWorkDate, schedule -> schedule, (kept, ignored) -> kept));
 	}
 
 	private boolean isInvalidDuration(Shipment shipment) {

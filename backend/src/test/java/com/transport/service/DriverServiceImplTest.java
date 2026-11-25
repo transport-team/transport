@@ -10,9 +10,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,9 +27,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.transport.domain.DispatchApplication;
 import com.transport.domain.Driver;
 import com.transport.domain.Member;
+import com.transport.domain.enums.DispatchApplicationStatus;
 import com.transport.domain.enums.DriverStatus;
+import com.transport.domain.enums.ShipmentStatus;
 import com.transport.domain.enums.MemberRole;
 import com.transport.domain.enums.NotificationType;
 import com.transport.dto.DriverDTO;
@@ -36,6 +41,8 @@ import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
+import com.transport.repository.DispatchApplicationRepository;
+import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
 
 // 기사 등록 · 상태 조회 · 관리자 목록 · 승인/중지 (DB 없이 Repository는 가짜로 확인)
@@ -47,6 +54,12 @@ class DriverServiceImplTest {
 
 	@Mock
 	private NotificationService notificationService;
+
+	@Mock
+	private DispatchRepository dispatchRepository;
+
+	@Mock
+	private DispatchApplicationRepository applicationRepository;
 
 	@InjectMocks
 	private DriverServiceImpl driverService;
@@ -210,6 +223,62 @@ class DriverServiceImplTest {
 		assertThatThrownBy(() -> driverService.changeStatus(99L, DriverStatus.ACTIVE))
 				.isInstanceOf(CustomException.class)
 				.extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
+	}
+
+	// ===== 운송 중인 기사 중지 막기 · 대기 지원 자동 마감 (11-25) =====
+
+	@Test
+	@DisplayName("배정 ~ 도착 중인 배송이 있으면 중지 못 함 — 상태 · 알림 그대로")
+	void stopDriverWithOngoingShipmentIsBlocked() {
+		Driver driver = driver(DriverStatus.ACTIVE, LocalDateTime.now());
+		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver));
+		when(dispatchRepository.countByDriver_IdAndActiveTrueAndShipment_StatusIn(eq(7L), any())).thenReturn(2L);
+
+		assertThatThrownBy(() -> driverService.changeStatus(7L, DriverStatus.INACTIVE))
+				.isInstanceOf(CustomException.class)
+				.extracting("errorCode").isEqualTo(ErrorCode.DRIVER_HAS_ACTIVE_SHIPMENT);
+		assertThat(driver.getStatus()).isEqualTo(DriverStatus.ACTIVE);
+		verifyNoInteractions(notificationService, applicationRepository);
+	}
+
+	@Test
+	@DisplayName("막는 상태는 배정 ~ 도착 — 배송완료(수령 확인 대기) · 운송완료 · 취소는 막지 않음")
+	@SuppressWarnings("unchecked")
+	void ongoingStatusesExcludeDelivered() {
+		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver(DriverStatus.ACTIVE, LocalDateTime.now())));
+
+		driverService.changeStatus(7L, DriverStatus.INACTIVE);
+
+		ArgumentCaptor<Collection<ShipmentStatus>> statuses = ArgumentCaptor.forClass(Collection.class);
+		verify(dispatchRepository).countByDriver_IdAndActiveTrueAndShipment_StatusIn(eq(7L), statuses.capture());
+		assertThat(statuses.getValue()).containsExactlyInAnyOrder(
+				ShipmentStatus.ASSIGNED, ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED);
+	}
+
+	@Test
+	@DisplayName("중지하면 그 기사의 대기 중 지원은 자동 마감(NOT_SELECTED)")
+	void stopDriverClosesPendingApplications() {
+		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver(DriverStatus.ACTIVE, LocalDateTime.now())));
+		DispatchApplication first = DispatchApplication.builder().id(1L).status(DispatchApplicationStatus.PENDING).build();
+		DispatchApplication second = DispatchApplication.builder().id(2L).status(DispatchApplicationStatus.PENDING).build();
+		when(applicationRepository.findByDriver_IdAndStatus(7L, DispatchApplicationStatus.PENDING))
+				.thenReturn(List.of(first, second));
+
+		assertThat(driverService.changeStatus(7L, DriverStatus.INACTIVE).getStatus()).isEqualTo(DriverStatus.INACTIVE);
+		assertThat(List.of(first, second)).extracting(DispatchApplication::getStatus)
+				.containsOnly(DispatchApplicationStatus.NOT_SELECTED);
+		verifyStatusNotice("관리자가 기사 계정을 중지했어요.");
+	}
+
+	@Test
+	@DisplayName("다시 활성화 · 이미 중지된 기사는 배송 검사 없이 그대로")
+	void reactivateOrAlreadyStoppedSkipsChecks() {
+		when(driverRepository.findById(7L)).thenReturn(Optional.of(driver(DriverStatus.INACTIVE, LocalDateTime.now())));
+
+		driverService.changeStatus(7L, DriverStatus.INACTIVE);
+		driverService.changeStatus(7L, DriverStatus.ACTIVE);
+
+		verifyNoInteractions(dispatchRepository, applicationRepository);
 	}
 
 	private Driver driver(DriverStatus status, LocalDateTime approvedAt) {

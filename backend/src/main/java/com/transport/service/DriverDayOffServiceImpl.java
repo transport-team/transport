@@ -23,7 +23,6 @@ import com.transport.repository.DispatchApplicationRepository;
 import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.DriverScheduleRepository;
-import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,7 +36,7 @@ public class DriverDayOffServiceImpl implements DriverDayOffService {
     private final DriverScheduleRepository scheduleRepository;
     private final DispatchRepository dispatchRepository;
     private final DispatchApplicationRepository applicationRepository;
-    private final ShipmentStatusHistoryRepository statusHistoryRepository;
+    private final StatusHistoryService statusHistoryService;  // 팀원 4 약속 메서드 (운송완료 시각)
 
     // 로그인 회원 ID로 기사 ID 조회
     private Long getDriverId(Long memberId) {
@@ -152,11 +151,9 @@ public class DriverDayOffServiceImpl implements DriverDayOffService {
                 .stream()
                 .filter(application -> application.getStatus() == DispatchApplicationStatus.SELECTED
                         && application.getShipment().getStatus() == ShipmentStatus.COMPLETED)
-                .anyMatch(application -> statusHistoryRepository
-                        .findFirstByShipment_IdAndToStatusOrderByChangedAtDesc(
-                                application.getShipment().getId(),
-                                ShipmentStatus.COMPLETED)
-                        .map(history -> history.getChangedAt().toLocalDate().equals(date))
+                .anyMatch(application -> statusHistoryService
+                        .getLastChangedAt(application.getShipment().getId(), ShipmentStatus.COMPLETED)
+                        .map(completedAt -> completedAt.toLocalDate().equals(date))
                         .orElse(false));
 
         if (completedConflict) {

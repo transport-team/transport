@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,7 +30,8 @@ public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
     // 해당 배송의 현재 유효한 배차 조회 (getActiveDriver용 — 5-5)
     Optional<Dispatch> findByShipmentIdAndActiveTrue(Long shipmentId);
     
-	// 기사별 현재 유효한 배차 목록 조회 (운송 시간 중복 검사에 사용)
+	// 기사별 현재 유효한 배차 목록 조회 (운송 시간 중복 검사 · 내 배차 목록) — 배송을 함께 가져온다(N+1 정리, 11-25)
+	@EntityGraph(attributePaths = {"shipment"})
 	List<Dispatch> findByDriver_IdAndActiveTrue(Long driverId);
 
 	// 특정 차량에 현재 유효한 배차가 있는지 확인
@@ -37,6 +39,9 @@ public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
 
 	// 특정 차량에 진행 중인 배차가 있는지 — 주어진 상태(완료 · 취소)의 배송 배차는 뺀다 (11-19 결정 34, #86)
 	boolean existsByVehicle_IdAndActiveTrueAndShipment_StatusNotIn(Long vehicleId, Collection<ShipmentStatus> statuses);
+
+	// 기사에게 주어진 상태(배정 ~ 도착)의 배송 활성 배차가 몇 건인지 — 운송 중인 기사 중지 막기
+	long countByDriver_IdAndActiveTrueAndShipment_StatusIn(Long driverId, Collection<ShipmentStatus> statuses);
 
     // 배송 ID로 현재 활성화된 배차 조회 (최근 배차 우선)
     Optional<Dispatch> findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(Long shipmentId);
