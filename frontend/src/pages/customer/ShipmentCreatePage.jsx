@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getCargoTypes } from '../../api/cargoApi'
-import { getDefaultAddress, getRecentAddress } from '../../api/addressApi'
+import { getSavedAddresses } from '../../api/addressApi'
 import { estimateFare } from '../../api/fareApi'
 import { getMyInfo } from '../../api/memberApi'
 import { createShipment } from '../../api/shipmentApi'
@@ -43,9 +43,8 @@ const getRecommendedCargoTypeId = (items, types) => {
 
 const ShipmentCreatePage = () => {
   const [form, setForm] = useState(initialForm)
-  const [defaultAddress, setDefaultAddress] = useState(null)
-  const [recentAddress, setRecentAddress] = useState(null)
-  const [selectedAddressPreset, setSelectedAddressPreset] = useState('')
+  const [savedAddresses, setSavedAddresses] = useState([])
+  const [selectedSavedAddress, setSelectedSavedAddress] = useState({ origin: '', dest: '' })
   const [cargoItems, setCargoItems] = useState([createCargoItem()])
   const [weightManuallyEdited, setWeightManuallyEdited] = useState(false)
   const [cargoTypeManuallyEdited, setCargoTypeManuallyEdited] = useState(false)
@@ -97,11 +96,8 @@ const ShipmentCreatePage = () => {
       receiverPhone: current.receiverPhone || formatPhone(member.phone || ''),
     }))).catch(() => {})
 
-    getDefaultAddress().then(setDefaultAddress).catch(() => setDefaultAddress(null))
-
-    if (typeof getRecentAddress === 'function') {
-      getRecentAddress().then(setRecentAddress).catch(() => setRecentAddress(null))
-    }
+    getSavedAddresses().then((items) => setSavedAddresses(Array.isArray(items) ? items : []))
+      .catch(() => setSavedAddresses([]))
   }, [])
 
   const clearEstimate = () => {
@@ -117,24 +113,30 @@ const ShipmentCreatePage = () => {
       setCargoTypeManuallyEdited(true)
     }
 
-    if (['originAddress', 'originDetail', 'destAddress', 'destDetail'].includes(target.name)) {
-      setSelectedAddressPreset('')
+    if (['originAddress', 'originDetail'].includes(target.name)) {
+      setSelectedSavedAddress((current) => ({ ...current, origin: '' }))
+    } else if (['destAddress', 'destDetail'].includes(target.name)) {
+      setSelectedSavedAddress((current) => ({ ...current, dest: '' }))
     }
     clearEstimate()
   }
 
-  const selectDefaultAddress = (preset) => {
-    if (preset === 'home' || preset === 'office') {
-      if (!defaultAddress) return
-      setForm((current) => ({ ...current, originAddress: defaultAddress.originAddress, originDetail: defaultAddress.originDetail, destAddress: defaultAddress.destAddress, destDetail: defaultAddress.destDetail }))
-    } else if (preset === 'recent') {
-      if (!recentAddress) {
-        setError('최근 배송 내역이 없습니다.')
-        return
-      }
-      setForm((current) => ({ ...current, originAddress: recentAddress.originAddress, originDetail: recentAddress.originDetail, destAddress: recentAddress.destAddress, destDetail: recentAddress.destDetail }))
+  const selectSavedAddress = (field, addressId) => {
+    const prefix = field === 'origin' ? 'origin' : 'dest'
+    if (!addressId) {
+      setForm((current) => ({ ...current, [`${prefix}Address`]: '', [`${prefix}Detail`]: '' }))
+      setSelectedSavedAddress((current) => ({ ...current, [field]: '' }))
+      clearEstimate()
+      return
     }
-    setSelectedAddressPreset(preset)
+    const address = savedAddresses.find((item) => String(item.id) === addressId)
+    if (!address) return
+    setForm((current) => ({
+      ...current,
+      [`${prefix}Address`]: address.address,
+      [`${prefix}Detail`]: address.detail || '',
+    }))
+    setSelectedSavedAddress((current) => ({ ...current, [field]: addressId }))
     clearEstimate()
   }
 
@@ -146,7 +148,7 @@ const ShipmentCreatePage = () => {
     new window.daum.Postcode({
       oncomplete: (data) => {
         setForm((current) => ({ ...current, [field]: data.roadAddress || data.jibunAddress }))
-        setSelectedAddressPreset('')
+        setSelectedSavedAddress((current) => ({ ...current, [field === 'originAddress' ? 'origin' : 'dest']: '' }))
         clearEstimate()
       },
     }).open()
@@ -688,19 +690,9 @@ const ShipmentCreatePage = () => {
                 <button type="button" onClick={() => openPostcode('originAddress')} className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">주소 검색</button>
               </div>
 
-              <div className="mb-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                {[['home', '🏠 우리집'], ['office', '🏢 회사'], ['recent', '⭐ 최근 주소']].map(([preset, label]) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => selectDefaultAddress(preset)}
-                    disabled={(preset === 'recent' ? !recentAddress : !defaultAddress)}
-                    className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-40 ${selectedAddressPreset === preset ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <p className="mb-3 text-xs text-gray-500">
+                저장한 배송지를 출발지와 도착지에 각각 선택하거나, 주소 검색으로 직접 입력할 수 있어요.
+              </p>
 
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <div className="flex gap-3">
@@ -718,6 +710,19 @@ const ShipmentCreatePage = () => {
                       </div>
                       <input name="originDetail" value={form.originDetail} onChange={handleChange} placeholder="상세주소 (동, 층, 호수)" className="mt-2 w-full bg-transparent px-1 py-1 text-xs text-gray-600 outline-none placeholder:text-gray-400" />
                     </label>
+                    {savedAddresses.length > 0 && (
+                      <select
+                        aria-label="출발지 저장 배송지 선택"
+                        value={selectedSavedAddress.origin}
+                        onChange={(event) => selectSavedAddress('origin', event.target.value)}
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
+                      >
+                        <option value="">출발지: 저장한 배송지 선택</option>
+                        {savedAddresses.map((address) => (
+                          <option key={address.id} value={String(address.id)}>{address.label} · {address.address}</option>
+                        ))}
+                      </select>
+                    )}
                     <label className="block" htmlFor="destAddress">
                       <span className="text-xs font-semibold text-gray-500">도착지</span>
                       <div className="mt-1 flex gap-2">
@@ -726,6 +731,19 @@ const ShipmentCreatePage = () => {
                       </div>
                       <input name="destDetail" value={form.destDetail} onChange={handleChange} placeholder="상세주소 (동, 층, 호수)" className="mt-2 w-full bg-transparent px-1 py-1 text-xs text-gray-600 outline-none placeholder:text-gray-400" />
                     </label>
+                    {savedAddresses.length > 0 && (
+                      <select
+                        aria-label="도착지 저장 배송지 선택"
+                        value={selectedSavedAddress.dest}
+                        onChange={(event) => selectSavedAddress('dest', event.target.value)}
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
+                      >
+                        <option value="">도착지: 저장한 배송지 선택</option>
+                        {savedAddresses.map((address) => (
+                          <option key={address.id} value={String(address.id)}>{address.label} · {address.address}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>

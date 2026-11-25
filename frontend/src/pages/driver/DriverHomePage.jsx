@@ -21,6 +21,9 @@ const makeDateKey = (year, month, day) => {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
+// 기본 근무: 월~토 09:00~18:00, 일요일 휴무. 날짜별 저장 내역이 우선 적용된다.
+const isDefaultOff = (dateKey) => new Date(`${dateKey}T12:00:00`).getDay() === 0
+
 // API의 상차 예정일에서 날짜만 추출
 const getPickupDate = (item) => {
   return item.pickupAt?.slice(0, 10) || ''
@@ -80,6 +83,7 @@ const DriverHomePage = () => {
   const [workSaving, setWorkSaving] = useState(false)
   const [workActionError, setWorkActionError] = useState('')
   const [workForm, setWorkForm] = useState({ date: '', start: '', end: '' })
+  const [workEditing, setWorkEditing] = useState(false)
 
   // 기존 API를 활용하여 기사 일정 조회
   useEffect(() => {
@@ -230,6 +234,8 @@ const DriverHomePage = () => {
         1
       )
     )
+    setWorkEditing(false)
+    setWorkForm({ date: '', start: '', end: '' })
   }
 
   // 이번 달로 돌아가기
@@ -248,6 +254,8 @@ const DriverHomePage = () => {
         today.getDate()
       )
     )
+    setWorkEditing(false)
+    setWorkForm({ date: '', start: '', end: '' })
   }
 
   // 달력 날짜 생성
@@ -292,7 +300,9 @@ const DriverHomePage = () => {
   )
 
   // 선택한 날짜의 휴무 여부
-  const selectedIsOff = offDays.includes(selectedDate)
+  const selectedWork = workHours.find((work) => work.date === selectedDate)
+  const selectedIsDefaultOff = isDefaultOff(selectedDate)
+  const selectedIsOff = offDays.includes(selectedDate) || (selectedIsDefaultOff && !selectedWork)
   const isPastDate = selectedDate < todayKey
 
   // 휴무 등록 또는 취소
@@ -301,6 +311,8 @@ const DriverHomePage = () => {
 
     const date = selectedDate
     const isOff = offDays.includes(date)
+    // 기본 휴무인 일요일은 취소 대상이 아니다. 일요일 근무는 시간 예외로 등록한다.
+    if (selectedIsDefaultOff && !selectedWork) return
 
     setOffSaving(true)
     setOffActionError('')
@@ -312,7 +324,10 @@ const DriverHomePage = () => {
       } else {
         await registerDriverOffDay(date)
         setOffDays((prev) => [...new Set([...prev, date])].sort())
+        setWorkHours((prev) => prev.filter((work) => work.date !== date))
       }
+      setWorkEditing(false)
+      setWorkForm({ date: '', start: '', end: '' })
     } catch (err) {
       console.error('휴무일 처리 실패:', err)
 
@@ -325,14 +340,13 @@ const DriverHomePage = () => {
   }
 
   // 선택한 날짜의 근무 가능 시간 (입력 칸 값은 고친 중이면 그 값, 아니면 저장된 값 · 기본 09:00 ~ 18:00)
-  const selectedWork = workHours.find((work) => work.date === selectedDate)
   const editingSelected = workForm.date === selectedDate
   const formStart = editingSelected ? workForm.start : (hhmm(selectedWork?.startTime) || '09:00')
   const formEnd = editingSelected ? workForm.end : (hhmm(selectedWork?.endTime) || '18:00')
 
   // 근무 가능 시간 등록 · 수정
   const handleSaveWorkHours = async () => {
-    if (workSaving || isPastDate || selectedIsOff) return
+    if (workSaving || isPastDate) return
     if (!formStart || !formEnd || formStart === formEnd) {
       setWorkActionError('시작 시간과 끝 시간을 다르게 입력해 주세요.')
       return
@@ -347,6 +361,8 @@ const DriverHomePage = () => {
       setWorkHours((prev) =>
         [...prev.filter((work) => work.date !== date), saved].sort((a, b) => a.date.localeCompare(b.date)))
       setWorkForm({ date: '', start: '', end: '' })
+      setOffDays((prev) => prev.filter((day) => day !== date))
+      setWorkEditing(false)
     } catch (err) {
       console.error('근무 가능 시간 저장 실패:', err)
       setWorkActionError(err.response?.data?.message || '근무 가능 시간 저장에 실패했습니다.')
@@ -367,6 +383,7 @@ const DriverHomePage = () => {
       await deleteDriverWorkHours(date)
       setWorkHours((prev) => prev.filter((work) => work.date !== date))
       setWorkForm({ date: '', start: '', end: '' })
+      setWorkEditing(false)
     } catch (err) {
       console.error('근무 가능 시간 삭제 실패:', err)
       setWorkActionError(err.response?.data?.message || '근무 가능 시간 삭제에 실패했습니다.')
@@ -528,7 +545,7 @@ const DriverHomePage = () => {
 
           <div className="flex items-center gap-2">
             <span className="h-4 w-4 rounded border border-emerald-300 bg-emerald-100" />
-            근무 가능 시간
+            근무시간 변경 (기본 월~토 09~18시)
           </div>
         </div>
 
@@ -568,8 +585,15 @@ const DriverHomePage = () => {
 
             const isSelected = selectedDate === dateKey
             const isToday = todayKey === dateKey
-            const isOff = offDays.includes(dateKey)
             const work = workHours.find((item) => item.date === dateKey)
+            const isOff = offDays.includes(dateKey) || (isDefaultOff(dateKey) && !work)
+            // 기본 일정과 다른 근무시간만 표시한다. 일요일 근무는 그 자체로 예외다.
+            const isChangedWorkTime = !!work && (
+              isDefaultOff(dateKey) ||
+              hhmm(work.startTime) !== '09:00' ||
+              hhmm(work.endTime) !== '18:00' ||
+              work.overnight
+            )
 
             return (
               <button
@@ -578,6 +602,8 @@ const DriverHomePage = () => {
                 onClick={() => {
                   setSelectedDate(dateKey)
                   setWorkActionError('')
+                  setWorkEditing(false)
+                  setWorkForm({ date: '', start: '', end: '' })
                 }}
                 className={`flex min-h-[92px] flex-col items-center rounded-xl border-2 p-2 transition sm:min-h-[116px] sm:p-3 ${isToday
                   ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-100'
@@ -628,16 +654,16 @@ const DriverHomePage = () => {
 
                 {isOff && (
                   <span className="mt-1 rounded-md bg-slate-200 px-2 py-1 text-xs font-bold text-slate-700">
-                    휴무
+                    {isDefaultOff(dateKey) && !offDays.includes(dateKey) ? '기본 휴무' : '휴무'}
                   </span>
                 )}
 
-                {!isOff && work && (
+                {!isOff && isChangedWorkTime && (
                   <span
-                    title={`근무 가능 ${hhmm(work.startTime)} ~ ${hhmm(work.endTime)}${work.overnight ? ' (다음 날)' : ''}`}
+                    title={`변경 근무 ${hhmm(work.startTime)} ~ ${hhmm(work.endTime)}${work.overnight ? ' (다음 날)' : ''}`}
                     className="mt-1 rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700"
                   >
-                    <span className="sm:hidden">근무</span>
+                    <span className="sm:hidden">변경</span>
                     <span className="hidden sm:inline">{hhmm(work.startTime)}~{hhmm(work.endTime)}</span>
                   </span>
                 )}
@@ -668,22 +694,36 @@ const DriverHomePage = () => {
               {selectedDate.replaceAll('-', '. ')} 일정
             </h3>
 
-            {!isPastDate && !offLoading && !offError && (
-              <button
-                type="button"
-                onClick={handleDayOff}
-                disabled={offSaving}
-                className={`w-full rounded-xl px-6 py-3 text-base font-bold shadow-sm transition hover:shadow-md disabled:opacity-50 sm:w-auto ${selectedIsOff
-                  ? 'border-2 border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  : 'border-2 border-blue-600 bg-blue-600 text-white hover:border-blue-700 hover:bg-blue-700'
-                  }`}
-              >
-                {offSaving
-                  ? '처리 중...'
-                  : selectedIsOff
-                    ? '휴무 취소'
-                    : '＋ 휴무일 등록'}
-              </button>
+            {!isPastDate && (
+              <div className="flex flex-wrap items-center gap-2">
+                {!offLoading && !offError && (
+                  <button
+                    type="button"
+                    onClick={handleDayOff}
+                    disabled={offSaving || workSaving || (selectedIsDefaultOff && !selectedWork)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${selectedIsOff
+                      ? 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                  >
+                    {offSaving ? '처리 중...' : selectedIsDefaultOff && !selectedWork ? '기본 휴무' : selectedIsOff ? '휴무 취소' : '휴무일 등록'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  aria-expanded={workEditing}
+                  aria-controls="driver-work-hours-editor"
+                  onClick={() => {
+                    setWorkEditing((prev) => !prev)
+                    setWorkForm({ date: '', start: '', end: '' })
+                    setWorkActionError('')
+                  }}
+                  disabled={workSaving || !!workError || !!offError || offLoading}
+                  className="rounded-lg border border-emerald-600 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+                >
+                  근무시간 변경
+                </button>
+              </div>
             )}
           </div>
 
@@ -705,74 +745,66 @@ const DriverHomePage = () => {
             </p>
           )}
 
-          {selectedIsOff && (
-            <div className="mt-4 rounded-xl bg-slate-100 p-4 text-sm font-medium text-slate-700">
-              휴무일로 등록된 날짜입니다.
-            </div>
-          )}
-
-          {/* 근무 가능 시간 (DRV-01): 휴무가 아닌 날짜 — 지난 날짜는 보기만 */}
-          {!selectedIsOff && (
-            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+          {workError && <p className="mt-3 text-xs text-red-600">{workError}</p>}
+          {workEditing && (
+            <div id="driver-work-hours-editor" className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-bold text-emerald-800">근무 가능 시간</p>
                 <p className="text-sm font-semibold text-emerald-700">
-                  {selectedWork
-                    ? `${hhmm(selectedWork.startTime)} ~ ${hhmm(selectedWork.endTime)}${selectedWork.overnight ? ' (다음 날)' : ''}`
-                    : '등록 안 함'}
+                  {selectedIsOff
+                    ? selectedIsDefaultOff && !offDays.includes(selectedDate) ? '매주 일요일 기본 휴무' : '이 날짜만 휴무'
+                    : selectedWork
+                      ? `${hhmm(selectedWork.startTime)} ~ ${hhmm(selectedWork.endTime)}${selectedWork.overnight ? ' (다음 날)' : ''} (변경)`
+                      : '09:00 ~ 18:00 (기본)'}
                 </p>
               </div>
-
-              {workError && (
-                <p className="mt-2 text-xs text-red-600">{workError}</p>
-              )}
+              <p className="mt-2 text-xs text-gray-500">
+                기본 일정은 월~토 09:00~18:00, 일요일 휴무예요. 변경한 날짜만 별도 저장됩니다.
+              </p>
 
               {!isPastDate && !workError && (
-                <>
-                  <div className="mt-3 flex flex-wrap items-end gap-2">
-                    <label className="text-xs font-medium text-gray-600">
-                      시작
-                      <input
-                        type="time"
-                        value={formStart}
-                        onChange={(event) => setWorkForm({ date: selectedDate, start: event.target.value, end: formEnd })}
-                        className="mt-1 block rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
-                      />
-                    </label>
-                    <label className="text-xs font-medium text-gray-600">
-                      끝
-                      <input
-                        type="time"
-                        value={formEnd}
-                        onChange={(event) => setWorkForm({ date: selectedDate, start: formStart, end: event.target.value })}
-                        className="mt-1 block rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
-                      />
-                    </label>
+                <div className="mt-3 flex flex-wrap items-end gap-2">
+                  <label className="text-xs font-medium text-gray-600">
+                    시작
+                    <input
+                      type="time"
+                      value={formStart}
+                      onChange={(event) => setWorkForm({ date: selectedDate, start: event.target.value, end: formEnd })}
+                      className="mt-1 block rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                  <label className="text-xs font-medium text-gray-600">
+                    끝
+                    <input
+                      type="time"
+                      value={formEnd}
+                      onChange={(event) => setWorkForm({ date: selectedDate, start: formStart, end: event.target.value })}
+                      className="mt-1 block rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleSaveWorkHours}
+                    disabled={workSaving || offSaving}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {workSaving ? '저장 중...' : '시간 저장'}
+                  </button>
+                  {selectedWork && (
                     <button
                       type="button"
-                      onClick={handleSaveWorkHours}
-                      disabled={workSaving}
-                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      onClick={handleDeleteWorkHours}
+                      disabled={workSaving || offSaving}
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                     >
-                      {workSaving ? '저장 중...' : selectedWork ? '시간 바꾸기' : '근무 시간 등록'}
+                      기본 일정으로
                     </button>
-                    {selectedWork && (
-                      <button
-                        type="button"
-                        onClick={handleDeleteWorkHours}
-                        disabled={workSaving}
-                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        지우기
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    끝 시간을 시작보다 이르게 적으면 자정을 넘기는 근무로 저장돼요. 운송 요청 목록에서 근무 끝 시간을 넘기는 요청에 안내가 떠요.
-                  </p>
-                </>
+                  )}
+                </div>
               )}
-
+              {!isPastDate && (
+                <p className="mt-2 text-xs text-gray-500">끝 시간이 시작보다 빠르면 다음 날까지 근무해요. 저장하면 해당 날짜만 적용됩니다.</p>
+              )}
               {workActionError && (
                 <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-600">{workActionError}</p>
               )}

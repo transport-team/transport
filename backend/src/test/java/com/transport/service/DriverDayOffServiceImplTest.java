@@ -119,15 +119,15 @@ class DriverDayOffServiceImplTest {
     }
 
     @Test
-    @DisplayName("휴무일에는 근무 시간을 넣을 수 없다 (휴무를 먼저 취소)")
-    void offDayCannotHaveWorkHours() {
+    @DisplayName("휴무일은 해당 날짜의 근무시간 예외로 한 번에 전환할 수 있다")
+    void offDayCanChangeToWorkHours() {
         givenDriver();
         when(scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow))
                 .thenReturn(Optional.of(schedule(DriverScheduleStatus.OFF, LocalTime.MIN, LocalTime.MAX)));
 
-        assertThatThrownBy(() -> dayOffService.saveWorkHours(MEMBER_ID, tomorrow, LocalTime.of(9, 0), LocalTime.of(18, 0)))
-                .isInstanceOf(CustomException.class)
-                .hasMessage("휴무일입니다. 휴무를 취소한 뒤 근무 시간을 등록해 주세요.");
+        DriverWorkHoursResponseDTO result = dayOffService.saveWorkHours(
+                MEMBER_ID, tomorrow, LocalTime.of(9, 0), LocalTime.of(18, 0));
+        assertThat(result.startTime()).isEqualTo(LocalTime.of(9, 0));
         verify(scheduleRepository, never()).save(any(DriverSchedule.class));
     }
 
@@ -193,15 +193,16 @@ class DriverDayOffServiceImplTest {
     }
 
     @Test
-    @DisplayName("근무 시간이 있는 날은 휴무로 바꿀 수 없고, 근무 시간을 지우라고 안내한다")
+    @DisplayName("예외 근무시간이 있어도 충돌이 없다면 휴무로 전환한다")
     void offDayOnWorkHoursDate() {
         givenDriver();
         when(scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow))
                 .thenReturn(Optional.of(schedule(DriverScheduleStatus.AVAILABLE, LocalTime.of(9, 0), LocalTime.of(18, 0))));
 
-        assertThatThrownBy(() -> dayOffService.registerOffDay(MEMBER_ID, tomorrow))
-                .isInstanceOf(CustomException.class)
-                .hasMessage("근무 시간이 등록된 날짜입니다. 근무 시간을 지운 뒤 휴무로 등록해 주세요.");
+        DriverSchedule existing = scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow).orElseThrow();
+        dayOffService.registerOffDay(MEMBER_ID, tomorrow);
+        assertThat(existing.getStatus()).isEqualTo(DriverScheduleStatus.OFF);
+        verify(scheduleRepository, never()).save(any(DriverSchedule.class));
     }
 
     @Test
