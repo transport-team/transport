@@ -6,6 +6,7 @@ import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery
 import { cancelAdminShipment, cancelAdminShipmentDispatch } from '../../api/adminTransportApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
+import { paymentStatusLabel } from '../../util/paymentStatusUtil'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import useConfirm from '../../hooks/useConfirm'
 
@@ -386,7 +387,7 @@ const AdminShipmentDetailPage = () => {
               <div className="mt-3 grid gap-3 rounded-xl bg-gray-50 p-4 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-xs text-gray-500">결제 상태</p>
-                  <p className="mt-1 font-semibold text-gray-900">{shipment.paymentInfo.status || '-'}</p>
+                  <p className="mt-1 font-semibold text-gray-900">{paymentStatusLabel(shipment.paymentInfo.status)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">결제 금액</p>
