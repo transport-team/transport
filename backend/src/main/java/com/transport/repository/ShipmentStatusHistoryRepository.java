@@ -33,7 +33,7 @@ public interface ShipmentStatusHistoryRepository extends JpaRepository<ShipmentS
 	long countByToStatusBetween(@Param("status") ShipmentStatus status,
 			@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-	// 기간 안에 그 상태로 바꾼 사람이 기사인 건만 기사별로 센다 (건수 많은 순 → 기사 id 순, 몇 명까지는 pageable)
+	// 기간 안에 그 상태로 바뀐 이력을 배정 기사(활성 배차의 기사, 활성 배차가 없으면 변경자)별로 센다 (건수 많은 순 → 기사 id 순, 몇 명까지는 pageable)
 	@Query("select d.id as driverId, d.member.name as driverName, count(h) as changedCount "
             + "from ShipmentStatusHistory h join Driver d on "
             + "(exists (select 1 from Dispatch a where a.shipment = h.shipment and a.active = true and a.driver = d) "

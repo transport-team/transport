@@ -1,37 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { searchAdminPayments } from '../../api/adminTransportApi'
+import { useSearchParams } from 'react-router-dom'
 import Pagination from '../../components/common/Pagination'
+import { readSearchQuery, toSearchParams } from '../../util/searchQuery'
+import { PAYMENT_STATUS_VALUES, paymentStatusBadge, paymentStatusLabel } from '../../util/paymentStatusUtil'
 
+// 결제 상태 필터 — 서버 PaymentStatus 값 그대로 (전에는 서버에 없는 PENDING · FAILED를 보내 400, util/paymentStatusUtil.js)
 const PAYMENT_STATUS_OPTIONS = [
   { value: '', label: '전체 결제상태' },
-  { value: 'PENDING', label: '결제 대기' },
-  { value: 'PAID', label: '결제 완료' },
-  { value: 'CANCELED', label: '결제 취소/환불' },
-  { value: 'FAILED', label: '결제 실패' },
+  ...PAYMENT_STATUS_VALUES.map((value) => ({ value, label: paymentStatusLabel(value) })),
 ]
-
-const PAYMENT_BADGE = {
-  PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
-  PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  CANCELED: 'bg-red-50 text-red-600 border-red-200',
-  FAILED: 'bg-gray-100 text-gray-600 border-gray-200',
-}
-
-const getPaymentLabel = (status) =>
-  PAYMENT_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || status
 
 const formatDateTime = (value) => (value ? value.replace('T', ' ').slice(0, 16) : '-')
 
+const EMPTY_PAGE = { dtoList: [], pageNumList: [], prev: false, next: false, prevPage: 0, nextPage: 0, totalCount: 0 }
+
 const PaymentManagePage = () => {
-  const [formInputs, setFormInputs] = useState({ status: '', from: '', to: '', keyword: '' })
-  const [appliedFilter, setAppliedFilter] = useState({ page: 1, status: '', from: '', to: '', keyword: '' })
+  // 검색 조건 · 쪽은 주소에 남긴다 (?status=&from=&to=&keyword=&page=) — 새로고침 · 뒤로 가기에도 그대로 (11-25, 팀원 1 목록 #152와 같은 방식)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryString = searchParams.toString()
+  const appliedFilter = useMemo(() => readSearchQuery(new URLSearchParams(queryString), PAYMENT_STATUS_VALUES), [queryString])
+  const [reloadKey, setReloadKey] = useState(0)  // 같은 조건으로 [검색]을 다시 눌러도 새로 불러오고, [초기화]는 입력 칸도 비운다
   const [fetchState, setFetchState] = useState({
     resolvedKey: '',
-    data: { dtoList: [], pageNumList: [], prev: false, next: false, prevPage: 0, nextPage: 0, totalCount: 0 },
+    data: EMPTY_PAGE,
     error: '',
   })
 
-  const requestKey = JSON.stringify(appliedFilter)
+  const requestKey = `${JSON.stringify(appliedFilter)}#${reloadKey}`
   const loading = fetchState.resolvedKey !== requestKey
 
   useEffect(() => {
@@ -47,6 +43,7 @@ const PaymentManagePage = () => {
         setFetchState((prev) => ({
           ...prev,
           resolvedKey: requestKey,
+          data: EMPTY_PAGE,  // 오류 때는 이전 검색의 건수 · 쪽 버튼을 남기지 않는다
           error: err.response?.data?.message || '결제 내역 조회에 실패했습니다.',
         }))
       })
@@ -54,15 +51,23 @@ const PaymentManagePage = () => {
     return () => { active = false }
   }, [appliedFilter, requestKey])
 
+  // 검색: 입력 칸 값을 주소로 (1쪽부터)
   const handleSearch = (e) => {
     e.preventDefault()
-    setAppliedFilter({ ...formInputs, page: 1 })
+    const form = new FormData(e.currentTarget)
+    setReloadKey((key) => key + 1)
+    setSearchParams(toSearchParams({
+      status: String(form.get('status') ?? ''),
+      from: String(form.get('from') ?? ''),
+      to: String(form.get('to') ?? ''),
+      keyword: String(form.get('keyword') ?? ''),
+      page: 1,
+    }))
   }
 
   const handleReset = () => {
-    const empty = { status: '', from: '', to: '', keyword: '' }
-    setFormInputs(empty)
-    setAppliedFilter({ ...empty, page: 1 })
+    setReloadKey((key) => key + 1)
+    setSearchParams({})
   }
 
   const { data, error } = fetchState
@@ -75,17 +80,18 @@ const PaymentManagePage = () => {
           <p className="mt-0.5 text-xs text-gray-500">주문번호, 결제 상태, 승인·취소 일시 및 환불 사유를 조회합니다.</p>
         </div>
         <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-xs">
-          총 <strong className="text-emerald-700">{data.totalCount}</strong>건
+          총 <strong className="text-blue-700">{data.totalCount}</strong>건
         </span>
       </div>
 
       {/* 검색 필터 바 */}
-      <form onSubmit={handleSearch} className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
+      {/* 주소가 바뀌면(뒤로 가기 · 초기화) 폼을 새로 만들어 주소의 조건으로 채운다 */}
+      <form key={`${queryString}#${reloadKey}`} onSubmit={handleSearch} className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <select
-            value={formInputs.status}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, status: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            name="status"
+            defaultValue={appliedFilter.status}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           >
             {PAYMENT_STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -94,26 +100,26 @@ const PaymentManagePage = () => {
 
           <input
             type="date"
-            value={formInputs.from}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, from: e.target.value }))}
+            name="from"
+            defaultValue={appliedFilter.from}
             aria-label="시작일"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
             type="date"
-            value={formInputs.to}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, to: e.target.value }))}
+            name="to"
+            defaultValue={appliedFilter.to}
             aria-label="종료일"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
             type="text"
-            value={formInputs.keyword}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, keyword: e.target.value }))}
+            name="keyword"
+            defaultValue={appliedFilter.keyword}
             placeholder="주문번호, 배송번호, 고객명, 화물명"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-blue-500 focus:outline-none"
           />
         </div>
 
@@ -127,7 +133,7 @@ const PaymentManagePage = () => {
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+            className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
           >
             검색
           </button>
@@ -161,14 +167,14 @@ const PaymentManagePage = () => {
                   <tr key={item.id} className="hover:bg-gray-50/70">
                     <td className="px-4 py-3">
                       <div className="font-bold text-gray-900">결제 #{item.id}</div>
-                      <div className="text-[11px] text-emerald-700">배송 #{item.shipmentId}</div>
+                      <div className="text-[11px] text-blue-700">배송 #{item.shipmentId}</div>
                     </td>
                     <td className="max-w-[170px] truncate px-4 py-3 font-mono text-[11px] text-gray-700" title={item.orderId}>
                       {item.orderId}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full border px-2.5 py-0.5 font-bold ${PAYMENT_BADGE[item.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                        {getPaymentLabel(item.status)}
+                      <span className={`inline-block rounded-full border px-2.5 py-0.5 font-bold ${paymentStatusBadge(item.status)}`}>
+                        {paymentStatusLabel(item.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -195,7 +201,7 @@ const PaymentManagePage = () => {
 
       {/* 페이지네이션 */}
       {!loading && data.pageNumList?.length > 0 && (
-        <Pagination pageData={data} onMove={(page) => setAppliedFilter((prev) => ({ ...prev, page }))} />
+        <Pagination pageData={data} onMove={(page) => setSearchParams(toSearchParams({ ...appliedFilter, page }))} />
       )}
     </section>
   )

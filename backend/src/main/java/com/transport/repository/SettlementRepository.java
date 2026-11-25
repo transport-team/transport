@@ -15,4 +15,7 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
 
     // 기사별 전체 정산 내역 (최신 월부터)
     List<Settlement> findByDriver_IdOrderBySettleMonthDesc(Long driverId);
+
+    // 한 달의 모든 기사 정산 (관리자 월 정산 목록 — 기사마다 따로 조회하던 것 정리, 11-25)
+    List<Settlement> findBySettleMonth(String settleMonth);
 }

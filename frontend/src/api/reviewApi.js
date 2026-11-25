@@ -20,3 +20,9 @@ export const getDriverReviews = async (driverId) => {
   const res = await jwtAxios.get(`/api/drivers/${driverId}/reviews`)
   return res.data
 }
+
+// 고객: 로그인한 본인이 작성한 리뷰만 최신순 조회
+export const getMyWrittenReviews = async () => {
+  const res = await jwtAxios.get('/api/reviews/mine')
+  return res.data
+}

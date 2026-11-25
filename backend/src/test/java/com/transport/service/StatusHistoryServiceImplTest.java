@@ -131,6 +131,94 @@ class StatusHistoryServiceImplTest {
 				.containsExactly(tuple(3L, "김기사", 7L), tuple(5L, "이기사", 2L));
 	}
 
+	// ===== 기사 실적 · 지난 내역 (팀원 2가 저장소 대신 부름, 2026-11-25) =====
+
+	@Test
+	@DisplayName("기사 운송완료 합계 — 운송완료(COMPLETED) 기준으로 묻고, 기록이 없어 null이면 0")
+	void driverCompletedTotal_usesCompletedAndTreatsNullAsZero() {
+		LocalDateTime from = LocalDateTime.of(2026, 11, 1, 0, 0);
+		LocalDateTime to = LocalDateTime.of(2026, 12, 1, 0, 0);
+		when(historyRepository.findDriverMonthlyTotal(7L, ShipmentStatus.COMPLETED, from, to))
+				.thenReturn(total(3L, 240_000L), total(0L, null));
+
+		var first = statusHistoryService.getDriverCompletedTotal(7L, from, to);
+		var empty = statusHistoryService.getDriverCompletedTotal(7L, from, to);
+
+		assertThat(first.completedCount()).isEqualTo(3L);
+		assertThat(first.totalFare()).isEqualTo(240_000L);
+		assertThat(empty.completedCount()).isZero();
+		assertThat(empty.totalFare()).isZero();
+	}
+
+	@Test
+	@DisplayName("기사 운송완료 배송 목록 — 저장소 결과를 DTO로 옮긴다")
+	void driverCompletedShipments_mapsRows() {
+		LocalDateTime from = LocalDateTime.of(2026, 11, 1, 0, 0);
+		LocalDateTime to = LocalDateTime.of(2026, 12, 1, 0, 0);
+		LocalDateTime completedAt = LocalDateTime.of(2026, 11, 19, 12, 30);
+		when(historyRepository.findDriverMonthlyFareItems(7L, ShipmentStatus.COMPLETED, from, to))
+				.thenReturn(List.of(fareItem(12L, "가전제품", 85_000, completedAt)));
+
+		var result = statusHistoryService.getDriverCompletedShipments(7L, from, to);
+
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).shipmentId()).isEqualTo(12L);
+		assertThat(result.get(0).cargoName()).isEqualTo("가전제품");
+		assertThat(result.get(0).fare()).isEqualTo(85_000);
+		assertThat(result.get(0).completedAt()).isEqualTo(completedAt);
+	}
+
+	@Test
+	@DisplayName("그 상태로 마지막에 바뀐 시각 — 없으면 빈 값")
+	void lastChangedAt_returnsLatestOrEmpty() {
+		LocalDateTime at = LocalDateTime.of(2026, 11, 20, 9, 0);
+		when(historyRepository.findFirstByShipment_IdAndToStatusOrderByChangedAtDesc(30L, ShipmentStatus.COMPLETED))
+				.thenReturn(java.util.Optional.of(ShipmentStatusHistory.builder().changedAt(at).build()));
+		when(historyRepository.findFirstByShipment_IdAndToStatusOrderByChangedAtDesc(31L, ShipmentStatus.COMPLETED))
+				.thenReturn(java.util.Optional.empty());
+
+		assertThat(statusHistoryService.getLastChangedAt(30L, ShipmentStatus.COMPLETED)).contains(at);
+		assertThat(statusHistoryService.getLastChangedAt(31L, ShipmentStatus.COMPLETED)).isEmpty();
+	}
+
+	private ShipmentStatusHistoryRepository.DriverMonthlyTotal total(Long count, Long fare) {
+		return new ShipmentStatusHistoryRepository.DriverMonthlyTotal() {
+			@Override
+			public Long getCompletedCount() {
+				return count;
+			}
+
+			@Override
+			public Long getTotalFare() {
+				return fare;
+			}
+		};
+	}
+
+	private ShipmentStatusHistoryRepository.DriverMonthlyFareItem fareItem(Long id, String cargo, Integer fare, LocalDateTime at) {
+		return new ShipmentStatusHistoryRepository.DriverMonthlyFareItem() {
+			@Override
+			public Long getShipmentId() {
+				return id;
+			}
+
+			@Override
+			public String getCargoName() {
+				return cargo;
+			}
+
+			@Override
+			public Integer getFare() {
+				return fare;
+			}
+
+			@Override
+			public LocalDateTime getCompletedAt() {
+				return at;
+			}
+		};
+	}
+
 	private ShipmentStatusHistoryRepository.DriverChangedCount driverCount(Long driverId, String name, Long count) {
 		return new ShipmentStatusHistoryRepository.DriverChangedCount() {
 			@Override

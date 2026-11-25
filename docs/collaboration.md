@@ -39,6 +39,9 @@
 | 저장소 직접 사용 정리 (11-23) | 3 → 전원 · 2 → 4 | `ShipmentService.getShipment(shipmentId)` → 배송 엔티티(없으면 `SHIPMENT_NOT_FOUND`, 같은 트랜잭션이라 상태를 바꾸면 그대로 저장) · `DriverService.findByMemberId(memberId)` → `Optional<Driver>`(위치 · 리뷰처럼 기사 엔티티를 연결할 때). 위치 · 리뷰 · 사진 · 상태 변경 서비스가 다른 도메인 저장소 대신 쓴다 (#94) |
 | 7주차 (T 2단계) | 4 → 1 | 대시보드 집계(읽기 전용): `StatusHistoryService.countCompleted(from, to)` · `getCompletedCountsByDriver(from, to, limit)` · `ReviewService.getRatingStat()` (팀원 1이 작성, 팀원 4 리뷰). 기사 순위도 상태 이력의 완료 변경자(배정 기사)로 세서, 예정했던 팀원 2의 기사별 완료 건수 메서드는 필요 없어졌다 (2026-11-13) |
 | #102 후속 | 2 → 3 | `DispatchApplicationService.closePendingApplications(shipment)` — 배송이 취소되면 대기 중인 지원을 모두 자동 마감(`NOT_SELECTED`). 결제 취소가 같은 트랜잭션에서 부른다 (팀원 1 작성, 팀원 2 리뷰, 2026-11-19) |
+| 저장소 직접 사용 정리 (11-25) | 4 → 2 | 기사 실적 · 지난 내역 · 휴무일(읽기 전용): `StatusHistoryService.getDriverCompletedTotal(driverMemberId, from, to)` · `getDriverCompletedShipments(driverMemberId, from, to)` — 기간 [from, to) 운송완료 건수 · 운임 합계 / 배송 목록(배정 기사 기준, 회원 ID), `getLastChangedAt(shipmentId, toStatus)` — 그 상태로 마지막에 바뀐 시각(`Optional`) (팀원 1이 팀원 2 몫 대신 작성, 팀원 4 리뷰) |
+| 저장소 직접 사용 정리 (11-25) | 3 → 2 | `ShipmentService.getShipmentForUpdate(shipmentId)` — 비관적 쓰기 잠금 조회(없으면 `SHIPMENT_NOT_FOUND`), 부른 쪽 트랜잭션이 끝날 때까지 잠김. 관리자 배차 취소가 쓴다 (팀원 1이 팀원 2 몫 대신 작성, 팀원 3 리뷰) |
+| 저장소 직접 사용 정리 (11-25) | 2 → 3 | `DispatchService.findActiveDispatch(shipmentId)` → 그 배송의 활성 배차 `Optional<Dispatch>`(가장 최근 배정). 배송 상세가 기사 · 차량 정보를 보여 줄 때 부른 쪽 트랜잭션 안에서 쓴다. 배송 상세의 리뷰는 이미 있는 `ReviewService.getReviewByShipment` — 리뷰 서비스가 배송 서비스를 쓰므로 `ObjectProvider`로 필요할 때 꺼낸다 (팀원 1이 팀원 3 몫 대신 작성, 팀원 2 · 4 리뷰) |
 
 다른 도메인은 위 Service 메서드로만 호출한다. 다른 사람의 Repository를 직접 쓰지 않는다. 약속이 늦어지면 데일리 스크럼에서 바로 공유한다.
 
@@ -58,7 +61,8 @@ public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember logi
 
 ## Git
 
-- `main`: 발표 · 배포용. 직접 push 금지. MVP가 화면으로 끝까지 될 때 한 번, 배포 직전에 한 번 팀원 2가 develop을 병합 (2026-11-19)
+- `main`: 발표 · 배포용. 직접 push 금지. MVP가 화면으로 끝까지 될 때 한 번, 배포 직전에 한 번 팀원 2가 develop을 병합 (2026-11-19). MVP 병합은 11-24 완료(#158)
+- **develop ↔ main 병합은 "Create a merge commit"** (squash 금지). squash로 합치면 두 브랜치 기록이 갈라져, 다음 병합 때 같은 파일이 충돌하고 develop에서 지운 파일이 main에 되살아난다 (2026-11-24, #158 ~ #161)
 - `develop`: 통합 브랜치(기본 브랜치). PR로만 병합 — 승인 1개와 CI(`백엔드 테스트` · `프론트 빌드 · lint`) 통과가 있어야 병합된다 (GitHub 규칙 `protect-main-develop`, main도 같음). 빌드가 깨지면 최우선으로 고친다
 - 작업 브랜치: `feature/{도메인}-{기능}` (예: feature/dispatch-candidate), `fix/...`
 - 하루 1번 이상 `git pull origin develop`으로 충돌을 작게 유지
@@ -68,7 +72,7 @@ public PageResponseDTO<ShipmentDTO> my(@AuthenticationPrincipal LoginMember logi
 
 - PR 하나에 기능 하나, 300줄 안팎. 큰 기능은 "엔티티 · API" → "화면"으로 나눈다
 - 짝 리뷰: 1 ↔ 3, 2 ↔ 4. 공통 파일을 건드리면 그 파일 관리자도 승인
-- 리뷰는 24시간 안에. Squash merge 후 브랜치 삭제
+- 리뷰는 24시간 안에. 기능 PR은 Squash merge 후 브랜치 삭제 (develop ↔ main만 merge commit — 위 Git 참고)
 - AI로 만든 부분은 PR에 표시. 본인이 설명할 수 있는 코드만 올린다
 
 ## 공통 파일 (PR + 관리자 승인)

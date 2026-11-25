@@ -15,6 +15,7 @@ const CargoTypeManagePage = () => {
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
+  const [listError, setListError] = useState('')  // 목록에서 사용 여부를 바꾸다 실패한 문구 (표 바로 위에)
 
   const loading = fetchState.resolvedKey !== refreshCount
 
@@ -86,11 +87,13 @@ const CargoTypeManagePage = () => {
   }
 
   const handleToggleActive = async (item) => {
+    setListError('')
     try {
       await changeAdminCargoTypeActive(item.id, !item.active)
       setRefreshCount((c) => c + 1)
     } catch (err) {
-      alert(err.response?.data?.message || '상태 변경에 실패했습니다.')
+      // alert() 대신 표 바로 위에 (#143 화면 점검표)
+      setListError(err.response?.data?.message || `${item.name}의 사용 여부를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.`)
     }
   }
 
@@ -127,7 +130,7 @@ const CargoTypeManagePage = () => {
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="예: 냉장/냉동 화물"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>
 
@@ -139,7 +142,7 @@ const CargoTypeManagePage = () => {
               step={1000}
               value={form.extraFee}
               onChange={(e) => setForm((prev) => ({ ...prev, extraFee: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>
 
@@ -151,7 +154,7 @@ const CargoTypeManagePage = () => {
               value={form.handlingNote}
               onChange={(e) => setForm((prev) => ({ ...prev, handlingNote: e.target.value }))}
               placeholder="예: 상하차 시 충격 주의 및 적재함 고정 필수"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>
         </div>
@@ -166,7 +169,7 @@ const CargoTypeManagePage = () => {
               type="checkbox"
               checked={form.active}
               onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
-              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             고객 신청 화면에 즉시 노출 (활성)
           </label>
@@ -174,7 +177,7 @@ const CargoTypeManagePage = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {submitting ? '저장 중...' : editingId ? '수정 완료' : '화물 유형 등록'}
           </button>
@@ -183,10 +186,13 @@ const CargoTypeManagePage = () => {
 
       {/* 목록 테이블 */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs">
+        {listError && <p role="alert" className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{listError}</p>}
         {loading ? (
           <div className="p-10 text-center text-sm text-gray-500">화물 유형 목록을 불러오는 중입니다...</div>
         ) : fetchState.error ? (
           <div className="p-8 text-center text-sm font-semibold text-red-600">{fetchState.error}</div>
+        ) : fetchState.items.length === 0 ? (
+          <div className="p-10 text-center text-sm text-gray-500">등록된 화물 종류가 없어요. 위에서 새 화물 종류를 등록해 주세요.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

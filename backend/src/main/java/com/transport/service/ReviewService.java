@@ -30,6 +30,11 @@ public interface ReviewService {
 	List<ReviewResponseDTO> getDriverReviews(Long driverId);
 
 	/**
+	 * 로그인 고객 본인이 작성한 리뷰 목록 (최신순)
+	 */
+	List<ReviewResponseDTO> getMyWrittenReviews(Long customerId);
+
+	/**
 	 * 기사 평균 평점 — 약속 메서드 (팀원 2 호출)
 	 * 리뷰가 없으면 0.0 (null 대신 — 호출 쪽에서 정렬에 바로 쓰도록)
 	 */

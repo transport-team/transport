@@ -5,7 +5,7 @@ import Pagination from '../../components/common/Pagination'
 import Modal from '../../components/common/Modal'
 import Badge from '../../components/common/Badge'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 
 const STATUS_NAME = { PENDING: '승인 대기', ACTIVE: '승인됨', INACTIVE: '중지' }
 // 기사 상태 배지 색 (모양은 공통 Badge)
@@ -55,6 +55,7 @@ const DriverListPage = () => {
   const [reloadKey, setReloadKey] = useState(0)       // 같은 조건으로 다시 검색해도 새로 불러온다
   const [pageData, setPageData] = useState(null)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')  // 승인 · 중지 실패 문구 — 기사 정보 창이 열려 있으면 창 안에도 보여 준다
   const [confirm, setConfirm] = useState(null)        // 확인 중인 거절 · 중지 { driver, action }
   const [changingId, setChangingId] = useState(null)  // 상태를 바꾸는 중인 기사
   const [review, setReview] = useState(null)          // 리뷰 창 { seq, driver, data, error }
@@ -98,13 +99,14 @@ const DriverListPage = () => {
 
   const changeStatus = async (driver, status) => {
     setChangingId(driver.id)
-    setError('')
+    setActionError('')
     try {
       const changed = await patchDriverStatus(driver.id, status)
       setPageData((prev) => ({ ...prev, dtoList: prev.dtoList.map((row) => (row.id === changed.id ? changed : row)) }))
       setDetail((current) => (current?.id === changed.id ? changed : current))
     } catch (err) {
-      setError(err.response?.data?.message ?? '기사 상태를 바꾸지 못했어요.')
+      // 예: 배정 · 운송 중인 배송이 있으면 409 DRIVER_HAS_ACTIVE_SHIPMENT
+      setActionError(err.response?.data?.message ?? '기사 상태를 바꾸지 못했어요.')
     } finally {
       setChangingId(null)
       setConfirm(null)
@@ -143,7 +145,7 @@ const DriverListPage = () => {
         <div className="flex justify-end gap-1">
           <button
             type="button" disabled={busy} onClick={() => changeStatus(driver, 'ACTIVE')}
-            className="rounded bg-emerald-700 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 px-2 py-1 text-xs font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             승인
           </button>
@@ -169,7 +171,7 @@ const DriverListPage = () => {
     return (
       <button
         type="button" disabled={busy} onClick={() => changeStatus(driver, 'ACTIVE')}
-        className="rounded border border-emerald-600 px-2 py-1 text-xs text-emerald-800 hover:bg-emerald-50 disabled:opacity-60"
+        className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-800 hover:bg-blue-50 disabled:opacity-60"
       >
         다시 승인
       </button>
@@ -194,12 +196,13 @@ const DriverListPage = () => {
           name="keyword" aria-label="이름 · 이메일" placeholder="이름 · 이메일 일부" defaultValue={query.keyword}
           className={`${INPUT_CLASS} w-56`}
         />
-        <button type="submit" className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+        <button type="submit" className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
           검색
         </button>
       </form>
 
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+      {actionError && detail === null && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{actionError}</p>}
       {!pageData && !error && <p className="text-sm text-gray-500">기사 목록 불러오는 중...</p>}
 
       {pageData && (
@@ -253,7 +256,7 @@ const DriverListPage = () => {
                       </button>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button type="button" onClick={() => setDetail(driver)}
+                      <button type="button" onClick={() => { setActionError(''); setDetail(driver) }}
                         className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">
                         더보기
                       </button>
@@ -277,6 +280,7 @@ const DriverListPage = () => {
                 ['연락처', detail.phone],
                 ['면허', detail.licenseType],
                 ['경력', detail.careerYears != null ? `${detail.careerYears}년` : '-'],
+                ['보유 자격증 (본인 입력)', detail.certifications || '미등록'],
                 ['가입일', date(detail.createdAt)],
                 ['승인일', date(detail.approvedAt)],
                 ['상태', STATUS_NAME[detail.status] || detail.status],
@@ -291,6 +295,7 @@ const DriverListPage = () => {
               <span className="text-xs text-gray-500">기사 계정 승인·거절·중지 관리</span>
               {renderAction(detail)}
             </div>
+            {actionError && <p role="alert" className="mt-3 rounded bg-red-50 p-3 text-sm text-red-800">{actionError}</p>}
           </>
         )}
       </Modal>

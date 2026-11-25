@@ -2,12 +2,15 @@ package com.transport.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import com.transport.domain.Member;
 import com.transport.domain.Shipment;
 import com.transport.domain.ShipmentStatusHistory;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.DriverCompletedShipmentDTO;
 import com.transport.dto.DriverCompletedStatDTO;
+import com.transport.dto.DriverCompletedTotalDTO;
 
 // 배송 상태 변경 이력 저장 (팀원 4 — docs/collaboration.md 약속: 모든 도메인이 이 메서드로만 이력 기록)
 public interface StatusHistoryService {
@@ -40,9 +43,29 @@ public interface StatusHistoryService {
 
 	/**
 	 * 기간 [from, to) 안의 기사별 배송완료 건수 — 대시보드 "기사 순위"
-	 * 완료는 배정 기사만 바꿀 수 있어 이력의 변경자가 곧 그 기사다 (status.md)
+	 * 운송완료는 고객 수령 확인으로 바뀌므로(status.md) 이력의 변경자가 아니라 그 배송의 배정 기사로 센다
 	 * @param limit 몇 명까지 (1 이상)
 	 * @return 건수 많은 순, 같으면 기사 id 순 (없으면 빈 목록)
 	 */
 	List<DriverCompletedStatDTO> getCompletedCountsByDriver(LocalDateTime from, LocalDateTime to, int limit);
+
+	// ===== 기사 실적 · 지난 내역 (읽기 전용 — 팀원 2가 저장소 대신 부름, 2026-11-25 저장소 직접 사용 정리) =====
+
+	/**
+	 * 기사 한 명의 기간 [from, to) 운송완료(COMPLETED) 건수 · 운임 합계 — 지금도 운송완료인 배송만, 배정 기사 기준
+	 * @param driverMemberId 기사의 회원 ID (driver.id 아님)
+	 */
+	DriverCompletedTotalDTO getDriverCompletedTotal(Long driverMemberId, LocalDateTime from, LocalDateTime to);
+
+	/**
+	 * 기사 한 명의 기간 [from, to) 운송완료 배송 목록 (완료 시각 최신순) — 기준은 getDriverCompletedTotal과 같다
+	 * @param driverMemberId 기사의 회원 ID (driver.id 아님)
+	 */
+	List<DriverCompletedShipmentDTO> getDriverCompletedShipments(Long driverMemberId, LocalDateTime from, LocalDateTime to);
+
+	/**
+	 * 배송이 그 상태로 마지막에 바뀐 시각 (예: 운송완료 시각)
+	 * @return 그 상태로 바뀐 적이 없으면 빈 값
+	 */
+	Optional<LocalDateTime> getLastChangedAt(Long shipmentId, ShipmentStatus toStatus);
 }

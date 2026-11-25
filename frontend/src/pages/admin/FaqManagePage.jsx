@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { deleteFaq, FAQ_CATEGORIES, getAllFaqs, postFaq, putFaq } from '../../api/faqApi'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 
 const initForm = { category: FAQ_CATEGORIES[0], question: '', answer: '', sortOrder: '', active: true }
 
@@ -139,7 +139,7 @@ const FaqManagePage = () => {
             />
           </label>
           <label className="flex items-center gap-2 py-2 text-sm">
-            <input type="checkbox" name="active" checked={form.active} onChange={handleChange} className="size-4 accent-emerald-700" />
+            <input type="checkbox" name="active" checked={form.active} onChange={handleChange} className="size-4 accent-blue-700" />
             <span className="font-medium">FAQ 화면에 보이기</span>
           </label>
         </div>
@@ -155,11 +155,11 @@ const FaqManagePage = () => {
           />
         </label>
         {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-        {message && <p role="status" className="rounded bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
+        {message && <p role="status" className="rounded bg-blue-50 p-3 text-sm text-blue-800">{message}</p>}
         <div className="flex gap-2">
           <button
             type="submit" disabled={submitting}
-            className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             {submitting ? '저장 중...' : editingId ? '수정 저장' : 'FAQ 올리기'}
           </button>
@@ -195,7 +195,7 @@ const FaqManagePage = () => {
                   </tr>
                 )}
                 {faqs.map((faq) => (
-                  <tr key={faq.id} className={`border-b border-gray-100 last:border-0 ${editingId === faq.id ? 'bg-emerald-50' : ''}`}>
+                  <tr key={faq.id} className={`border-b border-gray-100 last:border-0 ${editingId === faq.id ? 'bg-blue-50' : ''}`}>
                     <td className="px-4 py-3">{faq.category}</td>
                     <td className={`max-w-xs truncate px-4 py-3 ${faq.active ? '' : 'text-gray-400'}`}>{faq.question}</td>
                     <td className="px-4 py-3">{faq.sortOrder}</td>

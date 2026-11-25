@@ -50,7 +50,7 @@ const NEW_TYPE_PRESETS = [
   { code: 'TON25', name: '25톤', maxLoadKg: 25000 },
 ]
 
-const INPUT_CLASS = 'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-gray-100'
+const INPUT_CLASS = 'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100'
 
 const NumberField = ({ field, value, onChange }) => {
   const number = value === '' ? null : Number(value)
@@ -64,9 +64,9 @@ const NumberField = ({ field, value, onChange }) => {
   return (
     <label className="block text-xs font-semibold text-gray-700">
       {field.label}
-      <div className="mt-1 flex h-10 overflow-hidden rounded-lg border border-gray-200 bg-white focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+      <div className="mt-1 flex h-10 overflow-hidden rounded-lg border border-gray-200 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
         <button type="button" onClick={() => adjust(-1)} aria-label={`${field.label} 감소`}
-          className="w-9 shrink-0 border-r border-gray-100 bg-gray-50 text-base text-gray-600 hover:bg-emerald-50">−</button>
+          className="w-9 shrink-0 border-r border-gray-100 bg-gray-50 text-base text-gray-600 hover:bg-blue-50">−</button>
         <input type="text" inputMode="numeric" value={display}
           onChange={(event) => {
             const digits = event.target.value.replace(/[^0-9]/g, '')
@@ -77,7 +77,7 @@ const NumberField = ({ field, value, onChange }) => {
           className="min-w-0 flex-1 bg-transparent px-2 text-right text-sm font-medium text-gray-900 focus:outline-none" />
         <span className="flex items-center pr-2 text-xs text-gray-500">{field.unit}</span>
         <button type="button" onClick={() => adjust(1)} aria-label={`${field.label} 증가`}
-          className="w-9 shrink-0 border-l border-gray-100 bg-gray-50 text-base text-gray-600 hover:bg-emerald-50">+</button>
+          className="w-9 shrink-0 border-l border-gray-100 bg-gray-50 text-base text-gray-600 hover:bg-blue-50">+</button>
       </div>
     </label>
   )
@@ -94,6 +94,7 @@ const VehicleTypeFareManagePage = () => {
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [listError, setListError] = useState('')  // 목록에서 사용 · 숨김을 바꾸다 실패한 문구 (표 바로 위에)
   const loading = fetchState.key !== refreshKey
 
   useEffect(() => {
@@ -220,11 +221,12 @@ const VehicleTypeFareManagePage = () => {
       confirmLabel: action,
       danger: item.active,
     }))) return
+    setListError('')
     try {
       await changeAdminVehicleTypeActive(item.id, !item.active)
       setRefreshKey((value) => value + 1)
     } catch (err) {
-      alert(err.response?.data?.message || '차종 상태 변경에 실패했습니다.')
+      setListError(err.response?.data?.message || `${item.name} 차종을 ${action}하지 못했어요. 잠시 후 다시 시도해 주세요.`)
     }
   }
 
@@ -239,11 +241,11 @@ const VehicleTypeFareManagePage = () => {
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-wrap gap-2 border-b border-gray-100 p-4">
           <button type="button" onClick={() => { setMode('edit'); cancelEdit() }}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === 'edit' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === 'edit' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             기존 차종 요금 수정
           </button>
           <button type="button" onClick={startCreate}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === 'create' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === 'create' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             + 새 차종 등록
           </button>
         </div>
@@ -312,10 +314,10 @@ const VehicleTypeFareManagePage = () => {
           ) : (
             <>
               {mode === 'edit' && (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-emerald-50 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-blue-50 px-4 py-3">
                   <div>
-                    <p className="text-sm font-bold text-emerald-900">{form.name}</p>
-                    <p className="text-xs text-emerald-700">차종 코드: {form.code} · 기존 차종의 요금을 수정합니다.</p>
+                    <p className="text-sm font-bold text-blue-900">{form.name}</p>
+                    <p className="text-xs text-blue-700">차종 코드: {form.code} · 기존 차종의 요금을 수정합니다.</p>
                   </div>
                   <button type="button" onClick={cancelEdit} className="text-xs font-semibold text-gray-600 underline hover:text-gray-900">선택 해제</button>
                 </div>
@@ -341,7 +343,7 @@ const VehicleTypeFareManagePage = () => {
                   고객·기사 화면에 노출 (활성)
                 </label>
                 <button type="submit" disabled={saving}
-                  className="rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
+                  className="rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">
                   {saving ? '저장 중...' : mode === 'edit' ? '변경 사항 저장' : '차종 등록'}
                 </button>
               </div>
@@ -352,6 +354,7 @@ const VehicleTypeFareManagePage = () => {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        {listError && <p role="alert" className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{listError}</p>}
         {loading ? <p className="p-8 text-center text-sm text-gray-500">차종 목록을 불러오는 중입니다...</p>
           : fetchState.error ? <p role="alert" className="p-8 text-center text-sm text-red-600">{fetchState.error}</p>
           : <div className="overflow-x-auto">

@@ -34,9 +34,9 @@ const NoticeListPage = () => {
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
             aria-label="제목 검색" placeholder="제목 검색" value={input} onChange={(e) => setInput(e.target.value)}
-            className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
           />
-          <button type="submit" className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+          <button type="submit" className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
             검색
           </button>
         </form>

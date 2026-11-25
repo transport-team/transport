@@ -4,6 +4,16 @@ import { useOutletContext } from 'react-router-dom'
 import Badge from '../../components/common/Badge'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import useConfirm from '../../hooks/useConfirm'
+import useUrlFilters from '../../hooks/useUrlFilters'
+
+// 주소의 필터 값 확인 (?progress=PENDING&result=APPROVED&date=2026-11-25) — 모르는 값은 전체로
+const REQUEST_FILTERS = {
+  progress: ['PENDING', 'PROCESSED'],
+  result: ['APPROVED', 'REJECTED', 'WITHDRAWN'],
+  // 있는 날짜만 (2026-13-99 같은 값은 전체로) — 날짜로 바꿨다가 다시 글자로 바꿔 같으면 있는 날짜
+  date: (value) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value,
+}
 
 const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
 const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절', WITHDRAWN: '기사 철회' }
@@ -21,7 +31,7 @@ const VehicleDeletionRequestListPage = () => {
   const [processingId, setProcessingId] = useState(null)
   const [rejectId, setRejectId] = useState(null)
   const [rejectionReason, setRejectionReason] = useState('')
-  const [filters, setFilters] = useState({ progress: '', result: '', date: '' })
+  const [filters, setFilter, resetFilters] = useUrlFilters(REQUEST_FILTERS)  // 필터는 주소에 남긴다 (새로고침 · 뒤로 가기에도 그대로)
 
   const loadRequests = () => getAllVehicleDeletionRequests()
     .then((data) => setRequests(Array.isArray(data) ? data : []))
@@ -89,29 +99,29 @@ const VehicleDeletionRequestListPage = () => {
           <p className="mt-1 text-xs text-gray-500">삭제 승인 시 차량은 비활성화되고 운송 기록은 보존됩니다. 처리 완료된 신청도 이력으로 유지합니다.</p>
         </div>
         <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
-          조회 <strong className="text-emerald-700">{visibleRequests.length}</strong>건
+          조회 <strong className="text-blue-700">{visibleRequests.length}</strong>건
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:grid-cols-4">
         <label className="text-xs text-gray-600">처리 상태
-          <select value={filters.progress} onChange={(e) => setFilters((p) => ({ ...p, progress: e.target.value }))}
+          <select value={filters.progress} onChange={(e) => setFilter('progress', e.target.value)}
             className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
             <option value="">전체</option><option value="PENDING">처리 전</option><option value="PROCESSED">처리 완료</option>
           </select>
         </label>
         <label className="text-xs text-gray-600">처리 결과
-          <select value={filters.result} onChange={(e) => setFilters((p) => ({ ...p, result: e.target.value }))}
+          <select value={filters.result} onChange={(e) => setFilter('result', e.target.value)}
             className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
             <option value="">전체</option><option value="APPROVED">승인</option><option value="REJECTED">거절</option><option value="WITHDRAWN">기사 철회</option>
           </select>
         </label>
         <label className="text-xs text-gray-600">신청일
-          <input type="date" value={filters.date} onChange={(e) => setFilters((p) => ({ ...p, date: e.target.value }))}
+          <input type="date" value={filters.date} onChange={(e) => setFilter('date', e.target.value)}
             className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm" />
         </label>
         <div className="flex items-end">
-          <button type="button" onClick={() => setFilters({ progress: '', result: '', date: '' })}
+          <button type="button" onClick={resetFilters}
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">필터 초기화</button>
         </div>
       </div>
@@ -154,7 +164,7 @@ const VehicleDeletionRequestListPage = () => {
                           ) : (
                             <div className="flex justify-end gap-1.5">
                               <button type="button" disabled={processingId !== null} onClick={() => handleApprove(request)}
-                                className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">승인</button>
+                                className="rounded-lg bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-50">승인</button>
                               <button type="button" disabled={processingId !== null} onClick={() => { setRejectId(rejectId === request.id ? null : request.id); setRejectionReason(''); setError('') }}
                                 className="rounded-lg border border-red-200 bg-white px-3 py-1.5 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">거절</button>
                             </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Pagination from '../../components/common/Pagination'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import useUrlPage from '../../hooks/useUrlPage'
 import { getMyShipments } from '../../api/shipmentApi'
 import { getDispatchApplicantCounts, getDispatchApplicants } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
@@ -12,6 +13,7 @@ const FILTER_TABS = [
   ...['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELED']
     .map((value) => ({ value, label: shipmentStatusLabel(value) })),
 ]
+const TAB_VALUES = FILTER_TABS.map((tab) => tab.value).filter(Boolean)
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -19,8 +21,12 @@ const formatDateTime = (value) => {
 }
 
 const ShipmentListPage = () => {
-  const [statusFilter, setStatusFilter] = useState('')
-  const [page, setPage] = useState(1)
+  // 상태 탭 · 쪽은 주소에 남긴다 (?status=REQUESTED&page=2) — 새로고침 · 뒤로 가기 · 상세에서 돌아와도 그대로 (11-25)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [page, setPage] = useUrlPage()
+  const listSearch = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  const rawStatus = searchParams.get('status') ?? ''
+  const statusFilter = TAB_VALUES.includes(rawStatus) ? rawStatus : ''
   const [applicantCounts, setApplicantCounts] = useState({})
   const [applicantError, setApplicantError] = useState('')
   const [fetchState, setFetchState] = useState({
@@ -82,9 +88,9 @@ const ShipmentListPage = () => {
     return () => { active = false }
   }, [loading, fetchState.content, fetchState.error])
 
+  // 상태를 바꾸면 1쪽부터 (기록을 남겨 뒤로 가기로 이전 탭으로)
   const handleSelectStatus = (nextStatus) => {
-    setStatusFilter(nextStatus)
-    setPage(1)
+    setSearchParams(nextStatus ? { status: nextStatus } : {})
   }
 
   return (
@@ -97,7 +103,7 @@ const ShipmentListPage = () => {
           </div>
           <Link
             to="/customer/shipments/new"
-            className="rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+            className="rounded-full bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
           >
             + 새 배송 신청
           </Link>
@@ -122,7 +128,7 @@ const ShipmentListPage = () => {
       </header>
 
       <div className="space-y-3 px-5 pt-5">
-        <Link to="/customer/dispatch-requests" className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 hover:bg-emerald-100">
+        <Link to="/customer/dispatch-requests" className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
           <span className="flex items-center gap-2">지원한 기사 및 배차 확정
             {Object.values(applicantCounts).reduce((total, count) => total + Number(count || 0), 0) > 0 && (
               <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs text-white">
@@ -151,7 +157,7 @@ const ShipmentListPage = () => {
             <p className="mt-1 text-xs text-gray-500">새로운 화물 배송을 신청해 보세요.</p>
             <Link
               to="/customer/shipments/new"
-              className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
+              className="mt-5 inline-block rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
             >
               배송 신청하기
             </Link>
@@ -160,8 +166,8 @@ const ShipmentListPage = () => {
 
         {!loading && !fetchState.error && fetchState.content.map((item) => {
           return (
-            <article key={item.id} className="rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:border-emerald-200 hover:shadow-md">
-              <Link to={`/customer/shipments/${item.id}`} className="block p-5">
+            <article key={item.id} className="rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md">
+              <Link to={`/customer/shipments/${item.id}`} state={{ listSearch }} className="block p-5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={item.status} size="sm" />
@@ -179,7 +185,7 @@ const ShipmentListPage = () => {
 
               <div className="mt-3 space-y-1.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" />
                   <span className="truncate">{item.originAddress}</span>
                 </div>
                 <div className="flex items-center gap-2">

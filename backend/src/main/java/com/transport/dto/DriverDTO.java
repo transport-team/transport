@@ -23,6 +23,7 @@ public class DriverDTO {
 	private String phone;
 	private String licenseType;
 	private int careerYears;
+	private String certifications;  // 본인이 입력한 보유 자격증명 (검증 전)
 	private DriverStatus status;
 	private LocalDateTime approvedAt;  // 처음 승인한 시각 (승인 전이면 null)
 	private LocalDateTime createdAt;   // 가입 시각

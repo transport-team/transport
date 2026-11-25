@@ -6,6 +6,7 @@ import com.transport.domain.Driver;
 import com.transport.domain.Member;
 import com.transport.domain.enums.DriverStatus;
 import com.transport.dto.DriverDTO;
+import com.transport.dto.DriverProfileUpdateRequestDTO;
 import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageResponseDTO;
 
@@ -21,6 +22,11 @@ public interface DriverService {
 
 	// 관리자 기사 목록 (상태 · 이름 · 이메일 검색, 최신 가입 순)
 	PageResponseDTO<DriverDTO> getDrivers(DriverSearchDTO driverSearchDTO);
+
+	// 로그인한 기사 본인 정보 조회 · 변경 (memberId는 인증 정보로만 받는다)
+	DriverDTO getMyProfile(Long memberId);
+
+	DriverDTO updateMyProfile(Long memberId, DriverProfileUpdateRequestDTO request);
 
 	// 관리자 승인(ACTIVE) · 중지(INACTIVE) → 바뀐 기사 정보
 	DriverDTO changeStatus(Long driverId, DriverStatus status);
@@ -40,6 +46,7 @@ public interface DriverService {
 				.phone(member.getPhone())
 				.licenseType(driver.getLicenseType())
 				.careerYears(driver.getCareerYears())
+				.certifications(driver.getCertifications())
 				.status(driver.getStatus())
 				.approvedAt(driver.getApprovedAt())
 				.createdAt(driver.getCreatedAt())

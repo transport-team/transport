@@ -16,7 +16,6 @@ const MENU_GROUPS = [
     title: '운송 · 정산',
     menus: [
       { label: '배송 관리', to: '/admin/shipments' },
-      { label: '배차' },
       { label: '결제 내역', to: '/admin/payments' },
       { label: '정산', to: '/admin/settlements' },
     ],
@@ -100,7 +99,7 @@ const AdminLayout = () => {
                           ? { ...menu, badge: pendingDeletionCount }
                           : menu
                     }
-                    className={`flex min-h-10 items-center rounded-xl px-3 py-2 text-sm transition-colors aria-[current=page]:bg-emerald-50 aria-[current=page]:ring-1 aria-[current=page]:ring-emerald-100 ${menu.to ? 'hover:bg-gray-50' : ''}`}
+                    className={`flex min-h-10 items-center rounded-xl px-3 py-2 text-sm transition-colors aria-[current=page]:bg-blue-50 aria-[current=page]:ring-1 aria-[current=page]:ring-blue-100 ${menu.to ? 'hover:bg-gray-50' : ''}`}
                   />
                 ))}
               </div>

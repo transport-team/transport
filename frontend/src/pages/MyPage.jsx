@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getMyInfo } from '../api/memberApi'
 import PasswordForm from '../components/member/PasswordForm'
+import DriverProfileSection from '../components/driver/DriverProfileSection'
 import PhoneForm from '../components/member/PhoneForm'
 import DefaultAddressForm from '../components/member/DefaultAddressForm'
+import CustomerWrittenReviews from '../components/review/CustomerWrittenReviews'
 import { ROLE_HOME, ROLE_NAME } from '../util/roleUtil'
 
 // 내 정보 (고객 · 기사 · 관리자 공통, /{역할}/me): 이름 · 이메일 · 역할은 보기만, 연락처 · 비밀번호는 변경 (COM-03)
@@ -11,6 +13,11 @@ import { ROLE_HOME, ROLE_NAME } from '../util/roleUtil'
 const MyPage = () => {
   const [member, setMember] = useState(null)
   const [error, setError] = useState('')
+  const [activeEdit, setActiveEdit] = useState(null)
+
+  const toggleEdit = (section) => {
+    setActiveEdit((current) => current === section ? null : section)
+  }
 
   useEffect(() => {
     getMyInfo()
@@ -33,6 +40,7 @@ const MyPage = () => {
             <dt className="text-gray-500">역할</dt>
             <dd>{ROLE_NAME[member.role]}</dd>
           </dl>
+          {member.role === 'DRIVER' && <DriverProfileSection />}
           {/* 기사 전용 차량 관리 메뉴 */}
           {member.role === 'DRIVER' && (
             <Link
@@ -53,14 +61,34 @@ const MyPage = () => {
             </Link>
           )}
 
-          <PhoneForm phone={member.phone} onSaved={setMember} />
+          {member.role === 'CUSTOMER' && <CustomerWrittenReviews />}
           {member.role === 'CUSTOMER' && <DefaultAddressForm />}
-          <PasswordForm />
+
+          <div className="grid grid-cols-2 gap-2" aria-label="내 정보 변경 메뉴">
+            {[
+              { id: 'phone', label: '연락처 변경' },
+              { id: 'password', label: '비밀번호 변경' },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => toggleEdit(id)}
+                aria-expanded={activeEdit === id}
+                className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${activeEdit === id
+                  ? 'border-blue-700 bg-blue-700 text-white'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-blue-500 hover:text-blue-700'}`}
+              >
+                {label} {activeEdit === id ? '접기' : ''}
+              </button>
+            ))}
+          </div>
+          {activeEdit === 'phone' && <PhoneForm phone={member.phone} onSaved={setMember} />}
+          {activeEdit === 'password' && <PasswordForm />}
 
           {member.role !== 'ADMIN' && (
             <Link
               to={`${ROLE_HOME[member.role]}/inquiries`}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-emerald-600"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-blue-600"
             >
               <span>
                 <span className="block font-semibold">1:1 문의</span>

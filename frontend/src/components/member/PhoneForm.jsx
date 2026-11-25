@@ -40,7 +40,7 @@ const PhoneForm = ({ phone, onSaved }) => {
         <input
           name="phone" type="tel" inputMode="numeric" autoComplete="tel" required placeholder="010-1234-5678"
           value={value} onChange={handleChange}
-          className="rounded border border-gray-300 bg-white px-3 py-2 focus:border-emerald-600 focus:outline-none"
+          className="rounded border border-gray-300 bg-white px-3 py-2 focus:border-blue-600 focus:outline-none"
         />
         <span className="text-xs text-gray-500">숫자만 입력하면 하이픈이 자동으로 들어가요</span>
       </label>
@@ -48,7 +48,7 @@ const PhoneForm = ({ phone, onSaved }) => {
       {saved && <p role="status" className="rounded bg-emerald-50 p-3 text-sm text-emerald-800">연락처를 바꿨어요.</p>}
       <button
         type="submit" disabled={submitting || value === phone}
-        className="justify-self-start rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+        className="justify-self-start rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
       >
         {submitting ? '저장 중...' : '연락처 저장'}
       </button>

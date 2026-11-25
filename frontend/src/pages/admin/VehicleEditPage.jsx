@@ -10,6 +10,8 @@ const VehicleEditPage = () => {
 
     // 목록에서 전달받은 차량 정보
     const vehicle = state?.vehicle
+    // 돌아갈 목록 주소 — 목록의 쪽 번호(?page=2)를 그대로 (주소에 조건 남기기, 11-25)
+    const listPath = `/admin/vehicles${state?.listSearch ?? ''}`
 
     // 상태 선언은 effect보다 위에 둔다 (effect 안에서 setError를 쓴다 — react-hooks/immutability)
     const [form, setForm] = useState({
@@ -76,7 +78,7 @@ const VehicleEditPage = () => {
                 driverId: form.driverId ? Number(form.driverId) : null,
             })
             // 수정 성공 후 목록으로 이동하며 토스트 메시지 전달
-            navigate('/admin/vehicles', {
+            navigate(listPath, {
                 state: { toast: '차량 수정이 완료되었습니다.' }
             })
         } catch (err) {
@@ -93,7 +95,7 @@ const VehicleEditPage = () => {
                 <p>차량 정보가 없습니다. 목록에서 다시 선택해 주세요.</p>
                 <button
                     type="button"
-                    onClick={() => navigate('/admin/vehicles')}
+                    onClick={() => navigate(listPath)}
                     className="rounded border px-4 py-2"
                 >
                     목록으로
@@ -181,7 +183,7 @@ const VehicleEditPage = () => {
                 <div className="flex justify-end gap-3">
                     <button
                         type="button"
-                        onClick={() => navigate('/admin/vehicles')}
+                        onClick={() => navigate(listPath)}
                         className="rounded border px-4 py-2"
                     >
                         취소
@@ -190,7 +192,7 @@ const VehicleEditPage = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-50"
+                        className="rounded bg-blue-700 px-4 py-2 text-white disabled:opacity-50"
                     >
                         {loading ? '수정 중...' : '수정 완료'}
                     </button>

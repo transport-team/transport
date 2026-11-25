@@ -2,11 +2,15 @@
 @import "tailwindcss";
 
 @theme {
-  /* Primary (주색) — Emerald */
-  --color-primary: #059669;
-  --color-primary-hover: #047857;
-  --color-primary-light: #d1fae5;
-  --color-primary-text: #065f46;
+  /* JIMGO Primary (주색) — Navy Blue */
+  --color-primary: #103c98;
+  --color-primary-hover: #0b2d78;
+  --color-primary-light: #eff6ff;
+  --color-primary-text: #123977;
+
+  /* JIMGO Accent (포인트) — Orange */
+  --color-brand-orange: #ff7900;
+  --color-brand-orange-hover: #ea6a00;
 
   /* Danger (위험/취소/에러) — Red */
   --color-danger: #dc2626;

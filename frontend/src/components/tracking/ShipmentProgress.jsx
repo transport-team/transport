@@ -48,7 +48,7 @@ const ShipmentProgress = ({ status }) => {
                 )}
                 <span className={`relative z-10 mx-auto flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors ${
                   done ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-200 bg-white text-gray-400'
-                } ${now ? 'ring-4 ring-emerald-100' : ''}`} aria-current={now ? 'step' : undefined}>
+                } ${now ? 'ring-4 ring-blue-100' : ''}`} aria-current={now ? 'step' : undefined}>
                   {done && !now ? '✓' : step.icon}
                 </span>
                 <span className={`mt-2 block whitespace-nowrap text-[11px] font-semibold ${done ? 'text-emerald-700' : 'text-gray-400'}`}>

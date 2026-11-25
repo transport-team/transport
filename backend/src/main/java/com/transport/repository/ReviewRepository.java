@@ -19,6 +19,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 	@Query("select r from Review r join fetch r.customer where r.driver.id = :driverId order by r.createdAt desc")
 	List<Review> findByDriverIdWithCustomer(@Param("driverId") Long driverId);
 
+	// 작성한 고객 본인 ID 기준으로 조회. 연관 정보를 함께 읽어 모달 목록을 만들 때 N+1을 방지한다.
+	@Query("select r from Review r join fetch r.customer join fetch r.driver join fetch r.shipment where r.customer.id = :customerId order by r.createdAt desc")
+	List<Review> findByCustomerIdWithDetails(@Param("customerId") Long customerId);
+
 	// 평균 평점 (리뷰가 없으면 null — 서비스에서 0.0으로 변환)
 	@Query("select avg(r.rating) from Review r where r.driver.id = :driverId")
 	Double averageRatingByDriverId(@Param("driverId") Long driverId);

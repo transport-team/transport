@@ -20,9 +20,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.transport.domain.DispatchApplication;
 import com.transport.domain.Driver;
 import com.transport.domain.DriverSchedule;
+import com.transport.domain.Shipment;
+import com.transport.domain.enums.DispatchApplicationStatus;
 import com.transport.domain.enums.DriverScheduleStatus;
+import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.DriverWorkHoursResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -30,7 +34,6 @@ import com.transport.repository.DispatchApplicationRepository;
 import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.DriverScheduleRepository;
-import com.transport.repository.ShipmentStatusHistoryRepository;
 
 // 기사 근무 가능 시간 (DRV-01): 오늘 이후 · 휴무일과 따로 · 자정 넘기는 근무 · 등록과 수정 (DB 없이)
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +55,7 @@ class DriverDayOffServiceImplTest {
     DispatchApplicationRepository applicationRepository;
 
     @Mock
-    ShipmentStatusHistoryRepository statusHistoryRepository;
+    StatusHistoryService statusHistoryService;
 
     @InjectMocks
     DriverDayOffServiceImpl dayOffService;
@@ -116,15 +119,15 @@ class DriverDayOffServiceImplTest {
     }
 
     @Test
-    @DisplayName("휴무일에는 근무 시간을 넣을 수 없다 (휴무를 먼저 취소)")
-    void offDayCannotHaveWorkHours() {
+    @DisplayName("휴무일은 해당 날짜의 근무시간 예외로 한 번에 전환할 수 있다")
+    void offDayCanChangeToWorkHours() {
         givenDriver();
         when(scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow))
                 .thenReturn(Optional.of(schedule(DriverScheduleStatus.OFF, LocalTime.MIN, LocalTime.MAX)));
 
-        assertThatThrownBy(() -> dayOffService.saveWorkHours(MEMBER_ID, tomorrow, LocalTime.of(9, 0), LocalTime.of(18, 0)))
-                .isInstanceOf(CustomException.class)
-                .hasMessage("휴무일입니다. 휴무를 취소한 뒤 근무 시간을 등록해 주세요.");
+        DriverWorkHoursResponseDTO result = dayOffService.saveWorkHours(
+                MEMBER_ID, tomorrow, LocalTime.of(9, 0), LocalTime.of(18, 0));
+        assertThat(result.startTime()).isEqualTo(LocalTime.of(9, 0));
         verify(scheduleRepository, never()).save(any(DriverSchedule.class));
     }
 
@@ -190,14 +193,34 @@ class DriverDayOffServiceImplTest {
     }
 
     @Test
-    @DisplayName("근무 시간이 있는 날은 휴무로 바꿀 수 없고, 근무 시간을 지우라고 안내한다")
+    @DisplayName("예외 근무시간이 있어도 충돌이 없다면 휴무로 전환한다")
     void offDayOnWorkHoursDate() {
         givenDriver();
         when(scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow))
                 .thenReturn(Optional.of(schedule(DriverScheduleStatus.AVAILABLE, LocalTime.of(9, 0), LocalTime.of(18, 0))));
 
+        DriverSchedule existing = scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow).orElseThrow();
+        dayOffService.registerOffDay(MEMBER_ID, tomorrow);
+        assertThat(existing.getStatus()).isEqualTo(DriverScheduleStatus.OFF);
+        verify(scheduleRepository, never()).save(any(DriverSchedule.class));
+    }
+
+    @Test
+    @DisplayName("운송을 완료한 날은 휴무로 못 바꾼다 — 완료 시각은 팀원 4 StatusHistoryService로 묻는다")
+    void completedDayBlocksOffDay() {
+        givenDriver();
+        Shipment shipment = Shipment.builder().id(30L).status(ShipmentStatus.COMPLETED).build();
+        DispatchApplication selected = DispatchApplication.builder()
+                .id(3L).driver(driver).shipment(shipment).status(DispatchApplicationStatus.SELECTED).build();
+        when(scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow)).thenReturn(Optional.empty());
+        when(dispatchRepository.findByDriver_IdAndActiveTrue(DRIVER_ID)).thenReturn(List.of());
+        when(applicationRepository.findByDriver_IdOrderByUpdatedAtDesc(DRIVER_ID)).thenReturn(List.of(selected));
+        when(statusHistoryService.getLastChangedAt(30L, ShipmentStatus.COMPLETED))
+                .thenReturn(Optional.of(tomorrow.atTime(10, 0)));
+
         assertThatThrownBy(() -> dayOffService.registerOffDay(MEMBER_ID, tomorrow))
                 .isInstanceOf(CustomException.class)
-                .hasMessage("근무 시간이 등록된 날짜입니다. 근무 시간을 지운 뒤 휴무로 등록해 주세요.");
+                .hasMessage("배송을 완료한 날짜에는 휴무를 등록할 수 없습니다.");
+        verify(scheduleRepository, never()).save(any());
     }
 }

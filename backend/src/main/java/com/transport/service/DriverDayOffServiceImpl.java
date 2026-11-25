@@ -23,7 +23,6 @@ import com.transport.repository.DispatchApplicationRepository;
 import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.DriverScheduleRepository;
-import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,7 +36,7 @@ public class DriverDayOffServiceImpl implements DriverDayOffService {
     private final DriverScheduleRepository scheduleRepository;
     private final DispatchRepository dispatchRepository;
     private final DispatchApplicationRepository applicationRepository;
-    private final ShipmentStatusHistoryRepository statusHistoryRepository;
+    private final StatusHistoryService statusHistoryService;  // 팀원 4 약속 메서드 (운송완료 시각)
 
     // 로그인 회원 ID로 기사 ID 조회
     private Long getDriverId(Long memberId) {
@@ -107,18 +106,10 @@ public class DriverDayOffServiceImpl implements DriverDayOffService {
                     "오늘 이후의 날짜만 휴무로 등록할 수 있습니다.");
         }
 
-        // 기존 근무 일정이 있으면 덮어쓰지 않음
-        var existing = scheduleRepository
-                .findByDriver_IdAndWorkDate(driverId, date);
-
-        if (existing.isPresent()) {
-            if (existing.get().getStatus() == DriverScheduleStatus.OFF) {
-                return;
-            }
-
-            throw new CustomException(
-                    ErrorCode.INVALID_INPUT,
-                    "근무 시간이 등록된 날짜입니다. 근무 시간을 지운 뒤 휴무로 등록해 주세요.");
+        // 기존 예외 근무시간이 있으면 충돌 검사를 마친 뒤 같은 기록을 휴무로 전환한다.
+        var existing = scheduleRepository.findByDriver_IdAndWorkDate(driverId, date);
+        if (existing.isPresent() && existing.get().getStatus() == DriverScheduleStatus.OFF) {
+            return;
         }
 
         // 진행 중인 확정 배차와 겹치면 휴무 등록 불가
@@ -160,17 +151,20 @@ public class DriverDayOffServiceImpl implements DriverDayOffService {
                 .stream()
                 .filter(application -> application.getStatus() == DispatchApplicationStatus.SELECTED
                         && application.getShipment().getStatus() == ShipmentStatus.COMPLETED)
-                .anyMatch(application -> statusHistoryRepository
-                        .findFirstByShipment_IdAndToStatusOrderByChangedAtDesc(
-                                application.getShipment().getId(),
-                                ShipmentStatus.COMPLETED)
-                        .map(history -> history.getChangedAt().toLocalDate().equals(date))
+                .anyMatch(application -> statusHistoryService
+                        .getLastChangedAt(application.getShipment().getId(), ShipmentStatus.COMPLETED)
+                        .map(completedAt -> completedAt.toLocalDate().equals(date))
                         .orElse(false));
 
         if (completedConflict) {
             throw new CustomException(
                     ErrorCode.INVALID_INPUT,
                     "배송을 완료한 날짜에는 휴무를 등록할 수 없습니다.");
+        }
+
+        if (existing.isPresent()) {
+            existing.get().changeToOff();
+            return;
         }
 
         DriverSchedule schedule = DriverSchedule.builder()
@@ -268,12 +262,7 @@ public class DriverDayOffServiceImpl implements DriverDayOffService {
         var existing = scheduleRepository.findByDriver_IdAndWorkDate(driver.getId(), date);
         if (existing.isPresent()) {
             DriverSchedule schedule = existing.get();
-            if (schedule.getStatus() == DriverScheduleStatus.OFF) {
-                throw new CustomException(
-                        ErrorCode.INVALID_INPUT,
-                        "휴무일입니다. 휴무를 취소한 뒤 근무 시간을 등록해 주세요.");
-            }
-            schedule.changeWorkHours(start, end);  // 변경 감지로 저장
+            schedule.changeToAvailable(start, end);  // 휴무 → 예외 근무도 한 번에 변경 감지
             return DriverWorkHoursResponseDTO.from(schedule);
         }
 

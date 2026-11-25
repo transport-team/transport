@@ -100,6 +100,14 @@ public class ReviewServiceImpl implements ReviewService {
 
 	@Override
 	@Transactional(readOnly = true)
+	public List<ReviewResponseDTO> getMyWrittenReviews(Long customerId) {
+		return reviewRepository.findByCustomerIdWithDetails(customerId).stream()
+				.map(ReviewResponseDTO::from)
+				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
 	public double getAverageRating(Long driverId) {
 		Double avg = reviewRepository.averageRatingByDriverId(driverId);
 		// 리뷰가 없으면 0.0 — 약속 문서에 명시 (팀원 2가 정렬에 바로 사용)

@@ -2,6 +2,7 @@ package com.transport.repository;
 
 import java.util.List;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,12 +40,14 @@ public interface DispatchApplicationRepository extends JpaRepository<DispatchApp
                         Shipment shipment,
                         DispatchApplicationStatus status);
 
-        // 기사별 배차 신청 대기 목록 조회 (운송 시간 중복 경고에 사용)
+        // 기사별 배차 신청 대기 목록 조회 (운송 시간 중복 경고에 사용) — 배송을 함께 가져온다(N+1 정리, 11-25)
+        @EntityGraph(attributePaths = {"shipment"})
         List<DispatchApplication> findByDriver_IdAndStatus(
                         Long driverId,
                         DispatchApplicationStatus status);
 
-        // 기사: 본인의 전체 신청 기록 조회 (최근 변경 순)
+        // 기사: 본인의 전체 신청 기록 조회 (최근 변경 순) — 지난 내역에서 배송 상태로 거르므로 배송을 함께 가져온다
+        @EntityGraph(attributePaths = {"shipment"})
         List<DispatchApplication> findByDriver_IdOrderByUpdatedAtDesc(
                         Long driverId);
 

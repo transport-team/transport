@@ -2,6 +2,7 @@ package com.transport.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -11,7 +12,9 @@ import com.transport.domain.Member;
 import com.transport.domain.Shipment;
 import com.transport.domain.ShipmentStatusHistory;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.DriverCompletedShipmentDTO;
 import com.transport.dto.DriverCompletedStatDTO;
+import com.transport.dto.DriverCompletedTotalDTO;
 import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -66,5 +69,34 @@ public class StatusHistoryServiceImpl implements StatusHistoryService {
 						.completedCount(row.getChangedCount())
 						.build())
 				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public DriverCompletedTotalDTO getDriverCompletedTotal(Long driverMemberId, LocalDateTime from, LocalDateTime to) {
+		var total = historyRepository.findDriverMonthlyTotal(driverMemberId, ShipmentStatus.COMPLETED, from, to);
+		return new DriverCompletedTotalDTO(
+				total.getCompletedCount() == null ? 0 : total.getCompletedCount(),
+				total.getTotalFare() == null ? 0 : total.getTotalFare());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<DriverCompletedShipmentDTO> getDriverCompletedShipments(Long driverMemberId, LocalDateTime from, LocalDateTime to) {
+		return historyRepository.findDriverMonthlyFareItems(driverMemberId, ShipmentStatus.COMPLETED, from, to)
+				.stream()
+				.map(item -> new DriverCompletedShipmentDTO(
+						item.getShipmentId(),
+						item.getCargoName(),
+						item.getFare() == null ? 0 : item.getFare(),
+						item.getCompletedAt()))
+				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Optional<LocalDateTime> getLastChangedAt(Long shipmentId, ShipmentStatus toStatus) {
+		return historyRepository.findFirstByShipment_IdAndToStatusOrderByChangedAtDesc(shipmentId, toStatus)
+				.map(ShipmentStatusHistory::getChangedAt);
 	}
 }

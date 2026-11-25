@@ -81,7 +81,7 @@ const DriverDispatchHistoryDetailPage = () => {
       {/* 지난 내역 탭으로 돌아가기 */}
       <Link
         to="/driver/dispatches?tab=history"
-        className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+        className="inline-block text-sm font-semibold text-blue-700 hover:text-blue-800"
       >
         ← 지난 내역으로
       </Link>
@@ -154,7 +154,7 @@ const DriverDispatchHistoryDetailPage = () => {
 
           {/* 신청 기록 정보 */}
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <h3 className="mb-4 text-xs font-semibold text-emerald-600">
+            <h3 className="mb-4 text-xs font-semibold text-blue-600">
               APPLICATION HISTORY
             </h3>
 

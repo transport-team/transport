@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { changeTermActive, deleteTerm, getAllTerms, postTerm, reviseTerm } from '../../api/termApi'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 const SMALL_BUTTON = 'rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50'
 const DANGER_BUTTON = 'rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50'
 
@@ -186,11 +186,11 @@ const TermManagePage = () => {
           )}
           {list.map((term) => (
             <Fragment key={term.id}>
-              <tr className={`border-b border-gray-100 ${revising?.id === term.id ? 'bg-emerald-50' : ''}`}>
+              <tr className={`border-b border-gray-100 ${revising?.id === term.id ? 'bg-blue-50' : ''}`}>
                 <td className="max-w-xs truncate px-4 py-3">{term.title}</td>
                 <td className="px-4 py-3">{term.version}</td>
                 <td className="px-4 py-3">
-                  {term.required ? <span className="font-medium text-emerald-700">필수</span> : <span className="text-gray-500">선택</span>}
+                  {term.required ? <span className="font-medium text-blue-700">필수</span> : <span className="text-gray-500">선택</span>}
                 </td>
                 <td className="px-4 py-3">{term.agreementCount}명</td>
                 <td className="px-4 py-3">{term.createdAt?.slice(0, 10)}</td>
@@ -239,7 +239,7 @@ const TermManagePage = () => {
             />
           </label>
           <label className="flex items-center gap-2 py-2 text-sm">
-            <input type="checkbox" name="required" checked={form.required} onChange={handleChange} className="size-4 accent-emerald-700" />
+            <input type="checkbox" name="required" checked={form.required} onChange={handleChange} className="size-4 accent-blue-700" />
             <span className="font-medium">필수 동의</span>
           </label>
         </div>
@@ -255,7 +255,7 @@ const TermManagePage = () => {
         <div className="flex gap-2">
           <button
             type="submit" disabled={submitting}
-            className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             {submitting ? '저장 중...' : revising ? '새 버전으로 개정' : '약관 올리기'}
           </button>
