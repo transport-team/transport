@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Pagination from '../../components/common/Pagination'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import useUrlPage from '../../hooks/useUrlPage'
 import { getMyShipments } from '../../api/shipmentApi'
 import { getDispatchApplicantCounts, getDispatchApplicants } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
@@ -12,6 +13,7 @@ const FILTER_TABS = [
   ...['PENDING_PAYMENT', 'REQUESTED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELED']
     .map((value) => ({ value, label: shipmentStatusLabel(value) })),
 ]
+const TAB_VALUES = FILTER_TABS.map((tab) => tab.value).filter(Boolean)
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -19,8 +21,12 @@ const formatDateTime = (value) => {
 }
 
 const ShipmentListPage = () => {
-  const [statusFilter, setStatusFilter] = useState('')
-  const [page, setPage] = useState(1)
+  // 상태 탭 · 쪽은 주소에 남긴다 (?status=REQUESTED&page=2) — 새로고침 · 뒤로 가기 · 상세에서 돌아와도 그대로 (11-25)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [page, setPage] = useUrlPage()
+  const listSearch = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  const rawStatus = searchParams.get('status') ?? ''
+  const statusFilter = TAB_VALUES.includes(rawStatus) ? rawStatus : ''
   const [applicantCounts, setApplicantCounts] = useState({})
   const [applicantError, setApplicantError] = useState('')
   const [fetchState, setFetchState] = useState({
@@ -82,9 +88,9 @@ const ShipmentListPage = () => {
     return () => { active = false }
   }, [loading, fetchState.content, fetchState.error])
 
+  // 상태를 바꾸면 1쪽부터 (기록을 남겨 뒤로 가기로 이전 탭으로)
   const handleSelectStatus = (nextStatus) => {
-    setStatusFilter(nextStatus)
-    setPage(1)
+    setSearchParams(nextStatus ? { status: nextStatus } : {})
   }
 
   return (
@@ -161,7 +167,7 @@ const ShipmentListPage = () => {
         {!loading && !fetchState.error && fetchState.content.map((item) => {
           return (
             <article key={item.id} className="rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md">
-              <Link to={`/customer/shipments/${item.id}`} className="block p-5">
+              <Link to={`/customer/shipments/${item.id}`} state={{ listSearch }} className="block p-5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={item.status} size="sm" />

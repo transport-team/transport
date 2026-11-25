@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { getShipment } from '../../api/shipmentApi'
 import ShipmentProgress from '../../components/tracking/ShipmentProgress'
 import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
@@ -19,6 +19,7 @@ const formatFare = (value) => `${Number(value ?? 0).toLocaleString('ko-KR')}원`
 // 관리자: 고객·기사의 조작 버튼 없이 배송 정보를 조회하는 상세 화면
 const AdminShipmentDetailPage = () => {
   const { id } = useParams()
+  const location = useLocation()  // 목록에서 넘겨준 검색 조건 (state.listSearch)
   const { confirm, confirmProps } = useConfirm()
   const [fetchState, setFetchState] = useState({ id: null, shipment: null, error: '' })
   const loading = fetchState.id !== id
@@ -133,7 +134,8 @@ const AdminShipmentDetailPage = () => {
 
   return (
     <section className="mx-auto w-full max-w-4xl space-y-4 pb-10">
-      <Link to="/admin/shipments" className="inline-block text-sm text-gray-500 hover:text-blue-700">
+      {/* 목록의 검색 조건 · 쪽으로 돌아간다 (목록이 넘겨준 주소, 11-25) */}
+      <Link to={`/admin/shipments${location.state?.listSearch ?? ''}`} className="inline-block text-sm text-gray-500 hover:text-blue-700">
         ← 배송 통합 검색으로
       </Link>
 
