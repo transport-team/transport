@@ -3,7 +3,10 @@ package com.transport.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.LongStream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +33,7 @@ import com.transport.domain.SettlementItem;
 import com.transport.domain.SettlementPeriod;
 import com.transport.domain.enums.SettlementStatus;
 import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.AdminSettlementMonthResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.SettlementItemRepository;
@@ -61,6 +66,53 @@ class AdminSettlementServiceImplTest {
             @Override public Integer getFare() { return fare; }
             @Override public LocalDateTime getCompletedAt() { return LocalDateTime.of(2026, 10, 20, 12, 0); }
         };
+    }
+
+    // 월 정산 목록은 기사 · 운임 · 정산 행을 한 번씩 읽는다(N+1 정리, 11-25). 이 클래스의 테스트는 기사 3번 한 명을
+    // 기사별 조회(findAll · findCompletedForDriver · findByDriver_IdAndSettleMonth)로 준비하므로, 한 번에 읽는 조회도 같은 값을 내도록 잇는다
+    @BeforeEach
+    void batchQueriesFollowPerDriverStubs() {
+        lenient().when(driverRepository.findAllWithMember()).thenAnswer(call -> driverRepository.findAll());
+        lenient().when(settlementRepository.findBySettleMonth(anyString())).thenAnswer(call ->
+                settlementRepository.findByDriver_IdAndSettleMonth(3L, call.getArgument(0)).map(List::of).orElse(List.of()));
+        lenient().when(fareRepository.findCompletedForAllDrivers(any(), any(), any())).thenAnswer(call -> {
+            var lines = fareRepository.findCompletedForDriver(3L, call.getArgument(0), call.getArgument(1), call.getArgument(2));
+            return lines == null ? List.of() : lines.stream().map(line -> driverLine(3L, line)).toList();
+        });
+    }
+
+    private static SettlementFareRepository.SettlementDriverFareItem driverLine(long driverId,
+            SettlementFareRepository.SettlementFareItem line) {
+        return new SettlementFareRepository.SettlementDriverFareItem() {
+            @Override public Long getDriverId() { return driverId; }
+            @Override public Long getShipmentId() { return line.getShipmentId(); }
+            @Override public Integer getFare() { return line.getFare(); }
+            @Override public LocalDateTime getCompletedAt() { return line.getCompletedAt(); }
+        };
+    }
+
+    @Test
+    @DisplayName("월 정산 목록: 기사가 여럿이어도 기사 · 운임 · 정산 행을 한 번씩만 읽고 기사별로 나눈다")
+    void monthlyListReadsEachTableOnceForAllDrivers() {
+        String month = YearMonth.now().toString();
+        Driver other = Driver.builder().id(4L)
+                .member(Member.builder().id(6L).name("다른기사").email("other@example.test").build()).build();
+        // doReturn: 위 @BeforeEach의 이어 주는 답을 부르지 않고 바로 바꾼다 (when(...)은 메서드를 한 번 불러서 답이 실행됨)
+        doReturn(List.of(driver, other)).when(driverRepository).findAllWithMember();
+        doReturn(List.of()).when(settlementRepository).findBySettleMonth(month);
+        doReturn(List.of(
+                driverLine(3L, item(11, 50_000)), driverLine(4L, item(21, 30_000)),
+                driverLine(4L, item(22, 20_000)), driverLine(4L, item(22, 20_000))))  // 같은 배송이 두 번 와도 한 번만
+                .when(fareRepository).findCompletedForAllDrivers(eq(ShipmentStatus.COMPLETED), any(), any());
+
+        var result = service.getMonthlySettlements(month);
+
+        assertThat(result.items()).extracting(AdminSettlementMonthResponseDTO.Item::driverId).containsExactly(4L, 3L);
+        assertThat(result.items()).extracting(AdminSettlementMonthResponseDTO.Item::completedCount).containsExactly(2L, 1L);
+        assertThat(result.totalFare()).isEqualTo(100_000);
+        verify(fareRepository, never()).findCompletedForDriver(any(), any(), any(), any());
+        verify(settlementRepository, never()).findByDriver_IdAndSettleMonth(any(), any());
+        verify(driverRepository, never()).findAll();
     }
 
     private void withCompletedHistory() {
