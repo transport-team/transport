@@ -38,6 +38,9 @@ public interface DispatchRepository extends JpaRepository<Dispatch, Long> {
 	// 특정 차량에 진행 중인 배차가 있는지 — 주어진 상태(완료 · 취소)의 배송 배차는 뺀다 (11-19 결정 34, #86)
 	boolean existsByVehicle_IdAndActiveTrueAndShipment_StatusNotIn(Long vehicleId, Collection<ShipmentStatus> statuses);
 
+	// 기사에게 주어진 상태(배정 ~ 도착)의 배송 활성 배차가 몇 건인지 — 운송 중인 기사 중지 막기
+	long countByDriver_IdAndActiveTrueAndShipment_StatusIn(Long driverId, Collection<ShipmentStatus> statuses);
+
     // 배송 ID로 현재 활성화된 배차 조회 (최근 배차 우선)
     Optional<Dispatch> findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(Long shipmentId);
 

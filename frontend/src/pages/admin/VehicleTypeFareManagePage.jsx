@@ -94,6 +94,7 @@ const VehicleTypeFareManagePage = () => {
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [listError, setListError] = useState('')  // 목록에서 사용 · 숨김을 바꾸다 실패한 문구 (표 바로 위에)
   const loading = fetchState.key !== refreshKey
 
   useEffect(() => {
@@ -220,11 +221,12 @@ const VehicleTypeFareManagePage = () => {
       confirmLabel: action,
       danger: item.active,
     }))) return
+    setListError('')
     try {
       await changeAdminVehicleTypeActive(item.id, !item.active)
       setRefreshKey((value) => value + 1)
     } catch (err) {
-      alert(err.response?.data?.message || '차종 상태 변경에 실패했습니다.')
+      setListError(err.response?.data?.message || `${item.name} 차종을 ${action}하지 못했어요. 잠시 후 다시 시도해 주세요.`)
     }
   }
 
@@ -352,6 +354,7 @@ const VehicleTypeFareManagePage = () => {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        {listError && <p role="alert" className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{listError}</p>}
         {loading ? <p className="p-8 text-center text-sm text-gray-500">차종 목록을 불러오는 중입니다...</p>
           : fetchState.error ? <p role="alert" className="p-8 text-center text-sm text-red-600">{fetchState.error}</p>
           : <div className="overflow-x-auto">
