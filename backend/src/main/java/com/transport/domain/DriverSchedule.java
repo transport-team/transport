@@ -40,6 +40,18 @@ public class DriverSchedule extends BaseEntity {
 	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
 	private DriverScheduleStatus status;
 
+	// 특정 날짜 휴무와 근무시간 예외를 한 번의 DB 변경으로 전환한다.
+	public void changeToOff() {
+		this.status = DriverScheduleStatus.OFF;
+		this.startTime = LocalTime.MIN;
+		this.endTime = LocalTime.MAX;
+	}
+
+	public void changeToAvailable(LocalTime startTime, LocalTime endTime) {
+		this.status = DriverScheduleStatus.AVAILABLE;
+		changeWorkHours(startTime, endTime);
+	}
+
 	// 근무 가능 시간 바꾸기 (DRV-01 — 근무 가능 일정만 쓴다. 휴무는 시간을 쓰지 않는다)
 	public void changeWorkHours(LocalTime startTime, LocalTime endTime) {
 		this.startTime = startTime;

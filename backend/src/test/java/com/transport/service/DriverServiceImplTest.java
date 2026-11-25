@@ -31,6 +31,7 @@ import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.MemberRole;
 import com.transport.domain.enums.NotificationType;
 import com.transport.dto.DriverDTO;
+import com.transport.dto.DriverProfileUpdateRequestDTO;
 import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageResponseDTO;
 import com.transport.exception.CustomException;
@@ -74,6 +75,45 @@ class DriverServiceImplTest {
 		assertThat(saved.getCareerYears()).isEqualTo(5);
 		assertThat(saved.getStatus()).isEqualTo(DriverStatus.PENDING);
 		assertThat(saved.getApprovedAt()).isNull();
+	}
+
+	@Test
+	void getMyProfileUsesAuthenticatedMemberId() {
+		when(driverRepository.findByMemberId(5L)).thenReturn(Optional.of(driver(DriverStatus.ACTIVE, null)));
+		DriverDTO result = driverService.getMyProfile(5L);
+		assertThat(result.getMemberId()).isEqualTo(5L);
+		assertThat(result.getLicenseType()).isEqualTo("1종 보통");
+	}
+
+	@Test
+	void updateMyProfileDoesNotChangeApproval() {
+		LocalDateTime approvedAt = LocalDateTime.of(2026, 11, 1, 9, 0);
+		Driver driver = driver(DriverStatus.ACTIVE, approvedAt);
+		when(driverRepository.findByMemberId(5L)).thenReturn(Optional.of(driver));
+		DriverProfileUpdateRequestDTO request = new DriverProfileUpdateRequestDTO();
+		request.setLicenseType("1종 대형");
+		request.setCareerYears(7);
+		request.setCertifications("화물운송종사자격증");
+
+		DriverDTO result = driverService.updateMyProfile(5L, request);
+
+		assertThat(result.getLicenseType()).isEqualTo("1종 대형");
+		assertThat(result.getCareerYears()).isEqualTo(7);
+		assertThat(result.getCertifications()).isEqualTo("화물운송종사자격증");
+		assertThat(result.getStatus()).isEqualTo(DriverStatus.ACTIVE);
+		assertThat(result.getApprovedAt()).isEqualTo(approvedAt);
+		verifyNoInteractions(notificationService);
+	}
+
+	@Test
+	void updateMyProfileMissingDriverIsRejected() {
+		when(driverRepository.findByMemberId(99L)).thenReturn(Optional.empty());
+		DriverProfileUpdateRequestDTO request = new DriverProfileUpdateRequestDTO();
+		request.setLicenseType("1종 대형");
+		request.setCareerYears(2);
+		assertThatThrownBy(() -> driverService.updateMyProfile(99L, request))
+				.isInstanceOf(CustomException.class)
+				.extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
 	}
 
 	@Test

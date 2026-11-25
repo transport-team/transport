@@ -277,6 +277,7 @@ const DriverListPage = () => {
                 ['연락처', detail.phone],
                 ['면허', detail.licenseType],
                 ['경력', detail.careerYears != null ? `${detail.careerYears}년` : '-'],
+                ['보유 자격증 (본인 입력)', detail.certifications || '미등록'],
                 ['가입일', date(detail.createdAt)],
                 ['승인일', date(detail.approvedAt)],
                 ['상태', STATUS_NAME[detail.status] || detail.status],

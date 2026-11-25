@@ -94,6 +94,20 @@ class ReviewServiceImplTest {
 	}
 
 	@Test
+	@DisplayName("내가 작성한 리뷰는 로그인 고객 ID로 조회한다")
+	void myWrittenReviews() {
+		when(reviewRepository.findByCustomerIdWithDetails(CUSTOMER_ID))
+				.thenReturn(List.of(reviewBy("김민수")));
+
+		List<ReviewResponseDTO> reviews = reviewService.getMyWrittenReviews(CUSTOMER_ID);
+
+		assertThat(reviews).hasSize(1);
+		assertThat(reviews.get(0).getShipmentId()).isEqualTo(SHIPMENT_ID);
+		assertThat(reviews.get(0).getRating()).isEqualTo(4);
+		verify(reviewRepository).findByCustomerIdWithDetails(CUSTOMER_ID);
+	}
+
+	@Test
 	@DisplayName("배송 리뷰 조회도 고객 이름을 가려서 준다")
 	void shipmentReviewMasksCustomerName() {
 		when(reviewRepository.findByShipmentId(SHIPMENT_ID)).thenReturn(Optional.of(reviewBy("남궁현석")));

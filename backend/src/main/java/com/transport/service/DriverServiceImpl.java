@@ -13,6 +13,7 @@ import com.transport.domain.Member;
 import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.NotificationType;
 import com.transport.dto.DriverDTO;
+import com.transport.dto.DriverProfileUpdateRequestDTO;
 import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageResponseDTO;
 import com.transport.exception.CustomException;
@@ -67,6 +68,24 @@ public class DriverServiceImpl implements DriverService {
 				.pageRequestDTO(driverSearchDTO)
 				.totalCount(result.getTotalElements())
 				.build();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public DriverDTO getMyProfile(Long memberId) {
+		Driver driver = driverRepository.findByMemberId(memberId)
+				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "기사 정보가 없습니다."));
+		return entityToDTO(driver);
+	}
+
+	@Override
+	public DriverDTO updateMyProfile(Long memberId, DriverProfileUpdateRequestDTO request) {
+		Driver driver = driverRepository.findByMemberId(memberId)
+				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "기사 정보가 없습니다."));
+		String certifications = request.getCertifications() == null ? null : request.getCertifications().trim();
+		driver.updateProfile(request.getLicenseType().trim(), request.getCareerYears(),
+				certifications == null || certifications.isEmpty() ? null : certifications);
+		return entityToDTO(driver);
 	}
 
 	@Override

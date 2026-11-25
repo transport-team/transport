@@ -51,6 +51,14 @@ public class ReviewController {
 		return response == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(response);
 	}
 
+	@Operation(summary = "내가 작성한 리뷰 조회 (고객)", description = "인증된 고객 본인의 리뷰만 최신순으로 조회")
+	@PreAuthorize("hasRole('CUSTOMER')")
+	@GetMapping("/api/reviews/mine")
+	public ResponseEntity<List<ReviewResponseDTO>> myWrittenReviews(
+			@AuthenticationPrincipal LoginMember loginMember) {
+		return ResponseEntity.ok(reviewService.getMyWrittenReviews(loginMember.getId()));
+	}
+
 	@Operation(summary = "기사 리뷰 목록 + 평균 평점", description = "팀원 2 배차 정렬에서도 평균을 사용")
 	@GetMapping("/api/drivers/{id}/reviews")
 	public ResponseEntity<Map<String, Object>> getDriverReviews(@PathVariable Long id) {

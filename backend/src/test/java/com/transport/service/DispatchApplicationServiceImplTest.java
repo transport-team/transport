@@ -237,7 +237,7 @@ class DispatchApplicationServiceImplTest {
                 .customer(customer)
                 .vehicleType(vehicleType)
                 .status(ShipmentStatus.REQUESTED)
-                .pickupAt(LocalDateTime.of(2026, 11, 15, 10, 0))
+                .pickupAt(LocalDateTime.of(2026, 11, 16, 10, 0))
                 .durationMin(60)
                 .build();
 
@@ -316,14 +316,14 @@ class DispatchApplicationServiceImplTest {
                 .id(2L)
                 .status(ShipmentStatus.REQUESTED)
                 .vehicleType(vehicleType)
-                .pickupAt(LocalDateTime.of(2026, 11, 15, 10, 0))
+                .pickupAt(LocalDateTime.of(2026, 11, 16, 10, 0))
                 .durationMin(60)
                 .build();
 
         // 4. 이미 확정된 배송 (10:30 ~ 11:30)
         Shipment assignedShipment = Shipment.builder()
                 .id(99L)
-                .pickupAt(LocalDateTime.of(2026, 11, 15, 10, 30))
+                .pickupAt(LocalDateTime.of(2026, 11, 16, 10, 30))
                 .durationMin(60)
                 .build();
 
@@ -374,11 +374,11 @@ class DispatchApplicationServiceImplTest {
         // 새로 지원하려는 배송 (10:00 ~ 11:00)
         Shipment shipment = Shipment.builder()
                 .id(2L).status(ShipmentStatus.REQUESTED).vehicleType(vehicleType)
-                .pickupAt(LocalDateTime.of(2026, 11, 15, 10, 0)).durationMin(60).build();
+                .pickupAt(LocalDateTime.of(2026, 11, 16, 10, 0)).durationMin(60).build();
 
         // 같은 시간대(10:30 ~ 11:30)지만 이미 끝난 배송의 배차들 — active는 그대로 남아 있다
-        Dispatch completed = activeDispatchOf(driver, 98L, ShipmentStatus.COMPLETED, LocalDateTime.of(2026, 11, 15, 10, 30));
-        Dispatch canceled = activeDispatchOf(driver, 99L, ShipmentStatus.CANCELED, LocalDateTime.of(2026, 11, 15, 10, 30));
+        Dispatch completed = activeDispatchOf(driver, 98L, ShipmentStatus.COMPLETED, LocalDateTime.of(2026, 11, 16, 10, 30));
+        Dispatch canceled = activeDispatchOf(driver, 99L, ShipmentStatus.CANCELED, LocalDateTime.of(2026, 11, 16, 10, 30));
 
         when(driverRepository.findByMemberId(10L)).thenReturn(Optional.of(driver));
         when(shipmentService.getShipment(2L)).thenReturn(shipment);
@@ -403,6 +403,11 @@ class DispatchApplicationServiceImplTest {
         Vehicle vehicle = Vehicle.builder()
                 .id(30L).driver(driver).vehicleType(vehicleType).status(VehicleStatus.AVAILABLE).build();
         LocalDateTime tomorrow10 = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+        // 서로 다른 두 날짜 모두 기본 근무일이 되도록 주말 일요일을 피한다.
+        while (tomorrow10.getDayOfWeek() == java.time.DayOfWeek.SATURDAY
+                || tomorrow10.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            tomorrow10 = tomorrow10.plusDays(1);
+        }
         LocalDateTime dayAfter10 = tomorrow10.plusDays(1);
 
         // 내일 10시 요청은 진행 중(배차 완료) 배차와, 모레 10시 요청은 이미 완료된 배송의 배차와 시간이 겹친다
@@ -462,7 +467,7 @@ class DispatchApplicationServiceImplTest {
                 .id(2L)
                 .status(ShipmentStatus.REQUESTED)
                 .vehicleType(vehicleType)
-                .pickupAt(LocalDateTime.of(2026, 11, 15, 10, 0))
+                .pickupAt(LocalDateTime.of(2026, 11, 16, 10, 0))
                 .durationMin(60)
                 .build();
 
@@ -531,7 +536,7 @@ class DispatchApplicationServiceImplTest {
                 .id(2L)
                 .status(ShipmentStatus.REQUESTED)
                 .vehicleType(vehicleType)
-                .pickupAt(LocalDateTime.of(2026, 11, 15, 10, 0))
+                .pickupAt(LocalDateTime.of(2026, 11, 16, 10, 0))
                 .durationMin(0)
                 .build();
 
