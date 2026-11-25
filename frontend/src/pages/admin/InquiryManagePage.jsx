@@ -5,7 +5,7 @@ import Pagination from '../../components/common/Pagination'
 import InquiryStatusBadge from '../../components/inquiry/InquiryStatusBadge'
 import { ROLE_NAME } from '../../util/roleUtil'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 
 const TABS = [
   { value: 'WAITING', label: '답변 대기' },
@@ -142,7 +142,7 @@ const InquiryManagePage = () => {
           <button
             key={tab.label} type="button" aria-pressed={status === tab.value} onClick={() => selectTab(tab.value)}
             className={`rounded-full px-4 py-1.5 text-sm ${
-              status === tab.value ? 'bg-emerald-700 font-medium text-white' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              status === tab.value ? 'bg-blue-700 font-medium text-white' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
             {tab.label}
@@ -151,7 +151,7 @@ const InquiryManagePage = () => {
       </div>
 
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-      {message && <p role="status" className="rounded bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
+      {message && <p role="status" className="rounded bg-blue-50 p-3 text-sm text-blue-800">{message}</p>}
       {!pageData && !error && <p className="text-sm text-gray-500">문의를 불러오는 중...</p>}
 
       {pageData && (
@@ -162,12 +162,12 @@ const InquiryManagePage = () => {
               <li className="px-4 py-8 text-center text-sm text-gray-500">문의가 없어요.</li>
             )}
             {pageData.dtoList.map((inquiry) => (
-              <li key={inquiry.id} className={openId === inquiry.id ? 'bg-emerald-50/40' : ''}>
+              <li key={inquiry.id} className={openId === inquiry.id ? 'bg-blue-50/40' : ''}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                   <InquiryStatusBadge status={inquiry.status} />
                   <button
                     type="button" aria-expanded={openId === inquiry.id} onClick={() => toggle(inquiry)}
-                    className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:text-emerald-800"
+                    className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:text-blue-800"
                   >
                     {inquiry.title}
                   </button>
@@ -192,7 +192,7 @@ const InquiryManagePage = () => {
                     <div className="flex gap-2">
                       <button
                         type="button" onClick={() => saveAnswer(inquiry)} disabled={saving || !answer.trim()}
-                        className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+                        className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
                       >
                         {saving ? '저장 중...' : inquiry.answer ? '답변 수정' : '답변 등록'}
                       </button>

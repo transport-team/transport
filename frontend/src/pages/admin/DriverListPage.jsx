@@ -5,7 +5,7 @@ import Pagination from '../../components/common/Pagination'
 import Modal from '../../components/common/Modal'
 import Badge from '../../components/common/Badge'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 
 const STATUS_NAME = { PENDING: '승인 대기', ACTIVE: '승인됨', INACTIVE: '중지' }
 // 기사 상태 배지 색 (모양은 공통 Badge)
@@ -145,7 +145,7 @@ const DriverListPage = () => {
         <div className="flex justify-end gap-1">
           <button
             type="button" disabled={busy} onClick={() => changeStatus(driver, 'ACTIVE')}
-            className="rounded bg-emerald-700 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 px-2 py-1 text-xs font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             승인
           </button>
@@ -171,7 +171,7 @@ const DriverListPage = () => {
     return (
       <button
         type="button" disabled={busy} onClick={() => changeStatus(driver, 'ACTIVE')}
-        className="rounded border border-emerald-600 px-2 py-1 text-xs text-emerald-800 hover:bg-emerald-50 disabled:opacity-60"
+        className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-800 hover:bg-blue-50 disabled:opacity-60"
       >
         다시 승인
       </button>
@@ -196,7 +196,7 @@ const DriverListPage = () => {
           name="keyword" aria-label="이름 · 이메일" placeholder="이름 · 이메일 일부" defaultValue={query.keyword}
           className={`${INPUT_CLASS} w-56`}
         />
-        <button type="submit" className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+        <button type="submit" className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
           검색
         </button>
       </form>

@@ -7,7 +7,7 @@ const Pagination = ({ pageData, page, totalPages, onMove }) => {
 
   const start = Math.max(1, Math.min(current - 2, total - 4))
   const pageNumbers = Array.from({ length: Math.min(total, 5) }, (_, i) => start + i)
-  const buttonClass = 'inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-40'
+  const buttonClass = 'inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-40'
   const normalClass = `${buttonClass} border-gray-200 bg-white text-gray-600 hover:bg-gray-50`
 
   return (
@@ -22,7 +22,7 @@ const Pagination = ({ pageData, page, totalPages, onMove }) => {
           onClick={() => onMove(num)}
           aria-current={num === current ? 'page' : undefined}
           className={num === current
-            ? `${buttonClass} border-emerald-600 bg-emerald-600 text-white`
+            ? `${buttonClass} border-blue-600 bg-blue-600 text-white`
             : normalClass}
         >
           {num}

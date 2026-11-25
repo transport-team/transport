@@ -192,7 +192,7 @@ const VehicleEditPage = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-50"
+                        className="rounded bg-blue-700 px-4 py-2 text-white disabled:opacity-50"
                     >
                         {loading ? '수정 중...' : '수정 완료'}
                     </button>

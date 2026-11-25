@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { patchMyPassword } from '../../api/memberApi'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 focus:border-blue-600 focus:outline-none'
 
 const initForm = { currentPassword: '', newPassword: '', newPasswordConfirm: '' }
 
@@ -75,7 +75,7 @@ const PasswordForm = () => {
       )}
       <button
         type="submit" disabled={submitting}
-        className="justify-self-start rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+        className="justify-self-start rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
       >
         {submitting ? '변경 중...' : '비밀번호 변경'}
       </button>

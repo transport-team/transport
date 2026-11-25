@@ -81,7 +81,7 @@ const PaymentFailPage = () => {
               type="button"
               onClick={handleRetryPayment}
               disabled={retrying}
-              className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
             >
               {retrying ? '결제창 준비 중...' : '다시 결제하기'}
             </button>

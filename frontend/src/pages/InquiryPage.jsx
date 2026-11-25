@@ -4,7 +4,7 @@ import { getMyInquiries, postInquiry } from '../api/inquiryApi'
 import Pagination from '../components/common/Pagination'
 import InquiryStatusBadge from '../components/inquiry/InquiryStatusBadge'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 
 const initForm = { title: '', content: '' }
 
@@ -71,7 +71,7 @@ const InquiryPage = () => {
         <div>
           <button
             type="submit" disabled={submitting}
-            className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             {submitting ? '보내는 중...' : '문의 남기기'}
           </button>
@@ -100,7 +100,7 @@ const InquiryPage = () => {
                     <div className="grid gap-3 bg-gray-50 px-4 py-3 text-sm">
                       <p className="whitespace-pre-line leading-7 text-gray-800">{inquiry.content}</p>
                       {inquiry.answer ? (
-                        <div className="rounded border border-emerald-200 bg-white p-3">
+                        <div className="rounded border border-blue-200 bg-white p-3">
                           <p className="mb-1 text-xs font-semibold text-emerald-800">답변 · {inquiry.answeredAt?.slice(0, 10)}</p>
                           <p className="whitespace-pre-line leading-7 text-gray-800">{inquiry.answer}</p>
                         </div>

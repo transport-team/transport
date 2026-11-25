@@ -3,7 +3,7 @@ import { getMyDriverProfile, updateMyDriverProfile } from '../../api/driverProfi
 import DriverReviewModal from '../review/DriverReviewModal'
 
 const LICENSE_TYPES = ['1종 대형', '1종 보통', '1종 특수', '2종 보통']
-const INPUT_CLASS = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 const STATUS_LABEL = { ACTIVE: '승인됨', PENDING: '승인 대기', INACTIVE: '중지' }
 
 const toForm = (profile) => ({
@@ -80,12 +80,12 @@ const DriverProfileSection = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setShowReviews(true)} disabled={!profile}
-            className="rounded-lg border border-emerald-600 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+            className="rounded-lg border border-blue-600 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
             ★ 내 리뷰 보기
           </button>
           {profile && !editing && (
             <button type="button" onClick={startEditing}
-              className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800">
+              className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800">
               정보 수정
             </button>
           )}
@@ -133,7 +133,7 @@ const DriverProfileSection = () => {
             <button type="button" disabled={saving} onClick={cancelEditing}
               className="rounded-lg border border-gray-300 px-4 py-2 font-medium hover:bg-gray-50 disabled:opacity-50">취소</button>
             <button type="submit" disabled={saving}
-              className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-50">
+              className="rounded-lg bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-800 disabled:opacity-50">
               {saving ? '저장 중...' : '저장하기'}
             </button>
           </div>

@@ -58,7 +58,7 @@ const LoginPage = () => {
             <input
               id="login-email" name="email" type="email" autoComplete="username" required
               value={loginParam.email} onChange={handleChange}
-              className="rounded border border-gray-300 bg-white px-3 py-2 focus:border-emerald-600 focus:outline-none"
+              className="rounded border border-gray-300 bg-white px-3 py-2 focus:border-blue-600 focus:outline-none"
             />
           </label>
           <label htmlFor="login-password" className="grid gap-1 text-sm">
@@ -66,19 +66,19 @@ const LoginPage = () => {
             <input
               id="login-password" name="password" type="password" autoComplete="current-password" required
               value={loginParam.password} onChange={handleChange}
-              className="rounded border border-gray-300 bg-white px-3 py-2 focus:border-emerald-600 focus:outline-none"
+              className="rounded border border-gray-300 bg-white px-3 py-2 focus:border-blue-600 focus:outline-none"
             />
           </label>
           {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           <button
             type="submit" disabled={submitting}
-            className="rounded bg-emerald-700 py-2.5 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 py-2.5 font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             {submitting ? '로그인 중...' : '로그인'}
           </button>
         </form>
         <p className="text-sm text-gray-600">
-          아직 회원이 아닌가요? <Link to="/signup" className="font-medium text-emerald-700 hover:underline">회원가입</Link>
+          아직 회원이 아닌가요? <Link to="/signup" className="font-medium text-blue-700 hover:underline">회원가입</Link>
         </p>
         {import.meta.env.DEV && (
           <p className="text-xs text-gray-500">개발용 시드 계정 (비밀번호 1234): {SEED_ACCOUNTS.join(' · ')}</p>

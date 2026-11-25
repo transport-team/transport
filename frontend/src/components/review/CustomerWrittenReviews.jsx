@@ -51,7 +51,7 @@ const WrittenReviewsModal = ({ onClose }) => {
                     <Link
                       to={`/customer/shipments/${review.shipmentId}`}
                       onClick={onClose}
-                      className="mt-2 inline-block text-xs font-semibold text-emerald-700 hover:underline"
+                      className="mt-2 inline-block text-xs font-semibold text-blue-700 hover:underline"
                     >
                       배송 #{review.shipmentId} 상세 보기
                     </Link>
@@ -73,7 +73,7 @@ const CustomerWrittenReviews = () => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 hover:border-emerald-600 hover:bg-emerald-50"
+        className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 hover:border-blue-600 hover:bg-blue-50"
       >
         <span>★ 내가 남긴 리뷰</span>
         <span aria-hidden="true" className="text-gray-400">›</span>

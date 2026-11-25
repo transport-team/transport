@@ -123,7 +123,7 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold text-emerald-700">배송 #{shipment.id}</p>
+            <p className="text-xs font-semibold text-blue-700">배송 #{shipment.id}</p>
             <h2 className="mt-1 text-lg font-bold text-gray-900">{shipment.cargoName}</h2>
             <p className="mt-2 text-sm text-gray-600">{shipment.originAddress} → {shipment.destAddress}</p>
             <p className="mt-2 text-xs text-gray-500">상차 희망 {formatDateTime(shipment.pickupAt)}</p>
@@ -165,7 +165,7 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
             <div key={application.applicationId} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl" aria-hidden="true">🚚</div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xl" aria-hidden="true">🚚</div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-gray-900">{application.driverName || `기사 #${application.driverId}`}</h4>
                     <p className="mt-1 text-xs text-gray-500">면허 {application.licenseType || '-'} · 경력 {application.careerYears ?? 0}년</p>
@@ -194,7 +194,7 @@ const DispatchApplicantDetails = ({ shipmentId }) => {
                   type="button"
                   onClick={() => handleSelect(application)}
                   disabled={workingId !== null}
-                  className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {workingId === application.applicationId ? '처리 중...' : '이 기사로 배차 확정'}
                 </button>
@@ -293,14 +293,14 @@ const CustomerDispatchRequestsPage = () => {
           ) : listState.items.length === 0 ? (
             <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
               <p className="font-semibold text-gray-900">현재 배차 대기 중인 배송이 없어요.</p>
-              <Link to="/customer/shipments" className="mt-4 inline-block text-sm font-semibold text-emerald-700">내 배송 내역 보기</Link>
+              <Link to="/customer/shipments" className="mt-4 inline-block text-sm font-semibold text-blue-700">내 배송 내역 보기</Link>
             </div>
           ) : (
             listState.items.map((item) => (
               <Link
                 key={item.id}
                 to={`/customer/dispatch-requests?shipmentId=${item.id}`}
-                className="block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
+                className="block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="flex items-center gap-2">
@@ -313,7 +313,7 @@ const CustomerDispatchRequestsPage = () => {
                 <p className="mt-2 text-sm text-gray-600">{item.originAddress} → {item.destAddress}</p>
                 <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
                   <span className="text-sm font-semibold text-gray-800">{Number(item.fare ?? 0).toLocaleString('ko-KR')}원</span>
-                  <span className="text-sm font-semibold text-emerald-700">지원 기사 확인 →</span>
+                  <span className="text-sm font-semibold text-blue-700">지원 기사 확인 →</span>
                 </div>
               </Link>
             ))

@@ -67,7 +67,7 @@ const ShipmentManagePage = () => {
           <p className="mt-0.5 text-xs text-gray-500">전체 고객의 배송 신청 내역과 진행 상태를 통합 조회합니다.</p>
         </div>
         <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-xs">
-          총 <strong className="text-emerald-700">{data.totalCount}</strong>건
+          총 <strong className="text-blue-700">{data.totalCount}</strong>건
         </span>
       </div>
 
@@ -77,7 +77,7 @@ const ShipmentManagePage = () => {
           <select
             value={formInputs.status}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, status: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -89,7 +89,7 @@ const ShipmentManagePage = () => {
             value={formInputs.from}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, from: e.target.value }))}
             aria-label="시작일"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
@@ -97,7 +97,7 @@ const ShipmentManagePage = () => {
             value={formInputs.to}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, to: e.target.value }))}
             aria-label="종료일"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
@@ -105,7 +105,7 @@ const ShipmentManagePage = () => {
             value={formInputs.keyword}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, keyword: e.target.value }))}
             placeholder="배송번호, 화물, 주소, 고객명/이메일, 기사명/ID"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-blue-500 focus:outline-none"
           />
         </div>
 
@@ -119,7 +119,7 @@ const ShipmentManagePage = () => {
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+            className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
           >
             검색
           </button>
@@ -163,13 +163,13 @@ const ShipmentManagePage = () => {
                     tabIndex={0}
                     role="link"
                     aria-label={`배송 ${item.id} 상세 보기`}
-                    className="cursor-pointer hover:bg-emerald-50/60 focus-visible:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-500"
+                    className="cursor-pointer hover:bg-blue-50/60 focus-visible:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-500"
                   >
                     <td className="px-4 py-3 font-bold">
                       <Link
                         to={`/admin/shipments/${item.id}`}
                         onClick={(event) => event.stopPropagation()}
-                        className="text-emerald-700 underline-offset-2 hover:underline focus-visible:underline"
+                        className="text-blue-700 underline-offset-2 hover:underline focus-visible:underline"
                         aria-label={`배송 ${item.id} 상세 보기`}
                       >
                         #{item.id}
