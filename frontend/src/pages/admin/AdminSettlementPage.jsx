@@ -292,7 +292,7 @@ const AdminSettlementPage = () => {
               </button>
               <button type="button" aria-pressed={chartMetric === 'commission'}
                 onClick={() => { setChartMetric('commission'); setHoveredMonth(null) }}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${chartMetric === 'commission' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-600 hover:bg-white'}`}>
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${chartMetric === 'commission' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-white'}`}>
                 수수료
               </button>
             </div>
@@ -487,7 +487,7 @@ const AdminSettlementPage = () => {
                       {data?.closed && item.status === 'PENDING' && item.completedCount > 0
                         ? <button type="button" disabled={saving || !paymentAvailable} onClick={() => markPaid(item)}
                           title={!paymentAvailable ? `${scheduledPayDate(month)} 이후 기록 가능` : '실제 송금 후 증빙을 입력해야 합니다.'}
-                          className="w-full rounded-lg border border-emerald-300 px-1.5 py-1.5 font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-40">{paymentAvailable ? '지급 완료 기록' : '지급일 전'}</button>
+                          className="w-full rounded-lg border border-blue-300 px-1.5 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-40">{paymentAvailable ? '지급 완료 기록' : '지급일 전'}</button>
                         : <span className="text-gray-400">-</span>}
                     </td>
                   </tr>
@@ -524,7 +524,7 @@ const AdminSettlementPage = () => {
                   </dl>
                   {data?.closed && item.status === 'PENDING' && item.completedCount > 0 && (
                     <button type="button" disabled={saving || !paymentAvailable} onClick={() => markPaid(item)}
-                      className="mt-3 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-40">
+                      className="mt-3 rounded-lg border border-blue-300 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-40">
                       {paymentAvailable ? '지급 완료 기록' : `${scheduledPayDate(month)} 이후 기록 가능`}
                     </button>
                   )}

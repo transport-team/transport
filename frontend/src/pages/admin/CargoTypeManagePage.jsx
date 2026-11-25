@@ -130,7 +130,7 @@ const CargoTypeManagePage = () => {
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="예: 냉장/냉동 화물"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>
 
@@ -142,7 +142,7 @@ const CargoTypeManagePage = () => {
               step={1000}
               value={form.extraFee}
               onChange={(e) => setForm((prev) => ({ ...prev, extraFee: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>
 
@@ -154,7 +154,7 @@ const CargoTypeManagePage = () => {
               value={form.handlingNote}
               onChange={(e) => setForm((prev) => ({ ...prev, handlingNote: e.target.value }))}
               placeholder="예: 상하차 시 충격 주의 및 적재함 고정 필수"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
           </div>
         </div>
@@ -169,7 +169,7 @@ const CargoTypeManagePage = () => {
               type="checkbox"
               checked={form.active}
               onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
-              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             고객 신청 화면에 즉시 노출 (활성)
           </label>
@@ -177,7 +177,7 @@ const CargoTypeManagePage = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {submitting ? '저장 중...' : editingId ? '수정 완료' : '화물 유형 등록'}
           </button>

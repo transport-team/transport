@@ -64,7 +64,7 @@ const PaymentManagePage = () => {
           <p className="mt-0.5 text-xs text-gray-500">주문번호, 결제 상태, 승인·취소 일시 및 환불 사유를 조회합니다.</p>
         </div>
         <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-xs">
-          총 <strong className="text-emerald-700">{data.totalCount}</strong>건
+          총 <strong className="text-blue-700">{data.totalCount}</strong>건
         </span>
       </div>
 
@@ -74,7 +74,7 @@ const PaymentManagePage = () => {
           <select
             value={formInputs.status}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, status: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           >
             {PAYMENT_STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -86,7 +86,7 @@ const PaymentManagePage = () => {
             value={formInputs.from}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, from: e.target.value }))}
             aria-label="시작일"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
@@ -94,7 +94,7 @@ const PaymentManagePage = () => {
             value={formInputs.to}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, to: e.target.value }))}
             aria-label="종료일"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
@@ -102,7 +102,7 @@ const PaymentManagePage = () => {
             value={formInputs.keyword}
             onChange={(e) => setFormInputs((prev) => ({ ...prev, keyword: e.target.value }))}
             placeholder="주문번호, 배송번호, 고객명, 화물명"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-blue-500 focus:outline-none"
           />
         </div>
 
@@ -116,7 +116,7 @@ const PaymentManagePage = () => {
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+            className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
           >
             검색
           </button>
@@ -150,7 +150,7 @@ const PaymentManagePage = () => {
                   <tr key={item.id} className="hover:bg-gray-50/70">
                     <td className="px-4 py-3">
                       <div className="font-bold text-gray-900">결제 #{item.id}</div>
-                      <div className="text-[11px] text-emerald-700">배송 #{item.shipmentId}</div>
+                      <div className="text-[11px] text-blue-700">배송 #{item.shipmentId}</div>
                     </td>
                     <td className="max-w-[170px] truncate px-4 py-3 font-mono text-[11px] text-gray-700" title={item.orderId}>
                       {item.orderId}

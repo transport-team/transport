@@ -97,7 +97,7 @@ const ShipmentListPage = () => {
           </div>
           <Link
             to="/customer/shipments/new"
-            className="rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+            className="rounded-full bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
           >
             + 새 배송 신청
           </Link>
@@ -122,7 +122,7 @@ const ShipmentListPage = () => {
       </header>
 
       <div className="space-y-3 px-5 pt-5">
-        <Link to="/customer/dispatch-requests" className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 hover:bg-emerald-100">
+        <Link to="/customer/dispatch-requests" className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
           <span className="flex items-center gap-2">지원한 기사 및 배차 확정
             {Object.values(applicantCounts).reduce((total, count) => total + Number(count || 0), 0) > 0 && (
               <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs text-white">
@@ -151,7 +151,7 @@ const ShipmentListPage = () => {
             <p className="mt-1 text-xs text-gray-500">새로운 화물 배송을 신청해 보세요.</p>
             <Link
               to="/customer/shipments/new"
-              className="mt-5 inline-block rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
+              className="mt-5 inline-block rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
             >
               배송 신청하기
             </Link>
@@ -160,7 +160,7 @@ const ShipmentListPage = () => {
 
         {!loading && !fetchState.error && fetchState.content.map((item) => {
           return (
-            <article key={item.id} className="rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:border-emerald-200 hover:shadow-md">
+            <article key={item.id} className="rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md">
               <Link to={`/customer/shipments/${item.id}`} className="block p-5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -179,7 +179,7 @@ const ShipmentListPage = () => {
 
               <div className="mt-3 space-y-1.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" />
                   <span className="truncate">{item.originAddress}</span>
                 </div>
                 <div className="flex items-center gap-2">

@@ -57,7 +57,7 @@ const RouteMap = ({ origin, dest }) => {
       )}
       <div className="flex flex-wrap gap-2 border-t border-gray-100 p-3">
         <a href={directionsUrl(origin)} target="_blank" rel="noopener noreferrer"
-          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
+          className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800 hover:bg-blue-100">
           출발지 길찾기
         </a>
         <a href={directionsUrl(dest)} target="_blank" rel="noopener noreferrer"

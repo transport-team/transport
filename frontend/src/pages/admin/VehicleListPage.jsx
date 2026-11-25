@@ -64,7 +64,7 @@ const VehicleListPage = () => {
             {location.state?.toast && (
                 <div
                     role="status"
-                    className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-emerald-700 px-10 py-6 text-lg font-semibold text-white shadow-2xl"
+                    className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-blue-700 px-10 py-6 text-lg font-semibold text-white shadow-2xl"
                 >
                     ✓ {location.state.toast}
                 </div>
@@ -81,7 +81,7 @@ const VehicleListPage = () => {
                 {/* 차량 등록 페이지로 이동 */}
                 <Link
                     to="/admin/vehicles/new"
-                    className="rounded bg-emerald-700 px-4 py-2 text-sm text-white"
+                    className="rounded bg-blue-700 px-4 py-2 text-sm text-white"
                 >
                     + 차량 등록
                 </Link>

@@ -155,7 +155,7 @@ const ShipmentDetailPage = () => {
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-600">
           {error || '배송 정보를 찾을 수 없습니다.'}
         </div>
-        <Link className="mt-4 inline-block text-sm font-bold text-emerald-700" to="/customer/shipments">
+        <Link className="mt-4 inline-block text-sm font-bold text-blue-700" to="/customer/shipments">
           ← 내 배송 목록으로
         </Link>
       </section>
@@ -203,7 +203,7 @@ const ShipmentDetailPage = () => {
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-emerald-600">ROUTE & SCHEDULE</p>
+            <p className="text-xs font-semibold text-blue-600">ROUTE & SCHEDULE</p>
             <span className="text-xs font-semibold text-gray-500">
               {shipment.distanceKm}km{shipment.durationMin != null ? ` · 약 ${shipment.durationMin}분` : ''}
             </span>
@@ -211,7 +211,7 @@ const ShipmentDetailPage = () => {
 
           <div className="mt-4 flex gap-3">
             <div className="flex w-4 shrink-0 flex-col items-center">
-              <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-600 ring-4 ring-emerald-50" />
+              <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600 ring-4 ring-blue-50" />
               <span className="my-1 w-px flex-1 border-l border-dashed border-gray-300" />
               <span className="mb-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-4 ring-red-50" />
             </div>
@@ -237,7 +237,7 @@ const ShipmentDetailPage = () => {
 
         {TRACKING_STATUSES.includes(shipment.status) && (
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold text-emerald-600">LIVE TRACKING</p>
+            <p className="text-xs font-semibold text-blue-600">LIVE TRACKING</p>
             <div className="mt-3">
               <LiveTrackingMap
                 shipmentId={shipment.id}
@@ -249,7 +249,7 @@ const ShipmentDetailPage = () => {
         )}
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold text-emerald-600">CARGO & FARE</p>
+          <p className="text-xs font-semibold text-blue-600">CARGO & FARE</p>
           <h2 className="mt-1 text-base font-bold text-gray-900">{shipment.cargoName}</h2>
 
           <dl className="mt-4 space-y-2.5 border-t border-gray-100 pt-4 text-sm">
@@ -263,13 +263,13 @@ const ShipmentDetailPage = () => {
             </div>
             <div className="flex justify-between border-t border-dashed border-gray-200 pt-3">
               <dt className="font-bold text-gray-700">총 운임</dt>
-              <dd className="text-lg font-black text-emerald-700">{Number(shipment.fare).toLocaleString()}원</dd>
+              <dd className="text-lg font-black text-blue-700">{Number(shipment.fare).toLocaleString()}원</dd>
             </div>
           </dl>
         </div>
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold text-emerald-600">CONTACTS</p>
+          <p className="text-xs font-semibold text-blue-600">CONTACTS</p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-gray-50 p-3.5 text-xs">
               <p className="font-bold text-gray-500">보내는 분</p>
@@ -290,7 +290,7 @@ const ShipmentDetailPage = () => {
         </div>
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold text-emerald-600">STATUS TIMELINE</p>
+          <p className="text-xs font-semibold text-blue-600">STATUS TIMELINE</p>
           <div className="mt-4">
             <Timeline history={shipment.history || []} />
           </div>
@@ -304,7 +304,7 @@ const ShipmentDetailPage = () => {
             <p className="mt-2 text-sm text-emerald-800">증빙 사진과 실제 화물 상태를 확인한 뒤 수령을 확정해 주세요. 수령 확정 후 운송이 최종 완료되어 정산에 반영됩니다.</p>
             <button type="button" onClick={() => { setActionError(''); setReceiptModalOpen(true) }}
               disabled={actionLoading}
-              className="mt-4 w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">
+              className="mt-4 w-full rounded-xl bg-blue-700 px-4 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-50">
               화물 수령 확정
             </button>
           </div>
@@ -333,7 +333,7 @@ const ShipmentDetailPage = () => {
           {cancelLocked && (
             <div className="text-center">
               <p className="py-1 text-sm font-semibold text-gray-400">배차 확정으로 배송 취소·환불이 불가합니다.</p>
-              <p className="text-xs text-gray-400">변경 요청은 <Link to="/customer/inquiries" className="font-semibold text-emerald-700 underline">고객센터 문의</Link>를 이용해 주세요.</p>
+              <p className="text-xs text-gray-400">변경 요청은 <Link to="/customer/inquiries" className="font-semibold text-blue-700 underline">고객센터 문의</Link>를 이용해 주세요.</p>
             </div>
           )}
           {canPay && (
@@ -341,7 +341,7 @@ const ShipmentDetailPage = () => {
               type="button"
               onClick={handlePayNow}
               disabled={actionLoading}
-              className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {actionLoading ? '결제창 준비 중...' : '결제하기'}
             </button>
@@ -359,7 +359,7 @@ const ShipmentDetailPage = () => {
           <button type="button" disabled={actionLoading} onClick={() => setReceiptModalOpen(false)}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold">취소</button>
           <button type="button" disabled={actionLoading} onClick={handleConfirmReceipt}
-            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
             {actionLoading ? '처리 중...' : '수령 확정'}
           </button>
         </div>
@@ -386,7 +386,7 @@ const ShipmentDetailPage = () => {
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="예: 일정 변경으로 인한 취소"
-                className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
               />
             </label>
             {/* 취소 실패 문구를 창 안에도 (창 뒤 페이지 문구는 가려져 보이지 않았다) */}

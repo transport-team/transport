@@ -15,7 +15,7 @@ const TermAgreement = ({ terms, agreedIds, onChange }) => {
       <legend className="mb-1 text-sm font-medium">약관 동의</legend>
       <div className="grid gap-3 rounded border border-gray-300 bg-white p-4 text-sm">
         <label className="flex items-center gap-2 border-b border-gray-200 pb-3 font-medium">
-          <input type="checkbox" checked={allAgreed} onChange={toggleAll} className="size-4 accent-emerald-700" />
+          <input type="checkbox" checked={allAgreed} onChange={toggleAll} className="size-4 accent-blue-700" />
           전체 동의 (선택 약관 포함)
         </label>
         {terms.map((term) => (
@@ -24,9 +24,9 @@ const TermAgreement = ({ terms, agreedIds, onChange }) => {
               <label className="flex flex-1 items-center gap-2">
                 <input
                   type="checkbox" checked={agreedIds.includes(term.id)} onChange={() => toggle(term.id)}
-                  className="size-4 accent-emerald-700"
+                  className="size-4 accent-blue-700"
                 />
-                <span className={term.required ? 'font-medium text-emerald-700' : 'text-gray-500'}>
+                <span className={term.required ? 'font-medium text-blue-700' : 'text-gray-500'}>
                   [{term.required ? '필수' : '선택'}]
                 </span>
                 {term.title}

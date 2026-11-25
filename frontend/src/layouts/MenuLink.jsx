@@ -9,7 +9,7 @@ const MenuLink = ({ menu, className = '' }) => {
     <NavLink
       to={menu.to}
       end
-      className={({ isActive }) => `${className} ${isActive ? 'font-semibold text-emerald-800' : 'text-gray-700 hover:text-emerald-800'}`}
+      className={({ isActive }) => `${className} ${isActive ? 'font-semibold text-blue-800' : 'text-gray-700 hover:text-blue-800'}`}
     >
       <span className="inline-flex items-center gap-2">
         {menu.label}

@@ -45,7 +45,7 @@ const FaqPage = () => {
             <button
               key={value || 'all'} type="button" aria-pressed={category === value} onClick={() => selectTab(value)}
               className={`rounded-full px-4 py-1.5 text-sm ${
-                category === value ? 'bg-emerald-700 font-medium text-white' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                category === value ? 'bg-blue-700 font-medium text-white' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
               {value || '전체'}
@@ -65,7 +65,7 @@ const FaqPage = () => {
               <li key={faq.id}>
                 <details className="group">
                   <summary className="flex cursor-pointer list-none items-start gap-3 px-4 py-3 hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
-                    <span aria-hidden="true" className="font-bold text-emerald-700">Q</span>
+                    <span aria-hidden="true" className="font-bold text-blue-700">Q</span>
                     <span className="flex-1 font-medium">{faq.question}</span>
                     {!category && <span className="shrink-0 text-xs leading-6 text-gray-500">{faq.category}</span>}
                     <span aria-hidden="true" className="text-gray-400 transition-transform group-open:rotate-180">▾</span>
@@ -85,7 +85,7 @@ const FaqPage = () => {
             원하는 답이 없나요?{' '}
             <Link
               to={isLogin ? `${ROLE_HOME[loginState.role]}/inquiries` : '/login'}
-              className="font-medium text-emerald-700 hover:underline"
+              className="font-medium text-blue-700 hover:underline"
             >
               {isLogin ? '1:1 문의하기' : '로그인하고 1:1 문의하기'}
             </Link>

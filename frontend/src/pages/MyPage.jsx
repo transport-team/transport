@@ -75,8 +75,8 @@ const MyPage = () => {
                 onClick={() => toggleEdit(id)}
                 aria-expanded={activeEdit === id}
                 className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${activeEdit === id
-                  ? 'border-emerald-700 bg-emerald-700 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-emerald-500 hover:text-emerald-700'}`}
+                  ? 'border-blue-700 bg-blue-700 text-white'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-blue-500 hover:text-blue-700'}`}
               >
                 {label} {activeEdit === id ? '접기' : ''}
               </button>
@@ -88,7 +88,7 @@ const MyPage = () => {
           {member.role !== 'ADMIN' && (
             <Link
               to={`${ROLE_HOME[member.role]}/inquiries`}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-emerald-600"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-blue-600"
             >
               <span>
                 <span className="block font-semibold">1:1 문의</span>

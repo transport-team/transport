@@ -452,10 +452,10 @@ const DriverHomePage = () => {
         {/* 내 배차 관리 */}
         <Link
           to="/driver/dispatches"
-          className="block rounded-2xl border border-green-100 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-green-300 hover:shadow-md"
+          className="block rounded-2xl border border-blue-100 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-blue-300 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-2xl">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl">
               📋
             </div>
 
@@ -464,7 +464,7 @@ const DriverHomePage = () => {
                 내 배차 관리
               </h2>
 
-              <span className="shrink-0 text-sm font-semibold text-green-700">
+              <span className="shrink-0 text-sm font-semibold text-blue-700">
                 <span className="hidden lg:inline">관리하기 </span>→
               </span>
             </div>
@@ -719,7 +719,7 @@ const DriverHomePage = () => {
                     setWorkActionError('')
                   }}
                   disabled={workSaving || !!workError || !!offError || offLoading}
-                  className="rounded-lg border border-emerald-600 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+                  className="rounded-lg border border-blue-600 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 disabled:opacity-50"
                 >
                   근무시간 변경
                 </button>
@@ -747,10 +747,10 @@ const DriverHomePage = () => {
 
           {workError && <p className="mt-3 text-xs text-red-600">{workError}</p>}
           {workEditing && (
-            <div id="driver-work-hours-editor" className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+            <div id="driver-work-hours-editor" className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold text-emerald-800">근무 가능 시간</p>
-                <p className="text-sm font-semibold text-emerald-700">
+                <p className="text-sm font-bold text-blue-800">근무 가능 시간</p>
+                <p className="text-sm font-semibold text-blue-700">
                   {selectedIsOff
                     ? selectedIsDefaultOff && !offDays.includes(selectedDate) ? '매주 일요일 기본 휴무' : '이 날짜만 휴무'
                     : selectedWork
@@ -786,7 +786,7 @@ const DriverHomePage = () => {
                     type="button"
                     onClick={handleSaveWorkHours}
                     disabled={workSaving || offSaving}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
                   >
                     {workSaving ? '저장 중...' : '시간 저장'}
                   </button>
@@ -831,7 +831,7 @@ const DriverHomePage = () => {
               <Link
                 key={`pending-${shipment.shipmentId}`}
                 to={`/driver/shipments/${shipment.shipmentId}?from=my-dispatches`}
-                className="block rounded-2xl border border-gray-200 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-green-300 hover:shadow-md sm:p-5"
+                className="block rounded-2xl border border-gray-200 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-blue-300 hover:shadow-md sm:p-5"
               >
                 {/* 화물명 및 상태 */}
                 <div className="flex flex-wrap items-center gap-3">
@@ -882,7 +882,7 @@ const DriverHomePage = () => {
                     </p>
                   </div>
 
-                  <span className="text-sm font-semibold text-green-700">
+                  <span className="text-sm font-semibold text-blue-700">
                     상세 보기 →
                   </span>
                 </div>

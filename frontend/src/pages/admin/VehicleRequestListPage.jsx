@@ -115,7 +115,7 @@ const VehicleRequestListPage = () => {
                     <p className="mt-1 text-xs text-gray-500">처리 완료된 신청도 이력으로 유지합니다.</p>
                 </div>
                 <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
-                    조회 <strong className="text-emerald-700">{visibleRequests.length}</strong>건
+                    조회 <strong className="text-blue-700">{visibleRequests.length}</strong>건
                 </span>
             </div>
 
@@ -197,7 +197,7 @@ const VehicleRequestListPage = () => {
                                                         <div className="flex justify-end gap-1.5">
                                                             <button type="button" disabled={processingId !== null}
                                                                 onClick={() => handleApprove(request.id)}
-                                                                className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                                                                className="rounded-lg bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
                                                                 승인
                                                             </button>
                                                             <button type="button" disabled={processingId !== null}

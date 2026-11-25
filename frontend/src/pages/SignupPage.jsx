@@ -16,7 +16,7 @@ const ROLE_OPTIONS = [
 // 기사 면허 종류 (서버는 20자 이하 문자열로 받는다)
 const LICENSE_TYPES = ['1종 대형', '1종 보통', '1종 특수', '2종 보통']
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 focus:border-blue-600 focus:outline-none'
 
 const initForm = { email: '', password: '', passwordConfirm: '', name: '', phone: '', licenseType: '', careerYears: '' }
 
@@ -104,7 +104,7 @@ const SignupPage = () => {
               {ROLE_OPTIONS.map((option) => (
                 <label
                   key={option.value}
-                  className={`cursor-pointer rounded border p-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-emerald-600 ${role === option.value ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
+                  className={`cursor-pointer rounded border p-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-600 ${role === option.value ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
                 >
                   <input
                     type="radio" name="role" value={option.value}
@@ -148,8 +148,8 @@ const SignupPage = () => {
             />
           </Field>
           {role === 'DRIVER' && (
-            <div className="grid gap-4 rounded border border-emerald-200 bg-emerald-50/50 p-4 sm:grid-cols-2">
-              <p className="text-sm text-emerald-900 sm:col-span-2">기사는 가입 후 관리자 승인을 받아야 로그인할 수 있어요.</p>
+            <div className="grid gap-4 rounded border border-blue-200 bg-blue-50/50 p-4 sm:grid-cols-2">
+              <p className="text-sm text-blue-900 sm:col-span-2">기사는 가입 후 관리자 승인을 받아야 로그인할 수 있어요.</p>
               <Field label="면허 종류">
                 <select name="licenseType" required value={form.licenseType} onChange={handleChange} className={INPUT_CLASS}>
                   <option value="">선택해 주세요</option>
@@ -170,13 +170,13 @@ const SignupPage = () => {
           {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           <button
             type="submit" disabled={!terms || submitting}
-            className="rounded bg-emerald-700 py-2.5 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 py-2.5 font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             {submitting ? '가입 중...' : '가입하기'}
           </button>
         </form>
         <p className="text-sm text-gray-600">
-          이미 회원인가요? <Link to="/login" className="font-medium text-emerald-700 hover:underline">로그인</Link>
+          이미 회원인가요? <Link to="/login" className="font-medium text-blue-700 hover:underline">로그인</Link>
         </p>
       </div>
     </BasicLayout>

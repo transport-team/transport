@@ -6,7 +6,7 @@ import Modal from '../../components/common/Modal'
 import Pagination from '../../components/common/Pagination'
 import { ROLE_NAME } from '../../util/roleUtil'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 
 const ENABLED_VALUES = ['true', 'false']
 
@@ -113,7 +113,7 @@ const MemberListPage = () => {
     return (
       <button
         type="button" disabled={changingId === member.id} onClick={() => changeEnabled(member, true)}
-        className="rounded border border-emerald-600 px-2 py-1 text-xs text-emerald-800 hover:bg-emerald-50 disabled:opacity-60"
+        className="rounded border border-blue-600 px-2 py-1 text-xs text-blue-800 hover:bg-blue-50 disabled:opacity-60"
       >
         다시 활성화
       </button>
@@ -138,7 +138,7 @@ const MemberListPage = () => {
           name="keyword" aria-label="이름 · 이메일" placeholder="이름 · 이메일 일부" defaultValue={query.keyword}
           className={`${INPUT_CLASS} w-56`}
         />
-        <button type="submit" className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+        <button type="submit" className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
           검색
         </button>
       </form>

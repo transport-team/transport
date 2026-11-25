@@ -60,13 +60,14 @@ const PaymentSuccessPage = () => {
           <div className="flex justify-between"><span className="text-gray-500">결제 금액</span><strong className="text-gray-900">{amount ? `${Number(amount).toLocaleString()}원` : '-'}</strong></div>
           <div className="mt-5 h-10 bg-[repeating-linear-gradient(90deg,#111_0,#111_2px,transparent_2px,transparent_5px,#111_5px,#111_6px,transparent_6px,transparent_9px)] opacity-70" aria-label="결제 영수증 바코드" />
         </div>
+        {/* 버튼 색은 #169 브랜드 테마(blue)를 따른다 */}
         {failed ? (
           <div className="grid grid-cols-2 gap-2">
-            <Link className="block rounded-xl bg-emerald-600 px-4 py-3 text-center text-sm font-bold text-white" to="/customer/shipments">내 배송으로</Link>
+            <Link className="block rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-bold text-white" to="/customer/shipments">내 배송으로</Link>
             <Link className="block rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-bold text-gray-700" to="/customer">고객 홈으로</Link>
           </div>
         ) : (
-          <Link className="block rounded-xl bg-emerald-600 px-4 py-3 text-center text-sm font-bold text-white" to="/customer">고객 홈으로</Link>
+          <Link className="block rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-bold text-white" to="/customer">고객 홈으로</Link>
         )}
       </div>
     </section>
