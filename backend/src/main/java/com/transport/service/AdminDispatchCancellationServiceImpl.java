@@ -13,7 +13,6 @@ import com.transport.domain.enums.ShipmentStatus;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchRepository;
-import com.transport.repository.ShipmentRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminDispatchCancellationServiceImpl implements AdminDispatchCancellationService {
 
-    private final ShipmentRepository shipmentRepository;
+    private final ShipmentService shipmentService;  // 팀원 3 약속 메서드 (잠금 조회)
     private final DispatchRepository dispatchRepository;
     private final StatusHistoryService statusHistoryService;
     private final NotificationService notificationService;
@@ -34,8 +33,7 @@ public class AdminDispatchCancellationServiceImpl implements AdminDispatchCancel
         }
 
         // 다른 관리자가 동시에 취소하거나 기사 상태 변경이 발생하는 상황에서 일관성 유지
-        Shipment shipment = shipmentRepository.findByIdForUpdate(shipmentId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+        Shipment shipment = shipmentService.getShipmentForUpdate(shipmentId);
 
         // 상차 이후에는 배차만 해제할 수 없음. 주문 취소/환불과도 구분
         if (shipment.getStatus() != ShipmentStatus.ASSIGNED) {

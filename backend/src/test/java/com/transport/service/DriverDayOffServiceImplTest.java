@@ -20,9 +20,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.transport.domain.DispatchApplication;
 import com.transport.domain.Driver;
 import com.transport.domain.DriverSchedule;
+import com.transport.domain.Shipment;
+import com.transport.domain.enums.DispatchApplicationStatus;
 import com.transport.domain.enums.DriverScheduleStatus;
+import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.DriverWorkHoursResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
@@ -30,7 +34,6 @@ import com.transport.repository.DispatchApplicationRepository;
 import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.DriverScheduleRepository;
-import com.transport.repository.ShipmentStatusHistoryRepository;
 
 // 기사 근무 가능 시간 (DRV-01): 오늘 이후 · 휴무일과 따로 · 자정 넘기는 근무 · 등록과 수정 (DB 없이)
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +55,7 @@ class DriverDayOffServiceImplTest {
     DispatchApplicationRepository applicationRepository;
 
     @Mock
-    ShipmentStatusHistoryRepository statusHistoryRepository;
+    StatusHistoryService statusHistoryService;
 
     @InjectMocks
     DriverDayOffServiceImpl dayOffService;
@@ -199,5 +202,24 @@ class DriverDayOffServiceImplTest {
         assertThatThrownBy(() -> dayOffService.registerOffDay(MEMBER_ID, tomorrow))
                 .isInstanceOf(CustomException.class)
                 .hasMessage("근무 시간이 등록된 날짜입니다. 근무 시간을 지운 뒤 휴무로 등록해 주세요.");
+    }
+
+    @Test
+    @DisplayName("운송을 완료한 날은 휴무로 못 바꾼다 — 완료 시각은 팀원 4 StatusHistoryService로 묻는다")
+    void completedDayBlocksOffDay() {
+        givenDriver();
+        Shipment shipment = Shipment.builder().id(30L).status(ShipmentStatus.COMPLETED).build();
+        DispatchApplication selected = DispatchApplication.builder()
+                .id(3L).driver(driver).shipment(shipment).status(DispatchApplicationStatus.SELECTED).build();
+        when(scheduleRepository.findByDriver_IdAndWorkDate(DRIVER_ID, tomorrow)).thenReturn(Optional.empty());
+        when(dispatchRepository.findByDriver_IdAndActiveTrue(DRIVER_ID)).thenReturn(List.of());
+        when(applicationRepository.findByDriver_IdOrderByUpdatedAtDesc(DRIVER_ID)).thenReturn(List.of(selected));
+        when(statusHistoryService.getLastChangedAt(30L, ShipmentStatus.COMPLETED))
+                .thenReturn(Optional.of(tomorrow.atTime(10, 0)));
+
+        assertThatThrownBy(() -> dayOffService.registerOffDay(MEMBER_ID, tomorrow))
+                .isInstanceOf(CustomException.class)
+                .hasMessage("배송을 완료한 날짜에는 휴무를 등록할 수 없습니다.");
+        verify(scheduleRepository, never()).save(any());
     }
 }

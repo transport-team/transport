@@ -39,6 +39,8 @@
 | 저장소 직접 사용 정리 (11-23) | 3 → 전원 · 2 → 4 | `ShipmentService.getShipment(shipmentId)` → 배송 엔티티(없으면 `SHIPMENT_NOT_FOUND`, 같은 트랜잭션이라 상태를 바꾸면 그대로 저장) · `DriverService.findByMemberId(memberId)` → `Optional<Driver>`(위치 · 리뷰처럼 기사 엔티티를 연결할 때). 위치 · 리뷰 · 사진 · 상태 변경 서비스가 다른 도메인 저장소 대신 쓴다 (#94) |
 | 7주차 (T 2단계) | 4 → 1 | 대시보드 집계(읽기 전용): `StatusHistoryService.countCompleted(from, to)` · `getCompletedCountsByDriver(from, to, limit)` · `ReviewService.getRatingStat()` (팀원 1이 작성, 팀원 4 리뷰). 기사 순위도 상태 이력의 완료 변경자(배정 기사)로 세서, 예정했던 팀원 2의 기사별 완료 건수 메서드는 필요 없어졌다 (2026-11-13) |
 | #102 후속 | 2 → 3 | `DispatchApplicationService.closePendingApplications(shipment)` — 배송이 취소되면 대기 중인 지원을 모두 자동 마감(`NOT_SELECTED`). 결제 취소가 같은 트랜잭션에서 부른다 (팀원 1 작성, 팀원 2 리뷰, 2026-11-19) |
+| 저장소 직접 사용 정리 (11-25) | 4 → 2 | 기사 실적 · 지난 내역 · 휴무일(읽기 전용): `StatusHistoryService.getDriverCompletedTotal(driverMemberId, from, to)` · `getDriverCompletedShipments(driverMemberId, from, to)` — 기간 [from, to) 운송완료 건수 · 운임 합계 / 배송 목록(배정 기사 기준, 회원 ID), `getLastChangedAt(shipmentId, toStatus)` — 그 상태로 마지막에 바뀐 시각(`Optional`) (팀원 1이 팀원 2 몫 대신 작성, 팀원 4 리뷰) |
+| 저장소 직접 사용 정리 (11-25) | 3 → 2 | `ShipmentService.getShipmentForUpdate(shipmentId)` — 비관적 쓰기 잠금 조회(없으면 `SHIPMENT_NOT_FOUND`), 부른 쪽 트랜잭션이 끝날 때까지 잠김. 관리자 배차 취소가 쓴다 (팀원 1이 팀원 2 몫 대신 작성, 팀원 3 리뷰) |
 
 다른 도메인은 위 Service 메서드로만 호출한다. 다른 사람의 Repository를 직접 쓰지 않는다. 약속이 늦어지면 데일리 스크럼에서 바로 공유한다.
 

@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.transport.domain.Driver;
 import com.transport.domain.Settlement;
 import com.transport.domain.enums.SettlementStatus;
-import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.DriverMonthlySettlementResponseDTO;
 import com.transport.dto.DriverReviewSummaryResponseDTO;
 import com.transport.dto.DriverSettlementItemResponseDTO;
@@ -22,7 +21,6 @@ import com.transport.exception.ErrorCode;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.SettlementPeriodRepository;
 import com.transport.repository.SettlementRepository;
-import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +29,7 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class DriverSettlementServiceImpl implements DriverSettlementService {
 
-    private final ShipmentStatusHistoryRepository historyRepository;
+    private final StatusHistoryService statusHistoryService;  // 팀원 4 약속 메서드 (기사 운송완료 합계 · 내역)
     private final DriverRepository driverRepository;
     private final ReviewService reviewService;  // 팀원 4 약속 메서드 (평균 평점 · 리뷰 목록, driverId = driver.id)
     private final SettlementRepository settlementRepository;  // 월 정산 행 (지급 대기 · 지급 완료)
@@ -76,9 +74,8 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
         var from = month.atDay(1).atStartOfDay();
         var to = month.plusMonths(1).atDay(1).atStartOfDay();
 
-        var total = historyRepository.findDriverMonthlyTotal(
+        var total = statusHistoryService.getDriverCompletedTotal(
                 memberId,
-                ShipmentStatus.COMPLETED,
                 from,
                 to);
 
@@ -94,8 +91,8 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
 
         return new DriverMonthlySettlementResponseDTO(
                 monthText,
-                total.getCompletedCount(),
-                total.getTotalFare(),
+                total.completedCount(),
+                total.totalFare(),
                 state,
                 settled ? stored.getCommissionRate() : null,
                 settled ? stored.getPayoutAmount() : null,
@@ -134,16 +131,15 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
         var from = month.atDay(1).atStartOfDay();
         var to = month.plusMonths(1).atDay(1).atStartOfDay();
 
-        return historyRepository.findDriverMonthlyFareItems(
+        return statusHistoryService.getDriverCompletedShipments(
                 memberId,
-                ShipmentStatus.COMPLETED,
                 from,
                 to).stream()
                 .map(item -> new DriverSettlementItemResponseDTO(
-                        item.getShipmentId(),
-                        item.getCargoName(),
-                        item.getCompletedAt(),
-                        item.getFare()))
+                        item.shipmentId(),
+                        item.cargoName(),
+                        item.completedAt(),
+                        item.fare()))
                 .toList();
     }
 
@@ -154,17 +150,16 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
 
         validateRange(memberId, from, to);
 
-        var total = historyRepository.findDriverMonthlyTotal(
+        var total = statusHistoryService.getDriverCompletedTotal(
                 memberId,
-                ShipmentStatus.COMPLETED,
                 from.atStartOfDay(),
                 to.plusDays(1).atStartOfDay());
 
         return new DriverSettlementRangeResponseDTO(
                 from,
                 to,
-                total.getCompletedCount(),
-                total.getTotalFare());
+                total.completedCount(),
+                total.totalFare());
     }
 
     // 선택한 기간의 운임 상세 내역 조회
@@ -174,16 +169,15 @@ public class DriverSettlementServiceImpl implements DriverSettlementService {
 
         validateRange(memberId, from, to);
 
-        return historyRepository.findDriverMonthlyFareItems(
+        return statusHistoryService.getDriverCompletedShipments(
                 memberId,
-                ShipmentStatus.COMPLETED,
                 from.atStartOfDay(),
                 to.plusDays(1).atStartOfDay()).stream()
                 .map(item -> new DriverSettlementItemResponseDTO(
-                        item.getShipmentId(),
-                        item.getCargoName(),
-                        item.getCompletedAt(),
-                        item.getFare()))
+                        item.shipmentId(),
+                        item.cargoName(),
+                        item.completedAt(),
+                        item.fare()))
                 .toList();
     }
 
