@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getVehicleList } from '../../api/vehicleApi'
 import Pagination from '../../components/common/Pagination'
 import Badge from '../../components/common/Badge'
+import useUrlPage from '../../hooks/useUrlPage'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 // 차량 상태 이름 · 배지 색 (기사 내 차량 화면과 같게)
@@ -11,12 +12,15 @@ const VEHICLE_STATUS = {
     INACTIVE: { label: '비활성', tone: 'gray' },
 }
 
+// 쪽 번호는 주소(?page=2)에 남긴다 — 새로고침 · 뒤로 가기에도 그 쪽 그대로 (11-25, 팀원 1 목록 #152와 같은 방식)
 const VehicleListPage = () => {
-    const [vehicles, setVehicles] = useState([])
-    const [page, setPage] = useState(1)
-    const [totalPage, setTotalPage] = useState(1)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState('')
+    const [page, setPage] = useUrlPage()
+    // 불러온 결과를 쪽 번호와 함께 둔다 — 주소의 쪽과 다르면 아직 불러오는 중 (뒤로 가기에도 이전 쪽 목록이 남지 않게)
+    const [fetchState, setFetchState] = useState({ page: null, vehicles: [], totalPage: 1, error: '' })
+    const loading = fetchState.page !== page
+    const vehicles = loading ? [] : fetchState.vehicles
+    const totalPage = fetchState.totalPage
+    const error = loading ? '' : fetchState.error
     const location = useLocation()
     const navigate = useNavigate()
 
@@ -34,24 +38,16 @@ const VehicleListPage = () => {
         return () => clearTimeout(timer)
     }, [location.state, location.pathname, location.search, navigate])
 
-    // 현재 페이지의 차량 목록 조회 (로딩 표시 · 오류 지우기는 movePage에서)
+    // 주소의 쪽 번호가 바뀌면 그 쪽 차량 목록 조회
     useEffect(() => {
         let active = true
 
         getVehicleList(page, 10)
             .then((data) => {
-                if (!active) return
-
-                setVehicles(data.dtoList ?? [])
-                setTotalPage(data.totalPage ?? 1)
+                if (active) setFetchState({ page, vehicles: data.dtoList ?? [], totalPage: data.totalPage ?? 1, error: '' })
             })
             .catch(() => {
-                if (active) {
-                    setError('차량 목록을 불러오지 못했습니다.')
-                }
-            })
-            .finally(() => {
-                if (active) setLoading(false)
+                if (active) setFetchState((prev) => ({ ...prev, page, vehicles: [], error: '차량 목록을 불러오지 못했습니다.' }))
             })
 
         return () => {
@@ -59,13 +55,8 @@ const VehicleListPage = () => {
         }
     }, [page])
 
-    // 페이지 이동: 로딩 표시를 켜고 이전 오류를 지운 뒤 페이지를 바꾼다
-    // (effect 안에서 바로 setState를 부르지 않는다 — react-hooks/set-state-in-effect)
-    const movePage = (nextPage) => {
-        setLoading(true)
-        setError('')
-        setPage(nextPage)
-    }
+    // 페이지 이동: 주소의 쪽 번호만 바꾼다 (불러오는 중 표시는 주소의 쪽과 결과의 쪽이 다른 동안 저절로)
+    const movePage = (nextPage) => setPage(nextPage)
 
     return (
         <section className="space-y-6">
@@ -128,7 +119,7 @@ const VehicleListPage = () => {
                                     {/* 선택한 차량 정보를 수정 페이지로 전달 */}
                                     <Link
                                         to={`/admin/vehicles/${vehicle.id}/edit`}
-                                        state={{ vehicle }}
+                                        state={{ vehicle, listSearch: location.search }}
                                         className="rounded border border-gray-300 px-3 py-1"
                                     >
                                         수정
