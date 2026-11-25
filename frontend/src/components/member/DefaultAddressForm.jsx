@@ -163,7 +163,7 @@ const DefaultAddressForm = () => {
       )}
 
       {formOpen && (
-        <form onSubmit={handleSubmit} className="grid gap-3 rounded-lg border border-emerald-100 bg-emerald-50/40 p-3">
+        <form onSubmit={handleSubmit} className="grid gap-3 rounded-lg border border-blue-100 bg-blue-50/40 p-3">
           <h3 className="text-sm font-semibold">{editingId ? '배송지 수정' : '새 배송지 등록'}</h3>
           <Input id="savedAddressLabel" label="배송지 별명" value={form.label} onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))} maxLength={50} placeholder="예: 우리 집, 회사 창고" required />
           <div>

@@ -197,7 +197,7 @@ const DriverShipmentDetailPage = () => {
             {/* 목록으로 돌아가기 */}
             <Link
                 to={backPath}
-                className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                className="inline-block text-sm font-semibold text-blue-700 hover:text-blue-800"
             >
                 {fromMyDispatches ? '← 신청 대기 목록으로' : '← 운송 요청 목록으로'}
             </Link>
@@ -230,9 +230,9 @@ const DriverShipmentDetailPage = () => {
 
                         <span
                             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${shipment.alreadyApplied
-                                ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                                ? 'border border-blue-200 bg-blue-50 text-blue-700'
                                 : shipment.canApply
-                                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                                    ? 'border border-blue-200 bg-blue-50 text-blue-700'
                                     : 'border border-gray-200 bg-gray-100 text-gray-600'
                                 }`}
                         >
@@ -419,7 +419,7 @@ const DriverShipmentDetailPage = () => {
                                     onClick={handleApplyDispatch}
                                     disabled={!shipment.canApply || !selectedVehicleId || applying || applySuccess}
                                     className={`w-full rounded-xl px-6 py-3.5 text-base font-bold transition ${shipment.canApply && selectedVehicleId && !applying && !applySuccess
-                                        ? 'cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700'
+                                        ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
                                         : 'cursor-not-allowed bg-gray-200 text-gray-400'
                                         }`}
                                 >

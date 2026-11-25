@@ -3,7 +3,7 @@ import useUrlPage from '../../hooks/useUrlPage'
 import { deleteNotice, getNotices, postNotice, putNotice } from '../../api/noticeApi'
 import Pagination from '../../components/common/Pagination'
 
-const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none'
+const INPUT_CLASS = 'rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none'
 
 const initForm = { title: '', content: '' }
 
@@ -136,7 +136,7 @@ const NoticeManagePage = () => {
         <div className="flex gap-2">
           <button
             type="submit" disabled={submitting}
-            className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           >
             {submitting ? '저장 중...' : editingId ? '수정 저장' : '공지 올리기'}
           </button>
@@ -169,7 +169,7 @@ const NoticeManagePage = () => {
                   </tr>
                 )}
                 {pageData.dtoList.map((notice) => (
-                  <tr key={notice.id} className={`border-b border-gray-100 last:border-0 ${editingId === notice.id ? 'bg-emerald-50' : ''}`}>
+                  <tr key={notice.id} className={`border-b border-gray-100 last:border-0 ${editingId === notice.id ? 'bg-blue-50' : ''}`}>
                     <td className="max-w-xs truncate px-4 py-3">{notice.title}</td>
                     <td className="px-4 py-3">{notice.createdAt?.slice(0, 10)}</td>
                     <td className="px-4 py-3">{notice.viewCount}</td>

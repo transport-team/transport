@@ -183,7 +183,7 @@ const DriverDispatchProcessPage = () => {
     if (loadError) {
         return (
             <section className="grid gap-4 p-4">
-                <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800">← 배차 확정 목록으로</Link>
+                <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-blue-700 hover:text-blue-800">← 배차 확정 목록으로</Link>
                 <p className="rounded-2xl bg-white p-6 text-gray-600 shadow-sm">{loadError}</p>
             </section>
         )
@@ -191,7 +191,7 @@ const DriverDispatchProcessPage = () => {
 
     return (
         <section className="mx-auto min-h-screen w-full max-w-[640px] space-y-4 bg-gray-50 px-5 pb-24 pt-5">
-            <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-emerald-700 hover:text-emerald-800">← 배차 확정 목록으로</Link>
+            <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-blue-700 hover:text-blue-800">← 배차 확정 목록으로</Link>
 
             {/* 제목 + 상태 배지 */}
             <div className="flex items-center justify-between gap-3">
@@ -225,7 +225,7 @@ const DriverDispatchProcessPage = () => {
 
             {/* 수령인 — 전화 걸기 (tel:) */}
             <div className="rounded-2xl bg-white p-5 shadow-sm">
-                <p className="text-xs font-semibold text-emerald-600">
+                <p className="text-xs font-semibold text-blue-600">
                     CONTACTS
                 </p>
 
@@ -248,7 +248,7 @@ const DriverDispatchProcessPage = () => {
 
                     <a
                         href={`tel:${shipment.receiverPhone}`}
-                        className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                        className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
                     >
                         📞 전화 걸기
                     </a>
@@ -268,7 +268,7 @@ const DriverDispatchProcessPage = () => {
                         capture="environment"
                         multiple
                         onChange={handleSelectFiles}
-                        className="w-full text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-emerald-700 file:transition-colors file:hover:bg-emerald-100"
+                        className="w-full text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 file:transition-colors file:hover:bg-blue-100"
                     />
                     {/* 업로드 전 미리보기 */}
                     {photos.length > 0 && (
@@ -295,7 +295,7 @@ const DriverDispatchProcessPage = () => {
                         </div>
                     )}
 
-                    <Button onClick={handleUpload} loading={uploading} disabled={photos.length === 0} size="sm" className="!bg-emerald-600 hover:!bg-emerald-700">
+                    <Button onClick={handleUpload} loading={uploading} disabled={photos.length === 0} size="sm" className="!bg-blue-600 hover:!bg-blue-700">
                         {photos.length > 0 ? `${photos.length}장 업로드` : '사진을 선택해 주세요'}
                     </Button>
 
@@ -326,7 +326,7 @@ const DriverDispatchProcessPage = () => {
 
             {/* 다음 단계 버튼 (현재 상태에 맞는 버튼 하나) */}
             {step ? (
-                <Button onClick={handleNextStep} loading={changing} size="lg" className="w-full !rounded-xl !bg-emerald-600 hover:!bg-emerald-700">
+                <Button onClick={handleNextStep} loading={changing} size="lg" className="w-full !rounded-xl !bg-blue-600 hover:!bg-blue-700">
                     {step.label}
                 </Button>
             ) : (

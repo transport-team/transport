@@ -2,15 +2,15 @@ import { Link } from 'react-router-dom'
 
 const CustomerHomePage = () => (
   <section className="space-y-6">
-    <div className="rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-600 p-8 text-white shadow-sm">
-      <p className="text-sm font-medium text-emerald-100">안전하고 편리한 화물 운송</p>
+    <div className="rounded-2xl bg-gradient-to-r from-blue-900 to-blue-700 p-8 text-white shadow-sm">
+      <p className="text-sm font-medium text-blue-100">안전하고 편리한 화물 운송</p>
       <h1 className="mt-2 text-3xl font-bold">어떤 배송을 시작할까요?</h1>
-      <p className="mt-3 max-w-xl text-sm text-emerald-50">
+      <p className="mt-3 max-w-xl text-sm text-blue-50">
         출발지와 도착지를 입력하면 예상 운임을 확인하고 배송을 신청할 수 있어요.
       </p>
       <Link
         to="/customer/shipments/new"
-        className="mt-6 inline-flex rounded-lg bg-white px-5 py-3 text-sm font-semibold text-emerald-800 shadow-sm hover:bg-emerald-50"
+        className="mt-6 inline-flex rounded-lg bg-brand-orange px-5 py-3 text-sm font-semibold text-blue-950 shadow-sm hover:bg-brand-orange-hover"
       >
         배송 신청하기
       </Link>
@@ -19,11 +19,11 @@ const CustomerHomePage = () => (
     <div className="grid gap-4 md:grid-cols-3">
       <Link
         to="/customer/shipments/new"
-        className="rounded-xl border border-emerald-100 bg-emerald-50 p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
+        className="rounded-xl border border-blue-100 bg-blue-50 p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
       >
         <span className="text-2xl" aria-hidden="true">📦</span>
-        <h2 className="mt-3 font-semibold text-emerald-900">새 배송 신청</h2>
-        <p className="mt-1 text-sm text-emerald-700">배송 정보를 입력하고 운임을 확인하세요.</p>
+        <h2 className="mt-3 font-semibold text-blue-900">새 배송 신청</h2>
+        <p className="mt-1 text-sm text-blue-700">배송 정보를 입력하고 운임을 확인하세요.</p>
       </Link>
       <Link
         to="/customer/shipments"

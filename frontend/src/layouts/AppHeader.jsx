@@ -3,6 +3,7 @@ import NotificationBell from '../components/common/NotificationBell'
 import useCustomLogin from '../hooks/useCustomLogin'
 import { ROLE_HOME, ROLE_NAME } from '../util/roleUtil'
 import MenuLink from './MenuLink'
+import jimgoLogo from '../assets/jimgo-logo.webp'
 
 // 알림을 눌렀을 때 갈 배송 화면 (역할별). 고객 · 관리자는 배송 상세 화면이 생기면 더한다
 const NOTIFICATION_TARGET = {
@@ -20,8 +21,8 @@ const AppHeader = ({ menus = [] }) => {
     <header className="border-b border-gray-200 bg-white">
       {/* 여기에 overflow를 걸면 알림 종 드롭다운이 헤더 높이에서 잘린다 — 좁은 화면은 줄바꿈 · 메뉴만 가로 스크롤 */}
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-        <Link to={isLogin ? ROLE_HOME[loginState.role] : '/'} className="shrink-0 text-lg font-bold text-emerald-800">
-          운송서비스
+        <Link to={isLogin ? ROLE_HOME[loginState.role] : '/'} className="inline-flex shrink-0 items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" aria-label="JIMGO 짐고 홈으로">
+          <img src={jimgoLogo} alt="JIMGO 짐고" className="block h-9 w-auto sm:h-10" />
         </Link>
         {menus.length > 0 && (
           <nav aria-label="역할별 메뉴" className="flex min-w-[140px] flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap">
@@ -35,16 +36,16 @@ const AppHeader = ({ menus = [] }) => {
           </nav>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-3 whitespace-nowrap text-sm">
-          <Link to="/notices" className="text-gray-600 hover:text-emerald-800">
+          <Link to="/notices" className="text-gray-600 hover:text-blue-800">
             공지사항
           </Link>
-          <Link to="/faq" className="text-gray-600 hover:text-emerald-800">
+          <Link to="/faq" className="text-gray-600 hover:text-blue-800">
             FAQ
           </Link>
           {isLogin ? (
             <>
               <NotificationBell onNavigate={toTarget ? (shipmentId) => navigate(toTarget(shipmentId)) : undefined} />
-              <Link to={`${ROLE_HOME[loginState.role]}/me`} title="내 정보" className="text-gray-600 hover:text-emerald-800">
+              <Link to={`${ROLE_HOME[loginState.role]}/me`} title="내 정보" className="text-gray-600 hover:text-blue-800">
                 {loginState.name} · {ROLE_NAME[loginState.role]}
               </Link>
               <button type="button" onClick={doLogout} className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-50">
@@ -53,10 +54,10 @@ const AppHeader = ({ menus = [] }) => {
             </>
           ) : (
             <>
-              <Link to="/signup" className="text-gray-600 hover:text-emerald-800">
+              <Link to="/signup" className="text-gray-600 hover:text-blue-800">
                 회원가입
               </Link>
-              <Link to="/login" className="rounded bg-emerald-700 px-3 py-1.5 font-medium text-white hover:bg-emerald-800">
+              <Link to="/login" className="rounded bg-blue-700 px-3 py-1.5 font-medium text-white hover:bg-blue-800">
                 로그인
               </Link>
             </>

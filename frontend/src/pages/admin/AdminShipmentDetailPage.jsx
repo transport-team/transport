@@ -132,7 +132,7 @@ const AdminShipmentDetailPage = () => {
 
   return (
     <section className="mx-auto w-full max-w-4xl space-y-4 pb-10">
-      <Link to="/admin/shipments" className="inline-block text-sm text-gray-500 hover:text-emerald-700">
+      <Link to="/admin/shipments" className="inline-block text-sm text-gray-500 hover:text-blue-700">
         ← 배송 통합 검색으로
       </Link>
 
@@ -268,7 +268,7 @@ const AdminShipmentDetailPage = () => {
 
           {/* 운송 경로 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-emerald-700">ROUTE &amp; SCHEDULE</h2>
+            <h2 className="text-sm font-bold text-blue-700">ROUTE &amp; SCHEDULE</h2>
             <div className="mt-4 space-y-4">
               <div>
                 <p className="text-xs text-gray-500">출발지</p>
@@ -289,7 +289,7 @@ const AdminShipmentDetailPage = () => {
 
           {/* 화물 및 운임 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-emerald-700">CARGO &amp; FARE</h2>
+            <h2 className="text-sm font-bold text-blue-700">CARGO &amp; FARE</h2>
             <p className="mt-3 text-lg font-bold text-gray-900">{shipment.cargoName}</p>
             <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
               <div><p className="text-xs text-gray-500">화물 종류</p><p className="mt-1 font-medium">{shipment.cargoTypeName || '-'}</p></div>
@@ -298,13 +298,13 @@ const AdminShipmentDetailPage = () => {
             </div>
             <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
               <span className="text-sm font-semibold text-gray-700">운임</span>
-              <strong className="text-xl text-emerald-700">{formatFare(shipment.fare)}</strong>
+              <strong className="text-xl text-blue-700">{formatFare(shipment.fare)}</strong>
             </div>
           </div>
 
           {/* 연락처 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-emerald-700">CONTACTS</h2>
+            <h2 className="text-sm font-bold text-blue-700">CONTACTS</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-gray-50 p-4">
                 <p className="text-xs text-gray-500">보내는 분</p>
@@ -321,7 +321,7 @@ const AdminShipmentDetailPage = () => {
 
           {/* 고객 요청사항 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-emerald-700">CUSTOMER REQUEST</h2>
+            <h2 className="text-sm font-bold text-blue-700">CUSTOMER REQUEST</h2>
             <p className="mt-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-800">{shipment.memo?.trim() || '요청사항 없음'}</p>
           </div>
 
@@ -329,7 +329,7 @@ const AdminShipmentDetailPage = () => {
 
           {/* 상태 변경 이력 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-emerald-700">STATUS HISTORY</h2>
+            <h2 className="text-sm font-bold text-blue-700">STATUS HISTORY</h2>
             {shipment.history?.length > 0 ? (
               <ol className="mt-4 divide-y divide-gray-100">
                 {shipment.history.map((entry) => (
@@ -352,7 +352,7 @@ const AdminShipmentDetailPage = () => {
 
           {/* 배차 기사 정보 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-emerald-700">ASSIGNED DRIVER</h2>
+            <h2 className="text-sm font-bold text-blue-700">ASSIGNED DRIVER</h2>
             {shipment.driverInfo ? (
               <div className="mt-3 grid gap-3 rounded-xl bg-gray-50 p-4 text-sm sm:grid-cols-2">
                 <div>
@@ -381,7 +381,7 @@ const AdminShipmentDetailPage = () => {
 
           {/* 결제 정보 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-sm font-bold text-emerald-700">PAYMENT</h2>
+            <h2 className="text-sm font-bold text-blue-700">PAYMENT</h2>
             {shipment.paymentInfo ? (
               <div className="mt-3 grid gap-3 rounded-xl bg-gray-50 p-4 text-sm sm:grid-cols-2">
                 <div>

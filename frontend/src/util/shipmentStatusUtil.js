@@ -3,7 +3,7 @@
 // 상태 · 전이 규칙은 docs/status.md. 화면에서는 띄어 쓰고, 고객이 알기 쉽게 접수(REQUESTED)는 '배차 대기', 취소는 '취소됨'
 export const SHIPMENT_STATUS = {
   PENDING_PAYMENT: { label: '결제 대기', badge: 'border-amber-200 bg-amber-50 text-amber-700' },
-  REQUESTED: { label: '배차 대기', badge: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+  REQUESTED: { label: '배차 대기', badge: 'border-blue-200 bg-blue-50 text-blue-700' },
   ASSIGNED: { label: '배차 완료', badge: 'border-blue-200 bg-blue-50 text-blue-700' },
   PICKED_UP: { label: '상차 완료', badge: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
   IN_TRANSIT: { label: '운송 중', badge: 'border-indigo-200 bg-indigo-50 text-indigo-700' },

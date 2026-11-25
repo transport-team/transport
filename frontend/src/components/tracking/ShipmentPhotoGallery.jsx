@@ -26,7 +26,7 @@ const ShipmentPhotoGallery = ({ shipmentId, refreshKey = 0 }) => {
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-sm font-bold text-emerald-700">상차 · 배송 증빙 사진</h2>
+      <h2 className="text-sm font-bold text-blue-700">상차 · 배송 증빙 사진</h2>
       <p className="mt-2 text-xs text-gray-500">기사가 업로드한 사진을 확인할 수 있습니다.</p>
       {loading ? (
         <p className="mt-4 text-sm text-gray-500">사진을 불러오는 중입니다...</p>
@@ -45,7 +45,7 @@ const ShipmentPhotoGallery = ({ shipmentId, refreshKey = 0 }) => {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {images.map((item) => (
                     <a key={item.id} href={`${API_SERVER_HOST}${item.url}`} target="_blank" rel="noopener noreferrer"
-                      className="overflow-hidden rounded-xl border border-gray-200 hover:border-emerald-400"
+                      className="overflow-hidden rounded-xl border border-gray-200 hover:border-blue-400"
                       title={`${title} 원본 보기`}>
                       <img src={`${API_SERVER_HOST}${item.url}`} alt={`${title} ${item.id}`}
                         loading="lazy" className="h-32 w-full object-cover" />
