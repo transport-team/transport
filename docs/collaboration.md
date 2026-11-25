@@ -41,6 +41,7 @@
 | #102 후속 | 2 → 3 | `DispatchApplicationService.closePendingApplications(shipment)` — 배송이 취소되면 대기 중인 지원을 모두 자동 마감(`NOT_SELECTED`). 결제 취소가 같은 트랜잭션에서 부른다 (팀원 1 작성, 팀원 2 리뷰, 2026-11-19) |
 | 저장소 직접 사용 정리 (11-25) | 4 → 2 | 기사 실적 · 지난 내역 · 휴무일(읽기 전용): `StatusHistoryService.getDriverCompletedTotal(driverMemberId, from, to)` · `getDriverCompletedShipments(driverMemberId, from, to)` — 기간 [from, to) 운송완료 건수 · 운임 합계 / 배송 목록(배정 기사 기준, 회원 ID), `getLastChangedAt(shipmentId, toStatus)` — 그 상태로 마지막에 바뀐 시각(`Optional`) (팀원 1이 팀원 2 몫 대신 작성, 팀원 4 리뷰) |
 | 저장소 직접 사용 정리 (11-25) | 3 → 2 | `ShipmentService.getShipmentForUpdate(shipmentId)` — 비관적 쓰기 잠금 조회(없으면 `SHIPMENT_NOT_FOUND`), 부른 쪽 트랜잭션이 끝날 때까지 잠김. 관리자 배차 취소가 쓴다 (팀원 1이 팀원 2 몫 대신 작성, 팀원 3 리뷰) |
+| 저장소 직접 사용 정리 (11-25) | 2 → 3 | `DispatchService.findActiveDispatch(shipmentId)` → 그 배송의 활성 배차 `Optional<Dispatch>`(가장 최근 배정). 배송 상세가 기사 · 차량 정보를 보여 줄 때 부른 쪽 트랜잭션 안에서 쓴다. 배송 상세의 리뷰는 이미 있는 `ReviewService.getReviewByShipment` — 리뷰 서비스가 배송 서비스를 쓰므로 `ObjectProvider`로 필요할 때 꺼낸다 (팀원 1이 팀원 3 몫 대신 작성, 팀원 2 · 4 리뷰) |
 
 다른 도메인은 위 Service 메서드로만 호출한다. 다른 사람의 Repository를 직접 쓰지 않는다. 약속이 늦어지면 데일리 스크럼에서 바로 공유한다.
 

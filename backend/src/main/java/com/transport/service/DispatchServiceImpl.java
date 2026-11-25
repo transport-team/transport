@@ -39,4 +39,9 @@ public class DispatchServiceImpl implements DispatchService {
                 .findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(shipmentId)
                 .ifPresent(Dispatch::release);
     }
+
+    @Override
+    public java.util.Optional<Dispatch> findActiveDispatch(Long shipmentId) {
+        return dispatchRepository.findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(shipmentId);
+    }
 }

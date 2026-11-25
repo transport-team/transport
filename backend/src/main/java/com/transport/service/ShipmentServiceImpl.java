@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,9 +30,7 @@ import com.transport.dto.ShipmentResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
 import com.transport.repository.CargoTypeRepository;
-import com.transport.repository.DispatchRepository;
 import com.transport.repository.PaymentRepository;
-import com.transport.repository.ReviewRepository;
 import com.transport.repository.ShipmentRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -49,8 +48,9 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final VehicleTypeService vehicleTypeService;
     private final DispatchService dispatchService;
     private final StatusHistoryService statusHistoryService;
-    private final ReviewRepository reviewRepository;
-    private final DispatchRepository dispatchRepository;
+    // 리뷰(팀원 4) — 리뷰 서비스가 배송 서비스를 쓰므로(리뷰 작성 때 배송 조회) 바로 주입하면 시작할 때 순환 의존이 된다.
+    // 그래서 필요할 때 꺼내 쓴다 (저장소 직접 사용 정리, 2026-11-25)
+    private final ObjectProvider<ReviewService> reviewServiceProvider;
 
     @Override
     @Transactional
@@ -137,6 +137,10 @@ public class ShipmentServiceImpl implements ShipmentService {
     public PageResponseDTO<ShipmentListResponseDTO> getMyShipments(
             Long memberId, PageRequestDTO pageRequestDTO, ShipmentStatus status,
             LocalDate from, LocalDate to) {
+        // 기간을 거꾸로 넣으면 400 (전에는 200에 빈 목록 — 기사 정산 조회와 같게, #108 댓글)
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT, "검색 시작일이 종료일보다 늦어요. 기간을 다시 선택해 주세요.");
+        }
         LocalDateTime fromDateTime = from == null ? null : from.atStartOfDay();
         LocalDateTime toDateTime = to == null ? null : to.plusDays(1).atStartOfDay();
         var result = shipmentRepository.findMyShipments(
@@ -162,7 +166,7 @@ public class ShipmentServiceImpl implements ShipmentService {
             throw new CustomException(ErrorCode.FORBIDDEN, "본인 배송만 조회할 수 있습니다.");
         }
 
-        var driverInfo = dispatchRepository.findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(shipmentId)
+        var driverInfo = dispatchService.findActiveDispatch(shipmentId)  // 팀원 2 약속 메서드
                 .map(ShipmentDetailResponseDTO.DriverInfoDTO::from)
                 .orElse(null);
 
@@ -174,10 +178,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .map(com.transport.dto.ShipmentStatusHistoryResponseDTO::from)
                 .toList();
 
-        // 이미 정의된 findByShipmentId를 호출하여 리뷰 엔티티를 DTO로 변환
-        var review = reviewRepository.findByShipmentId(shipmentId)
-                .map(com.transport.dto.ReviewResponseDTO::from)
-                .orElse(null);
+        // 배송의 리뷰 — 팀원 4 약속 메서드 (없으면 null, 같은 ReviewResponseDTO.from 변환)
+        var review = reviewServiceProvider.getObject().getReviewByShipment(shipmentId);
 
         return ShipmentDetailResponseDTO.from(shipment, assignedDriverMemberId, driverInfo, paymentInfo, history, review);
     }

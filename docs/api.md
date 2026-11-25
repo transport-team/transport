@@ -389,19 +389,19 @@
 | 메서드 | URL | 설명 | 권한 |
 |---|---|---|---|
 | GET | /api/cargo-types | 화물 종류 목록 | 전체 |
-| GET · POST · PUT | /api/admin/cargo-types(/{id}) | 화물 종류 관리 | ADMIN |
-| PATCH | /api/admin/cargo-types/{id}/active | 화물 종류 사용 · 숨김 { active } | ADMIN |
+| GET · POST · PUT | /api/admin/cargo-types(/{id}) | 화물 종류 관리 { name 30자 이하, extraFee, handlingNote, active } — extraFee · active는 빼거나 null이면 0원 · 사용함 | ADMIN |
+| PATCH | /api/admin/cargo-types/{id}/active | 화물 종류 사용 · 숨김 { active } — active가 빠지거나 null이면 400 (차종과 같게) | ADMIN |
 | POST | /api/fares/estimate | 예상 운임 → 좌표 · 거리 · 추천 차종 · 운임 내역 (표준 운임 API) | CUSTOMER |
 | POST | /api/shipments | 신청 → 결제대기 + 결제 준비(orderId · amount) | CUSTOMER |
 | POST | /api/payments/confirm | 결제 승인 { paymentKey, orderId, amount } → 접수 | CUSTOMER |
 | POST | /api/payments/{shipmentId}/retry | 결제 재시도 (새 orderId) — 본인 배송 · 결제 대기 · 신청 30분 안만 | CUSTOMER |
 | POST | /api/local/payments/skip/{shipmentId} | 개발용 결제 건너뛰기 → PAID · 접수 (local 프로필만, 본인 배송) | CUSTOMER |
-| GET | /api/shipments/my | 내 배송 목록 (page, status, from, to) | CUSTOMER |
+| GET | /api/shipments/my | 내 배송 목록 (page, status, from, to) — 기간을 거꾸로(from > to) 넣으면 400 `INVALID_INPUT` | CUSTOMER |
 | GET | /api/shipments/{id} | 상세 (본인 · 배정 기사 · 관리자) | 로그인 |
 | POST | /api/payments/{shipmentId}/cancel | 고객 취소 { cancelReason } → 결제 완료 건은 자동 환불 (배차 전만, 위 '배송 취소 · 환불') | CUSTOMER |
 | POST | /api/admin/shipments/{id}/cancel | 관리자 취소 { cancelReason } — 상차 전(배차 완료 포함), 결제 건은 자동 환불 · 배차 해제 · 고객 · 기사 알림 (위 '관리자 취소') | ADMIN |
-| GET | /api/admin/shipments | 전체 배송 검색 | ADMIN |
-| GET | /api/admin/payments | 결제 · 환불 내역 | ADMIN |
+| GET | /api/admin/shipments | 전체 배송 검색 (status, from, to, keyword — 배송 번호 · 화물 · 주소 · 고객 · 수령인 · 배정 기사 이름 · 기사 번호) — 기간을 거꾸로(from > to) 넣으면 400 `INVALID_INPUT` | ADMIN |
+| GET | /api/admin/payments | 결제 · 환불 내역 (status = READY · PAID · CANCELED · EXPIRED, from, to, keyword) — 기간을 거꾸로(from > to) 넣으면 400 `INVALID_INPUT` | ADMIN |
 
 `/api/shipments/calculate-fare`는 사용하지 않으며, 운임 미리보기와 배송 신청 내부 재계산 모두 `FareService`를 통해 처리합니다. 카카오 주소 검색 실패는 `400 ADDRESS_NOT_FOUND`로 반환하고, 주소 좌표를 확보한 뒤 길찾기만 실패하면 하버사인 직선거리 × 1.3으로 대체 계산합니다. 대체 경로의 `durationMin`은 `null`입니다.
 

@@ -112,4 +112,15 @@ class DispatchServiceImplTest {
         verify(dispatchRepository)
                 .findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(10L);
     }
+
+    @Test
+    @DisplayName("배송의 활성 배차 — 있으면 그 배차, 없으면 빈 값 (배송 상세가 저장소 대신 부름, 11-25)")
+    void findActiveDispatch_returnsLatestActiveOrEmpty() {
+        Dispatch active = Dispatch.builder().id(7L).active(true).assignedAt(LocalDateTime.now()).build();
+        when(dispatchRepository.findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(10L)).thenReturn(Optional.of(active));
+        when(dispatchRepository.findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(11L)).thenReturn(Optional.empty());
+
+        assertThat(dispatchService.findActiveDispatch(10L)).containsSame(active);
+        assertThat(dispatchService.findActiveDispatch(11L)).isEmpty();
+    }
 }
