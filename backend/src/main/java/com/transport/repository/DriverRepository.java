@@ -1,5 +1,6 @@
 package com.transport.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -24,4 +25,8 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
 			+ " where (:status is null or d.status = :status)"
 			+ " and (:keyword is null or m.name like concat('%', :keyword, '%') or m.email like concat('%', :keyword, '%'))")
 	Page<Driver> search(@Param("status") DriverStatus status, @Param("keyword") String keyword, Pageable pageable);
+
+	// 모든 기사 + 회원 정보 한 번에 (관리자 월 정산 목록 — 기사 이름 · 이메일을 행마다 따로 조회하던 것 정리, 11-25)
+	@Query("select d from Driver d join fetch d.member")
+	List<Driver> findAllWithMember();
 }

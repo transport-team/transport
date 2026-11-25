@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,10 +62,16 @@ public class AdminSettlementServiceImpl implements AdminSettlementService {
         boolean closed = period != null;
         List<AdminSettlementMonthResponseDTO.Item> items = new ArrayList<>();
 
-        for (Driver driver : driverRepository.findAll()) {
-            Totals current = readCompleted(driver, target);
-            Settlement stored = settlementRepository
-                    .findByDriver_IdAndSettleMonth(driver.getId(), month).orElse(null);
+        // 기사 · 운송완료 운임 · 정산 행을 한 번씩만 읽고 기사별로 나눈다 (기사마다 3번씩 조회하던 N+1 정리, 11-25)
+        Map<Long, Totals> completedByDriver = readCompletedByDriver(target);
+        Map<Long, Settlement> storedByDriver = new HashMap<>();
+        for (Settlement settlement : settlementRepository.findBySettleMonth(month)) {
+            storedByDriver.putIfAbsent(settlement.getDriver().getId(), settlement);
+        }
+
+        for (Driver driver : driverRepository.findAllWithMember()) {
+            Totals current = completedByDriver.getOrDefault(driver.getId(), EMPTY_TOTALS);
+            Settlement stored = storedByDriver.get(driver.getId());
             // 운송 실적도 기존 정산 기록도 없는 기사는 목록에 넣지 않는다.
             if (current.count() == 0 && stored == null) continue;
             // 미리 계산해 두었던 초안은 마감 전에는 확정 금액으로 보여주지 않는다.
@@ -262,13 +269,36 @@ public class AdminSettlementServiceImpl implements AdminSettlementService {
         Map<Long, FareLine> unique = new LinkedHashMap<>();
         if (records != null) {
             for (var item : records) {
-                if (item.getShipmentId() == null || item.getFare() == null || item.getCompletedAt() == null) {
-                    throw new CustomException(ErrorCode.INVALID_INPUT, "배송 완료 명세에 누락된 값이 있습니다.");
-                }
-                unique.putIfAbsent(item.getShipmentId(),
-                        new FareLine(item.getShipmentId(), item.getFare(), item.getCompletedAt()));
+                addLine(unique, item.getShipmentId(), item.getFare(), item.getCompletedAt());
             }
         }
+        return toTotals(unique);
+    }
+
+    // 모든 기사의 그 달 운송완료를 한 번에 읽어 기사별 합계로 (readCompleted와 같은 규칙: 배송 중복 제거 · 빈 값이면 오류)
+    private Map<Long, Totals> readCompletedByDriver(YearMonth month) {
+        var records = fareRepository.findCompletedForAllDrivers(ShipmentStatus.COMPLETED,
+                month.atDay(1).atStartOfDay(), month.plusMonths(1).atDay(1).atStartOfDay());
+        Map<Long, Map<Long, FareLine>> linesByDriver = new HashMap<>();
+        if (records != null) {
+            for (var item : records) {
+                addLine(linesByDriver.computeIfAbsent(item.getDriverId(), id -> new LinkedHashMap<>()),
+                        item.getShipmentId(), item.getFare(), item.getCompletedAt());
+            }
+        }
+        Map<Long, Totals> totals = new HashMap<>();
+        linesByDriver.forEach((driverId, unique) -> totals.put(driverId, toTotals(unique)));
+        return totals;
+    }
+
+    private void addLine(Map<Long, FareLine> unique, Long shipmentId, Integer fare, LocalDateTime completedAt) {
+        if (shipmentId == null || fare == null || completedAt == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT, "배송 완료 명세에 누락된 값이 있습니다.");
+        }
+        unique.putIfAbsent(shipmentId, new FareLine(shipmentId, fare, completedAt));
+    }
+
+    private Totals toTotals(Map<Long, FareLine> unique) {
         long sum = unique.values().stream().mapToLong(FareLine::fare).sum();
         return new Totals(unique.size(), sum, List.copyOf(unique.values()));
     }
@@ -333,5 +363,6 @@ public class AdminSettlementServiceImpl implements AdminSettlementService {
 
     private record FareLine(Long shipmentId, int fare, LocalDateTime completedAt) { }
     private record Totals(long count, long fare, List<FareLine> lines) { }
+    private static final Totals EMPTY_TOTALS = new Totals(0, 0, List.of());
     private record ClosePlan(Driver driver, Settlement stored, Totals totals, int rate) { }
 }

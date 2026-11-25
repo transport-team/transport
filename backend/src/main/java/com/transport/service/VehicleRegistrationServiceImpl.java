@@ -148,7 +148,7 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
     public List<VehicleRegistrationResponseDTO> getPendingRequests() {
 
         return requestRepository
-                .findByStatusOrderByCreatedAtDesc(VehicleRegistrationStatus.PENDING)
+                .findByStatusOrderByCreatedAtDescIdDesc(VehicleRegistrationStatus.PENDING)
                 .stream()
                 .map(request -> VehicleRegistrationResponseDTO.builder()
                         .id(request.getId())
