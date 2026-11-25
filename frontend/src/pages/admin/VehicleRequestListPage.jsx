@@ -8,6 +8,16 @@ import { useOutletContext } from 'react-router-dom'
 import Badge from '../../components/common/Badge'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import useConfirm from '../../hooks/useConfirm'
+import useUrlFilters from '../../hooks/useUrlFilters'
+
+// 주소의 필터 값 확인 (?progress=PENDING&result=APPROVED&date=2026-11-25) — 모르는 값은 전체로
+const REQUEST_FILTERS = {
+  progress: ['PENDING', 'PROCESSED'],
+  result: ['APPROVED', 'REJECTED', 'WITHDRAWN'],
+  // 있는 날짜만 (2026-13-99 같은 값은 전체로) — 날짜로 바꿨다가 다시 글자로 바꿔 같으면 있는 날짜
+  date: (value) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value,
+}
 
 const formatDateTime = (value) => value ? value.replace('T', ' ').slice(0, 16) : '-'
 const STATUS_LABEL = { PENDING: '처리 전', APPROVED: '승인', REJECTED: '거절', WITHDRAWN: '기사 철회' }
@@ -25,7 +35,7 @@ const VehicleRequestListPage = () => {
     const [rejectionReason, setRejectionReason] = useState('')
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
-    const [filters, setFilters] = useState({ progress: '', result: '', date: '' })
+    const [filters, setFilter, resetFilters] = useUrlFilters(REQUEST_FILTERS)  // 필터는 주소에 남긴다 (새로고침 · 뒤로 가기에도 그대로)
 
     // 전체 등록 신청 목록 조회 (처리 완료 건도 남겨두고 신청일 최신순 정렬)
     const loadRequests = () =>
@@ -113,7 +123,7 @@ const VehicleRequestListPage = () => {
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:grid-cols-4">
                 <label className="text-xs text-gray-600">
                     처리 상태
-                    <select value={filters.progress} onChange={(e) => setFilters((p) => ({ ...p, progress: e.target.value }))}
+                    <select value={filters.progress} onChange={(e) => setFilter('progress', e.target.value)}
                         className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
                         <option value="">전체</option>
                         <option value="PENDING">처리 전</option>
@@ -122,20 +132,21 @@ const VehicleRequestListPage = () => {
                 </label>
                 <label className="text-xs text-gray-600">
                     처리 결과
-                    <select value={filters.result} onChange={(e) => setFilters((p) => ({ ...p, result: e.target.value }))}
+                    <select value={filters.result} onChange={(e) => setFilter('result', e.target.value)}
                         className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm">
                         <option value="">전체</option>
                         <option value="APPROVED">승인</option>
                         <option value="REJECTED">거절</option>
+                        <option value="WITHDRAWN">기사 철회</option>
                     </select>
                 </label>
                 <label className="text-xs text-gray-600">
                     신청일
-                    <input type="date" value={filters.date} onChange={(e) => setFilters((p) => ({ ...p, date: e.target.value }))}
+                    <input type="date" value={filters.date} onChange={(e) => setFilter('date', e.target.value)}
                         className="mt-1 block w-full rounded-lg border border-gray-200 px-2 py-2 text-sm" />
                 </label>
                 <div className="flex items-end">
-                    <button type="button" onClick={() => setFilters({ progress: '', result: '', date: '' })}
+                    <button type="button" onClick={resetFilters}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">
                         필터 초기화
                     </button>

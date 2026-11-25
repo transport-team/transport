@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   getAdminSettlementDifferences,
   getAdminMonthlySettlements,
@@ -40,6 +41,27 @@ const safeCsvCell = (value) => {
   return `"${escaped.replace(/"/g, '""')}"`
 }
 
+// 주소의 조건 (?month=2026-10&status=PAID&keyword=김&page=2) — 모르는 값 · 미래 달은 기본값으로 (11-25, 팀원 1 목록 #152와 같은 방식)
+const STATUS_FILTERS = ['NOT_CREATED', 'PENDING', 'PAID', 'LATE']
+const readQuery = (params) => {
+  const month = params.get('month') ?? ''
+  const status = params.get('status') ?? ''
+  const page = Math.floor(Number(params.get('page')))
+  return {
+    month: /^\d{4}-(0[1-9]|1[0-2])$/.test(month) && month <= THIS_MONTH ? month : THIS_MONTH,
+    status: STATUS_FILTERS.includes(status) ? status : '',
+    keyword: params.get('keyword') ?? '',
+    page: page >= 1 ? page : 1,
+  }
+}
+// 기본값은 빼고 주소에 남긴다 (이번 달 · 전체 상태 · 빈 검색어 · 1쪽)
+const toUrlParams = ({ month, status, keyword, page }) => ({
+  ...(month !== THIS_MONTH && { month }),
+  ...(status && { status }),
+  ...(keyword && { keyword }),
+  ...(page > 1 && { page: String(page) }),
+})
+
 const STATUS = {
   NOT_CREATED: { label: '정산 전', className: 'bg-gray-100 text-gray-600' },
   PENDING: { label: '지급 대기', className: 'bg-amber-50 text-amber-700' },
@@ -48,18 +70,24 @@ const STATUS = {
 }
 
 const AdminSettlementPage = () => {
-  const [month, setMonth] = useState(THIS_MONTH)
+  // 정산 월 · 상태 · 검색어 · 쪽은 주소에 — 새로고침 · 뒤로 가기에도 그대로 (그래프 기준 월 · 운임/수수료 전환은 보기 설정이라 화면에만)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryString = searchParams.toString()
+  const query = useMemo(() => readQuery(new URLSearchParams(queryString)), [queryString])
+  const { month, status, keyword, page } = query
+  // 월 · 쪽 이동은 기록을 쌓고(뒤로 가기로 돌아옴), 상태 · 검색어 입력은 주소만 바꾼다(replace)
+  const setQuery = (next, options) => setSearchParams(toUrlParams({ ...query, ...next }), options)
   const [graphMonth, setGraphMonth] = useState(THIS_MONTH)
   const [chartMetric, setChartMetric] = useState('fare')
-  const [status, setStatus] = useState('')
-  const [keyword, setKeyword] = useState('')
-  const [page, setPage] = useState(1)
   const [reloadKey, setReloadKey] = useState(0)
-  const [data, setData] = useState(null)
+  // 불러온 정산 내역을 '월#다시 불러오기 번호'와 함께 둔다 — 지금 조건과 다르면 불러오는 중 (뒤로 가기에도 이전 달이 남지 않게)
+  const [fetchState, setFetchState] = useState({ key: null, data: null, error: '' })
+  const loading = fetchState.key !== `${month}#${reloadKey}`
+  const data = loading ? null : fetchState.data
+  const listError = loading ? '' : fetchState.error
   const [trend, setTrend] = useState([])
   const [trendError, setTrendError] = useState('')
   const [trendLoading, setTrendLoading] = useState(true)
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   // 지급 완료 기록 창 (송금 확인 메모 입력 + 확인을 한 창에서)
   const [payTarget, setPayTarget] = useState(null)
@@ -76,18 +104,12 @@ const AdminSettlementPage = () => {
   // 정산 내역과 그래프는 서로 다른 기준월로 조회한다.
   useEffect(() => {
     let active = true
+    const key = `${month}#${reloadKey}`
     getAdminMonthlySettlements(month)
-      .then((result) => {
-        if (!active) return
-        setData(result)
-        setError('')
-      })
+      .then((result) => { if (active) setFetchState({ key, data: result, error: '' }) })
       .catch((err) => {
-        if (!active) return
-        setData(null)
-        setError(err?.response?.data?.message ?? '정산 내역을 불러오지 못했습니다.')
+        if (active) setFetchState({ key, data: null, error: err?.response?.data?.message ?? '정산 내역을 불러오지 못했습니다.' })
       })
-      .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [month, reloadKey])
 
@@ -110,14 +132,11 @@ const AdminSettlementPage = () => {
 
   const selectMonth = (next) => {
     if (next === month || next > THIS_MONTH || loading || saving) return
-    setMonth(next)
-    setPage(1)
-    setData(null)
+    setQuery({ month: next, page: 1 })
     setError('')
     setMessage('')
     setDifference(null)
     setDifferenceKey(null)
-    setLoading(true)
   }
 
   const moveMonth = (amount) => selectMonth(changeMonth(month, amount))
@@ -133,7 +152,6 @@ const AdminSettlementPage = () => {
   const reload = () => {
     setDifference(null)
     setDifferenceKey(null)
-    setLoading(true)
     setTrendLoading(true)
     setReloadKey((value) => value + 1)
   }
@@ -147,7 +165,11 @@ const AdminSettlementPage = () => {
     )
   }, [data, keyword, status])
   const totalPages = Math.ceil(rows.length / PAGE_SIZE)
-  const visibleRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  // 주소의 쪽이 끝 쪽보다 크면(?page=99) 끝 쪽을 보여 준다
+  const currentPage = Math.min(page, Math.max(totalPages, 1))
+  const visibleRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  // 차이 상세는 그 달 것만 (뒤로 가기로 달이 바뀌면 닫힌 것으로)
+  const showDifference = differenceKey?.startsWith(`${month}:`)
   const paymentAvailable = koreanToday() >= scheduledPayDate(month)
   const hasLate = (data?.items ?? []).some((item) => item.status === 'LATE' || item.changedSinceDraft)
 
@@ -334,7 +356,7 @@ const AdminSettlementPage = () => {
         )}
       </div>
 
-      {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+      {(error || listError) && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error || listError}</div>}
       {message && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{message}</div>}
       {hasLate && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">마감 후 완료된 과거 운송이나 기존 지급 내역과의 차이가 발견됐습니다. 확정 금액은 유지되며, 이 건은 별도로 확인해야 합니다.</div>}
 
@@ -396,14 +418,14 @@ const AdminSettlementPage = () => {
             <p className="mt-1 text-xs text-gray-500">조회 {rows.length}명 · {month === THIS_MONTH ? '이번 달 실적은 계속 업데이트됩니다.' : data?.closed ? '마감 완료된 금액은 변경되지 않습니다.' : '정산 마감 전입니다.'}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1) }} aria-label="정산 상태" className={INPUT}>
+            <select value={status} onChange={(event) => setQuery({ status: event.target.value, page: 1 }, { replace: true })} aria-label="정산 상태" className={INPUT}>
               <option value="">전체 상태</option>
               <option value="NOT_CREATED">정산 전</option>
               <option value="PENDING">지급 대기</option>
               <option value="PAID">지급 완료</option>
               <option value="LATE">마감 후 실적</option>
             </select>
-            <input value={keyword} onChange={(event) => { setKeyword(event.target.value); setPage(1) }}
+            <input value={keyword} onChange={(event) => setQuery({ keyword: event.target.value, page: 1 }, { replace: true })}
               placeholder="기사 이름 · 이메일" aria-label="기사 검색" className={INPUT} />
             <button type="button" onClick={exportCsv} disabled={loading || rows.length === 0}
               className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40">
@@ -511,7 +533,7 @@ const AdminSettlementPage = () => {
             </div>
           </>}
         </div>
-        {differenceKey && <div className="border-t border-red-100 bg-red-50/60 p-5 text-sm text-gray-700 sm:p-6">
+        {showDifference && <div className="border-t border-red-100 bg-red-50/60 p-5 text-sm text-gray-700 sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-bold text-gray-900">마감 후 실적 차이 상세</h3>
             <button type="button" onClick={() => { setDifferenceKey(null); setDifference(null) }}
@@ -535,7 +557,7 @@ const AdminSettlementPage = () => {
             </>}
         </div>}
       </div>
-      {!loading && totalPages > 1 && <Pagination page={page} totalPages={totalPages} onMove={setPage} />}
+      {!loading && totalPages > 1 && <Pagination page={currentPage} totalPages={totalPages} onMove={(next) => setQuery({ page: next })} />}
       <p className="text-xs leading-5 text-gray-500">정산 마감 후에는 기존 금액을 다시 계산하지 않습니다. 나중에 발견된 과거 배송 실적은 별도 확인이 필요합니다. 지급 완료 기록은 실제 계좌이체가 아닌 관리자 확인 기록이며, 해당 월의 다음 달 5일 이후에만 허용됩니다. 실제 지급 예정일은 팀 정책 확정이 필요합니다. 이미 확정된 과거 정산의 수수료율은 당시 값을 유지합니다.</p>
 
       {/* 지급 완료 기록 — 실제 송금 뒤 확인 메모를 남긴다 (송금을 실행하지는 않음) */}
