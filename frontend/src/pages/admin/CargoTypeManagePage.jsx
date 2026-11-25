@@ -15,6 +15,7 @@ const CargoTypeManagePage = () => {
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
+  const [listError, setListError] = useState('')  // 목록에서 사용 여부를 바꾸다 실패한 문구 (표 바로 위에)
 
   const loading = fetchState.resolvedKey !== refreshCount
 
@@ -86,11 +87,13 @@ const CargoTypeManagePage = () => {
   }
 
   const handleToggleActive = async (item) => {
+    setListError('')
     try {
       await changeAdminCargoTypeActive(item.id, !item.active)
       setRefreshCount((c) => c + 1)
     } catch (err) {
-      alert(err.response?.data?.message || '상태 변경에 실패했습니다.')
+      // alert() 대신 표 바로 위에 (#143 화면 점검표)
+      setListError(err.response?.data?.message || `${item.name}의 사용 여부를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.`)
     }
   }
 
@@ -183,10 +186,13 @@ const CargoTypeManagePage = () => {
 
       {/* 목록 테이블 */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs">
+        {listError && <p role="alert" className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{listError}</p>}
         {loading ? (
           <div className="p-10 text-center text-sm text-gray-500">화물 유형 목록을 불러오는 중입니다...</div>
         ) : fetchState.error ? (
           <div className="p-8 text-center text-sm font-semibold text-red-600">{fetchState.error}</div>
+        ) : fetchState.items.length === 0 ? (
+          <div className="p-10 text-center text-sm text-gray-500">등록된 화물 종류가 없어요. 위에서 새 화물 종류를 등록해 주세요.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

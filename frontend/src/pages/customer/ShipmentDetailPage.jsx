@@ -366,13 +366,15 @@ const ShipmentDetailPage = () => {
         {actionError && <p role="alert" className="mt-3 text-sm text-red-600">{actionError}</p>}
       </Modal>
 
-      {cancelModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-5">
-          <form onSubmit={handleCancelSubmit} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900">
-              {shipment.status === 'REQUESTED' ? '배송 취소 및 결제 환불' : '배송 주문 취소'}
-            </h2>
-            <p className="mt-1 text-xs text-gray-500">
+      {/* 배송 취소 — 공통 Modal (직접 만든 창이던 것, #143). Esc · 바깥 클릭으로 닫히고, 처리 중에는 닫지 않는다 */}
+      <Modal
+        open={cancelModalOpen}
+        onClose={() => { if (!actionLoading) setCancelModalOpen(false) }}
+        title={shipment.status === 'REQUESTED' ? '배송 취소 및 결제 환불' : '배송 주문 취소'}
+        size="sm"
+      >
+          <form onSubmit={handleCancelSubmit}>
+            <p className="text-xs text-gray-500">
               {shipment.status === 'REQUESTED'
                 ? '취소 시 결제된 운임 전액이 환불되며 기사 배차 요청이 마감됩니다.'
                 : '결제 대기 주문을 취소합니다.'}
@@ -387,6 +389,8 @@ const ShipmentDetailPage = () => {
                 className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
               />
             </label>
+            {/* 취소 실패 문구를 창 안에도 (창 뒤 페이지 문구는 가려져 보이지 않았다) */}
+            {actionError && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
             <div className="mt-5 flex gap-2.5">
               <button
                 type="button"
@@ -405,8 +409,7 @@ const ShipmentDetailPage = () => {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </Modal>
     </section>
   )
 }

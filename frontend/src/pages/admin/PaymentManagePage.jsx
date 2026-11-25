@@ -1,24 +1,13 @@
 import { useEffect, useState } from 'react'
 import { searchAdminPayments } from '../../api/adminTransportApi'
 import Pagination from '../../components/common/Pagination'
+import { PAYMENT_STATUS_VALUES, paymentStatusBadge, paymentStatusLabel } from '../../util/paymentStatusUtil'
 
+// 결제 상태 필터 — 서버 PaymentStatus 값 그대로 (전에는 서버에 없는 PENDING · FAILED를 보내 400, util/paymentStatusUtil.js)
 const PAYMENT_STATUS_OPTIONS = [
   { value: '', label: '전체 결제상태' },
-  { value: 'PENDING', label: '결제 대기' },
-  { value: 'PAID', label: '결제 완료' },
-  { value: 'CANCELED', label: '결제 취소/환불' },
-  { value: 'FAILED', label: '결제 실패' },
+  ...PAYMENT_STATUS_VALUES.map((value) => ({ value, label: paymentStatusLabel(value) })),
 ]
-
-const PAYMENT_BADGE = {
-  PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
-  PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  CANCELED: 'bg-red-50 text-red-600 border-red-200',
-  FAILED: 'bg-gray-100 text-gray-600 border-gray-200',
-}
-
-const getPaymentLabel = (status) =>
-  PAYMENT_STATUS_OPTIONS.find((opt) => opt.value === status)?.label || status
 
 const formatDateTime = (value) => (value ? value.replace('T', ' ').slice(0, 16) : '-')
 
@@ -167,8 +156,8 @@ const PaymentManagePage = () => {
                       {item.orderId}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full border px-2.5 py-0.5 font-bold ${PAYMENT_BADGE[item.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                        {getPaymentLabel(item.status)}
+                      <span className={`inline-block rounded-full border px-2.5 py-0.5 font-bold ${paymentStatusBadge(item.status)}`}>
+                        {paymentStatusLabel(item.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
