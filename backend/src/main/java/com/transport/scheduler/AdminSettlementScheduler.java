@@ -1,4 +1,4 @@
-package com.transport.service;
+package com.transport.scheduler;
 
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -9,6 +9,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import com.transport.service.AdminSettlementService;
 
 // 서울 시각 매일 00:05 지난달 마감을 재시도한다.
 // 1일에 자동 확정하며, 서버가 꺼졌거나 수수료 미설정 시 다음 실행에서 재시도한다.

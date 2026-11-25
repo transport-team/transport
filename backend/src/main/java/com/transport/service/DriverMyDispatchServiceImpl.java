@@ -22,7 +22,6 @@ import com.transport.exception.ErrorCode;
 import com.transport.repository.DispatchApplicationRepository;
 import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
-import com.transport.repository.ShipmentStatusHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,7 +33,7 @@ public class DriverMyDispatchServiceImpl implements DriverMyDispatchService {
     private final DriverRepository driverRepository;
     private final DispatchRepository dispatchRepository;
     private final DispatchApplicationRepository applicationRepository;
-    private final ShipmentStatusHistoryRepository statusHistoryRepository;
+    private final StatusHistoryService statusHistoryService;  // 팀원 4 약속 메서드 (운송완료 시각)
 
     // 배차 확정 후 배송 완료 전까지의 상태
     private static final Set<ShipmentStatus> ACTIVE_STATUSES = EnumSet.of(
@@ -189,10 +188,8 @@ public class DriverMyDispatchServiceImpl implements DriverMyDispatchService {
         if (application.getStatus() == DispatchApplicationStatus.SELECTED
                 && shipment.getStatus() == ShipmentStatus.COMPLETED) {
 
-            completedAt = statusHistoryRepository
-                    .findFirstByShipment_IdAndToStatusOrderByChangedAtDesc(
-                            shipment.getId(), ShipmentStatus.COMPLETED)
-                    .map(history -> history.getChangedAt())
+            completedAt = statusHistoryService
+                    .getLastChangedAt(shipment.getId(), ShipmentStatus.COMPLETED)
                     .orElse(null);
         }
 

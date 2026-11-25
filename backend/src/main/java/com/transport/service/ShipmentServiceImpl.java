@@ -201,6 +201,15 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
     }
 
+    // 비관적 쓰기 잠금 조회 (관리자 배차 취소 — 동시에 취소 · 상태 변경되는 것을 막는다)
+    // 클래스 기본값이 읽기 전용이라 쓰기 트랜잭션으로 바꾼다 (부른 쪽 트랜잭션에 합류)
+    @Override
+    @Transactional
+    public Shipment getShipmentForUpdate(Long shipmentId) {
+        return shipmentRepository.findByIdForUpdate(shipmentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SHIPMENT_NOT_FOUND));
+    }
+
     // 기사: 배차 대기 중인 운송 요청 목록 조회
     @Override
     public List<Shipment> getRequestedShipments() {

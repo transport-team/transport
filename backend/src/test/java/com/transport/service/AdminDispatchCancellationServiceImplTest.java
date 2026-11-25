@@ -26,12 +26,11 @@ import com.transport.domain.enums.NotificationType;
 import com.transport.domain.enums.ShipmentStatus;
 import com.transport.exception.CustomException;
 import com.transport.repository.DispatchRepository;
-import com.transport.repository.ShipmentRepository;
 
 @ExtendWith(MockitoExtension.class)
 class AdminDispatchCancellationServiceImplTest {
 
-    @Mock private ShipmentRepository shipmentRepository;
+    @Mock private ShipmentService shipmentService;
     @Mock private DispatchRepository dispatchRepository;
     @Mock private StatusHistoryService statusHistoryService;
     @Mock private NotificationService notificationService;
@@ -46,7 +45,7 @@ class AdminDispatchCancellationServiceImplTest {
                 .driver(Driver.builder().member(driverMember).build())
                 .active(true).assignedAt(LocalDateTime.now()).build();
 
-        when(shipmentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(shipment));
+        when(shipmentService.getShipmentForUpdate(10L)).thenReturn(shipment);
         when(dispatchRepository.findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(10L))
                 .thenReturn(Optional.of(dispatch));
         when(dispatchRepository.deactivateActiveDispatches(eq(10L), any(LocalDateTime.class))).thenReturn(1);
@@ -64,7 +63,7 @@ class AdminDispatchCancellationServiceImplTest {
     @Test
     void cannotCancelAfterPickup() {
         Shipment shipment = Shipment.builder().id(10L).status(ShipmentStatus.PICKED_UP).build();
-        when(shipmentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(shipment));
+        when(shipmentService.getShipmentForUpdate(10L)).thenReturn(shipment);
 
         assertThatThrownBy(() -> service.cancelDispatch(10L, 7L, "배차 해제"))
                 .isInstanceOf(CustomException.class);
@@ -75,13 +74,13 @@ class AdminDispatchCancellationServiceImplTest {
     void cannotCancelWithoutReason() {
         assertThatThrownBy(() -> service.cancelDispatch(10L, 7L, "  "))
                 .isInstanceOf(CustomException.class);
-        verifyNoInteractions(shipmentRepository, dispatchRepository);
+        verifyNoInteractions(shipmentService, dispatchRepository);
     }
 
     @Test
     void cannotCancelWithoutActiveDispatch() {
         Shipment shipment = Shipment.builder().id(10L).status(ShipmentStatus.ASSIGNED).build();
-        when(shipmentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(shipment));
+        when(shipmentService.getShipmentForUpdate(10L)).thenReturn(shipment);
         when(dispatchRepository.findFirstByShipment_IdAndActiveTrueOrderByAssignedAtDesc(10L))
                 .thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.cancelDispatch(10L, 7L, "배차 해제"))

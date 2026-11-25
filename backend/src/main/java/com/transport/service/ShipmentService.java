@@ -29,6 +29,10 @@ public interface ShipmentService {
     // 배차 서비스에서 사용할 배송 단건 조회
     Shipment getShipment(Long shipmentId);
 
+    // 배송 단건을 비관적 쓰기 잠금으로 조회 — 호출한 트랜잭션이 끝날 때까지 다른 변경을 막는다
+    // (팀원 2 관리자 배차 취소가 저장소 대신 부름, 2026-11-25). 없으면 SHIPMENT_NOT_FOUND
+    Shipment getShipmentForUpdate(Long shipmentId);
+
     // 기사: 배차 대기 중인 운송 요청 목록 조회
     List<Shipment> getRequestedShipments();
 }

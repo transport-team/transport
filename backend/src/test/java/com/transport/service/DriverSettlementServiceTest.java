@@ -2,7 +2,6 @@ package com.transport.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -21,7 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.transport.domain.Driver;
 import com.transport.domain.Settlement;
 import com.transport.domain.enums.SettlementStatus;
-import com.transport.domain.enums.ShipmentStatus;
+import com.transport.dto.DriverCompletedShipmentDTO;
+import com.transport.dto.DriverCompletedTotalDTO;
 import com.transport.dto.DriverReviewSummaryResponseDTO;
 import com.transport.dto.ReviewResponseDTO;
 import com.transport.exception.CustomException;
@@ -29,14 +29,13 @@ import com.transport.exception.ErrorCode;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.SettlementPeriodRepository;
 import com.transport.repository.SettlementRepository;
-import com.transport.repository.ShipmentStatusHistoryRepository;
 
 // 기사 운임 조회 서비스: 날짜 계산, DTO 매핑, 입력값 검증 (DB 연결 없이 확인)
 @ExtendWith(MockitoExtension.class)
 class DriverSettlementServiceTest {
 
     @Mock
-    private ShipmentStatusHistoryRepository historyRepository;
+    private StatusHistoryService statusHistoryService;
 
     @Mock
     private DriverRepository driverRepository;
@@ -70,7 +69,7 @@ class DriverSettlementServiceTest {
         assertThat(result.averageRating()).isEqualTo(4.0);
         assertThat(result.reviewCount()).isEqualTo(2);
         assertThat(result.reviews()).extracting(ReviewResponseDTO::getCustomerName).containsExactly("김*수", "이*");
-        verifyNoInteractions(historyRepository);
+        verifyNoInteractions(statusHistoryService);
     }
 
     @Test
@@ -98,11 +97,9 @@ class DriverSettlementServiceTest {
 
     @Test
     void monthlySummaryUsesFirstDayAndNextMonthFirstDay() {
-        var total = mock(ShipmentStatusHistoryRepository.DriverMonthlyTotal.class);
-        when(total.getCompletedCount()).thenReturn(2L);
-        when(total.getTotalFare()).thenReturn(150_000L);
-        when(historyRepository.findDriverMonthlyTotal(
-                7L, ShipmentStatus.COMPLETED,
+        var total = new DriverCompletedTotalDTO(2L, 150_000L);
+        when(statusHistoryService.getDriverCompletedTotal(
+                7L,
                 LocalDateTime.of(2026, 11, 1, 0, 0),
                 LocalDateTime.of(2026, 12, 1, 0, 0)))
                 .thenReturn(total);
@@ -120,11 +117,9 @@ class DriverSettlementServiceTest {
     // ===== 그 달 정산 상태 (마감 전 · 지급 대기 · 지급 완료 · 정산 없음) =====
 
     private void stubOctober(long count, long fare) {
-        var total = mock(ShipmentStatusHistoryRepository.DriverMonthlyTotal.class);
-        when(total.getCompletedCount()).thenReturn(count);
-        when(total.getTotalFare()).thenReturn(fare);
-        when(historyRepository.findDriverMonthlyTotal(
-                7L, ShipmentStatus.COMPLETED,
+        var total = new DriverCompletedTotalDTO(count, fare);
+        when(statusHistoryService.getDriverCompletedTotal(
+                7L,
                 LocalDateTime.of(2026, 10, 1, 0, 0),
                 LocalDateTime.of(2026, 11, 1, 0, 0)))
                 .thenReturn(total);
@@ -202,14 +197,10 @@ class DriverSettlementServiceTest {
 
     @Test
     void monthlyItemsMapsFareAndCompletionTime() {
-        var item = mock(ShipmentStatusHistoryRepository.DriverMonthlyFareItem.class);
         LocalDateTime completedAt = LocalDateTime.of(2026, 11, 19, 12, 30);
-        when(item.getShipmentId()).thenReturn(12L);
-        when(item.getCargoName()).thenReturn("가전제품");
-        when(item.getFare()).thenReturn(85_000);
-        when(item.getCompletedAt()).thenReturn(completedAt);
-        when(historyRepository.findDriverMonthlyFareItems(
-                7L, ShipmentStatus.COMPLETED,
+        var item = new DriverCompletedShipmentDTO(12L, "가전제품", 85_000, completedAt);
+        when(statusHistoryService.getDriverCompletedShipments(
+                7L,
                 LocalDateTime.of(2026, 11, 1, 0, 0),
                 LocalDateTime.of(2026, 12, 1, 0, 0)))
                 .thenReturn(List.of(item));
@@ -227,11 +218,9 @@ class DriverSettlementServiceTest {
     void rangeSummaryIncludesEndDate() {
         LocalDate from = LocalDate.of(2026, 11, 1);
         LocalDate to = LocalDate.of(2026, 11, 19);
-        var total = mock(ShipmentStatusHistoryRepository.DriverMonthlyTotal.class);
-        when(total.getCompletedCount()).thenReturn(3L);
-        when(total.getTotalFare()).thenReturn(240_000L);
-        when(historyRepository.findDriverMonthlyTotal(
-                7L, ShipmentStatus.COMPLETED,
+        var total = new DriverCompletedTotalDTO(3L, 240_000L);
+        when(statusHistoryService.getDriverCompletedTotal(
+                7L,
                 LocalDateTime.of(2026, 11, 1, 0, 0),
                 LocalDateTime.of(2026, 11, 20, 0, 0)))
                 .thenReturn(total);
@@ -247,15 +236,15 @@ class DriverSettlementServiceTest {
     @Test
     void singleDayRangeItemsUsesNextDayAsExclusiveBound() {
         LocalDate day = LocalDate.of(2026, 11, 19);
-        when(historyRepository.findDriverMonthlyFareItems(
-                7L, ShipmentStatus.COMPLETED,
+        when(statusHistoryService.getDriverCompletedShipments(
+                7L,
                 day.atStartOfDay(),
                 day.plusDays(1).atStartOfDay()))
                 .thenReturn(List.of());
 
         assertThat(service.getRangeItems(7L, day, day)).isEmpty();
-        verify(historyRepository).findDriverMonthlyFareItems(
-                7L, ShipmentStatus.COMPLETED,
+        verify(statusHistoryService).getDriverCompletedShipments(
+                7L,
                 day.atStartOfDay(),
                 day.plusDays(1).atStartOfDay());
     }
@@ -263,11 +252,9 @@ class DriverSettlementServiceTest {
     @Test
     void emptyRangeReturnsZeroTotals() {
         LocalDate day = LocalDate.of(2026, 11, 19);
-        var total = mock(ShipmentStatusHistoryRepository.DriverMonthlyTotal.class);
-        when(total.getCompletedCount()).thenReturn(0L);
-        when(total.getTotalFare()).thenReturn(0L);
-        when(historyRepository.findDriverMonthlyTotal(
-                7L, ShipmentStatus.COMPLETED,
+        var total = new DriverCompletedTotalDTO(0L, 0L);
+        when(statusHistoryService.getDriverCompletedTotal(
+                7L,
                 day.atStartOfDay(), day.plusDays(1).atStartOfDay()))
                 .thenReturn(total);
 
@@ -291,7 +278,7 @@ class DriverSettlementServiceTest {
         assertThatThrownBy(() -> service.getMonthlyItems(7L, null))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
-        verifyNoInteractions(historyRepository);
+        verifyNoInteractions(statusHistoryService);
     }
 
     @Test
@@ -313,6 +300,6 @@ class DriverSettlementServiceTest {
         assertThatThrownBy(() -> service.getRangeSummary(7L, to, null))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
-        verifyNoInteractions(historyRepository);
+        verifyNoInteractions(statusHistoryService);
     }
 }
