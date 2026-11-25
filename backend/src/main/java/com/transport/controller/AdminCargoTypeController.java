@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.transport.dto.CargoTypeRequestDTO;
 import com.transport.dto.CargoTypeResponseDTO;
+import com.transport.exception.CustomException;
+import com.transport.exception.ErrorCode;
 import com.transport.service.CargoTypeService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,7 +57,10 @@ public class AdminCargoTypeController {
 	@Operation(summary = "화물 유형 활성/비활성 전환")
 	@PatchMapping("/{id}/active")
 	public CargoTypeResponseDTO changeActive(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-		boolean active = Boolean.TRUE.equals(body.get("active"));
-		return cargoTypeService.changeCargoTypeActive(id, active);
+		// active가 빠지거나 null이면 400 — 전에는 {}나 오타도 '사용 안 함'으로 바뀌었다 (#108 댓글, 차종 API와 같게)
+		if (!body.containsKey("active") || body.get("active") == null) {
+			throw new CustomException(ErrorCode.INVALID_INPUT, "사용 여부(active)를 선택해 주세요.");
+		}
+		return cargoTypeService.changeCargoTypeActive(id, body.get("active"));
 	}
 }

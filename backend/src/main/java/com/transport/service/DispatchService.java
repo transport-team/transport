@@ -14,4 +14,11 @@ public interface DispatchService {
 
 	// 배송의 현재 활성 배차 해제 (활성 배차가 없으면 아무 작업도 하지 않음)
 	void releaseDispatch(Long shipmentId);
+
+	/**
+	 * 배송의 현재 활성 배차 (기사 · 차량 정보를 보여 줄 때 — 배송 상세)
+	 * 부른 쪽 트랜잭션 안에서 기사 · 회원 · 차량을 꺼내 쓴다 (팀원 3 배송 상세가 저장소 대신 부름, 2026-11-25)
+	 * @return 활성 배차가 없으면 빈 값 (여러 건이면 가장 최근 배정)
+	 */
+	java.util.Optional<com.transport.domain.Dispatch> findActiveDispatch(Long shipmentId);
 }
