@@ -2,21 +2,27 @@ package com.transport.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.transport.domain.DispatchApplication;
 import com.transport.domain.Driver;
 import com.transport.domain.Member;
+import com.transport.domain.enums.DispatchApplicationStatus;
 import com.transport.domain.enums.DriverStatus;
 import com.transport.domain.enums.NotificationType;
+import com.transport.domain.enums.ShipmentStatus;
 import com.transport.dto.DriverDTO;
 import com.transport.dto.DriverSearchDTO;
 import com.transport.dto.PageResponseDTO;
 import com.transport.exception.CustomException;
 import com.transport.exception.ErrorCode;
+import com.transport.repository.DispatchApplicationRepository;
+import com.transport.repository.DispatchRepository;
 import com.transport.repository.DriverRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -29,7 +35,13 @@ import lombok.extern.log4j.Log4j2;
 @RequiredArgsConstructor
 public class DriverServiceImpl implements DriverService {
 
+	// 중지를 막는 배송 상태: 배정 ~ 도착 (status.md)
+	private static final Set<ShipmentStatus> ONGOING_STATUSES = Set.of(
+			ShipmentStatus.ASSIGNED, ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED);
+
 	private final DriverRepository driverRepository;
+	private final DispatchRepository dispatchRepository;
+	private final DispatchApplicationRepository applicationRepository;
 	private final NotificationService notificationService;  // 팀원 4 약속 메서드 (승인 · 중지 알림)
 
 	@Override
@@ -77,11 +89,33 @@ public class DriverServiceImpl implements DriverService {
 		Driver driver = driverRepository.findById(driverId)
 				.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND, "기사 정보가 없습니다."));
 		DriverStatus before = driver.getStatus();
+		if (status == DriverStatus.INACTIVE && before != DriverStatus.INACTIVE) {
+			suspend(driver);
+		}
 		driver.changeStatus(status); // 변경 감지로 저장 (트랜잭션이 끝날 때 UPDATE)
 
 		log.info("기사 상태 변경: driverId={}, {} → {}", driverId, before, status);
 		notifyStatusChange(driver, before, status);
 		return entityToDTO(driver);
+	}
+
+	// 중지(가입 거절 포함) 전 처리
+	// 1) 배정 ~ 도착 중인 배송이 있으면 막는다 — 관리자가 배차 취소(재배차)하거나 운송이 끝난 뒤 중지
+	//    (배송완료 DELIVERED는 고객 수령 확인만 남아 기사가 할 일이 없으므로 막지 않는다)
+	// 2) 기사의 대기 중 지원은 자동 마감(NOT_SELECTED) — 고객이 고르면 그때 "운송할 수 없는 기사" 오류가 나던 것
+	private void suspend(Driver driver) {
+		long ongoing = dispatchRepository.countByDriver_IdAndActiveTrueAndShipment_StatusIn(
+				driver.getId(), ONGOING_STATUSES);
+		if (ongoing > 0) {
+			throw new CustomException(ErrorCode.DRIVER_HAS_ACTIVE_SHIPMENT,
+					"배정되었거나 운송 중인 배송이 " + ongoing + "건 있어 중지할 수 없어요. 배차를 취소(재배차)하거나 운송이 끝난 뒤 중지해 주세요.");
+		}
+		List<DispatchApplication> pending = applicationRepository.findByDriver_IdAndStatus(
+				driver.getId(), DispatchApplicationStatus.PENDING);
+		pending.forEach(DispatchApplication::notSelect);
+		if (!pending.isEmpty()) {
+			log.info("기사 중지로 대기 지원 자동 마감: driverId={}, {}건", driver.getId(), pending.size());
+		}
 	}
 
 	// 기사에게 승인 · 가입 거절 · 중지 · 다시 활성화 알림 (상태가 그대로면 보내지 않는다)

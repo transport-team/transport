@@ -40,6 +40,8 @@ public enum ErrorCode {
     SHIPMENT_NOT_REQUESTED(HttpStatus.CONFLICT, "현재 배차 대기 중인 운송 요청이 아닙니다."),
     // 이미 선택 또는 거절 등으로 처리된 배차 신청
     DISPATCH_APPLICATION_NOT_PENDING(HttpStatus.CONFLICT, "이미 처리되었거나 대기 중이 아닌 배차 신청입니다."),
+    // 배정 · 운송 중인 배송이 있는 기사를 중지하려 함
+    DRIVER_HAS_ACTIVE_SHIPMENT(HttpStatus.CONFLICT, "배정되었거나 운송 중인 배송이 있어 기사를 중지할 수 없습니다."),
 
 
 	// 배송 · 결제 (팀원 3)
