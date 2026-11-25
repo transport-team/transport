@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { searchAdminShipments } from '../../api/adminTransportApi'
 import Pagination from '../../components/common/Pagination'
+import { readSearchQuery, toSearchParams } from '../../util/searchQuery'
 import StatusBadge from '../../components/common/StatusBadge'
 import { SHIPMENT_STATUS } from '../../util/shipmentStatusUtil'
 
@@ -13,17 +14,23 @@ const STATUS_OPTIONS = [
 
 const formatDateTime = (value) => (value ? value.replace('T', ' ').slice(0, 16) : '-')
 
+const EMPTY_PAGE = { dtoList: [], pageNumList: [], prev: false, next: false, prevPage: 0, nextPage: 0, totalCount: 0, totalPage: 0 }
+
 const ShipmentManagePage = () => {
   const navigate = useNavigate()
-  const [formInputs, setFormInputs] = useState({ status: '', from: '', to: '', keyword: '' })
-  const [appliedFilter, setAppliedFilter] = useState({ page: 1, status: '', from: '', to: '', keyword: '' })
+  // 검색 조건 · 쪽은 주소에 남긴다 (?status=&from=&to=&keyword=&page=) — 새로고침 · 뒤로 가기에도 그대로 (11-25, 팀원 1 목록 #152와 같은 방식)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryString = searchParams.toString()
+  const listSearch = queryString ? `?${queryString}` : ''  // 상세로 넘겨 [← 배송 통합 검색으로]가 이 조건으로 돌아오게
+  const appliedFilter = useMemo(() => readSearchQuery(new URLSearchParams(queryString), Object.keys(SHIPMENT_STATUS)), [queryString])
+  const [reloadKey, setReloadKey] = useState(0)  // 같은 조건으로 [검색]을 다시 눌러도 새로 불러오고, [초기화]는 입력 칸도 비운다
   const [fetchState, setFetchState] = useState({
     resolvedKey: '',
-    data: { dtoList: [], pageNumList: [], prev: false, next: false, prevPage: 0, nextPage: 0, totalCount: 0, totalPage: 0 },
+    data: EMPTY_PAGE,
     error: '',
   })
 
-  const requestKey = JSON.stringify(appliedFilter)
+  const requestKey = `${JSON.stringify(appliedFilter)}#${reloadKey}`
   const loading = fetchState.resolvedKey !== requestKey
 
   useEffect(() => {
@@ -39,6 +46,7 @@ const ShipmentManagePage = () => {
         setFetchState((prev) => ({
           ...prev,
           resolvedKey: requestKey,
+          data: EMPTY_PAGE,  // 오류 때는 이전 검색의 건수 · 쪽 버튼을 남기지 않는다
           error: err.response?.data?.message || '배송 목록 조회에 실패했습니다.',
         }))
       })
@@ -46,15 +54,23 @@ const ShipmentManagePage = () => {
     return () => { active = false }
   }, [appliedFilter, requestKey])
 
+  // 검색: 입력 칸 값을 주소로 (1쪽부터)
   const handleSearch = (e) => {
     e.preventDefault()
-    setAppliedFilter({ ...formInputs, page: 1 })
+    const form = new FormData(e.currentTarget)
+    setReloadKey((key) => key + 1)
+    setSearchParams(toSearchParams({
+      status: String(form.get('status') ?? ''),
+      from: String(form.get('from') ?? ''),
+      to: String(form.get('to') ?? ''),
+      keyword: String(form.get('keyword') ?? ''),
+      page: 1,
+    }))
   }
 
   const handleReset = () => {
-    const empty = { status: '', from: '', to: '', keyword: '' }
-    setFormInputs(empty)
-    setAppliedFilter({ ...empty, page: 1 })
+    setReloadKey((key) => key + 1)
+    setSearchParams({})
   }
 
   const { data, error } = fetchState
@@ -72,11 +88,12 @@ const ShipmentManagePage = () => {
       </div>
 
       {/* 검색 필터 바 */}
-      <form onSubmit={handleSearch} className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
+      {/* 주소가 바뀌면(뒤로 가기 · 초기화) 폼을 새로 만들어 주소의 조건으로 채운다 */}
+      <form key={`${queryString}#${reloadKey}`} onSubmit={handleSearch} className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <select
-            value={formInputs.status}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, status: e.target.value }))}
+            name="status"
+            defaultValue={appliedFilter.status}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           >
             {STATUS_OPTIONS.map((opt) => (
@@ -86,24 +103,24 @@ const ShipmentManagePage = () => {
 
           <input
             type="date"
-            value={formInputs.from}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, from: e.target.value }))}
+            name="from"
+            defaultValue={appliedFilter.from}
             aria-label="시작일"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
             type="date"
-            value={formInputs.to}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, to: e.target.value }))}
+            name="to"
+            defaultValue={appliedFilter.to}
             aria-label="종료일"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
             type="text"
-            value={formInputs.keyword}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, keyword: e.target.value }))}
+            name="keyword"
+            defaultValue={appliedFilter.keyword}
             placeholder="배송번호, 화물, 주소, 고객명/이메일, 기사명/ID"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-blue-500 focus:outline-none"
           />
@@ -153,11 +170,11 @@ const ShipmentManagePage = () => {
                 {data.dtoList.map((item) => (
                   <tr
                     key={item.id}
-                    onClick={() => navigate(`/admin/shipments/${item.id}`)}
+                    onClick={() => navigate(`/admin/shipments/${item.id}`, { state: { listSearch } })}
                     onKeyDown={(event) => {
                       if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
                         event.preventDefault()
-                        navigate(`/admin/shipments/${item.id}`)
+                        navigate(`/admin/shipments/${item.id}`, { state: { listSearch } })
                       }
                     }}
                     tabIndex={0}
@@ -168,6 +185,7 @@ const ShipmentManagePage = () => {
                     <td className="px-4 py-3 font-bold">
                       <Link
                         to={`/admin/shipments/${item.id}`}
+                        state={{ listSearch }}
                         onClick={(event) => event.stopPropagation()}
                         className="text-blue-700 underline-offset-2 hover:underline focus-visible:underline"
                         aria-label={`배송 ${item.id} 상세 보기`}
@@ -207,7 +225,7 @@ const ShipmentManagePage = () => {
 
       {/* 페이지네이션 */}
       {!loading && data.pageNumList?.length > 0 && (
-        <Pagination pageData={data} onMove={(page) => setAppliedFilter((prev) => ({ ...prev, page }))} />
+        <Pagination pageData={data} onMove={(page) => setSearchParams(toSearchParams({ ...appliedFilter, page }))} />
       )}
     </section>
   )

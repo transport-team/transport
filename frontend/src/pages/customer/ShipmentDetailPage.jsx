@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { cancelPayment, retryPayment } from '../../api/paymentApi'
 import { getShipment, confirmShipmentReceipt } from '../../api/shipmentApi'
 import { requestTossPayment } from '../../util/tossPayments'
@@ -23,6 +23,9 @@ const formatDateTime = (value) => {
 
 const ShipmentDetailPage = () => {
   const { id } = useParams()
+  // 목록에서 왔으면 그 탭 · 쪽으로 돌아간다 (11-25)
+  const location = useLocation()
+  const backToList = `/customer/shipments${location.state?.listSearch ?? ''}`
   const [refreshCount, setRefreshCount] = useState(0)
   const [fetchState, setFetchState] = useState({
     resolvedKey: '',
@@ -155,7 +158,7 @@ const ShipmentDetailPage = () => {
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-600">
           {error || '배송 정보를 찾을 수 없습니다.'}
         </div>
-        <Link className="mt-4 inline-block text-sm font-bold text-blue-700" to="/customer/shipments">
+        <Link className="mt-4 inline-block text-sm font-bold text-blue-700" to={backToList}>
           ← 내 배송 목록으로
         </Link>
       </section>
@@ -171,7 +174,7 @@ const ShipmentDetailPage = () => {
       <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link className="text-2xl leading-none text-gray-700" to="/customer/shipments" aria-label="내 배송 목록으로">←</Link>
+            <Link className="text-2xl leading-none text-gray-700" to={backToList} aria-label="내 배송 목록으로">←</Link>
             <h1 className="text-lg font-bold text-gray-900">배송 상세 #{shipment.id}</h1>
           </div>
           <StatusBadge status={shipment.status} />

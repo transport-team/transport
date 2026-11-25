@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { searchAdminPayments } from '../../api/adminTransportApi'
+import { useSearchParams } from 'react-router-dom'
 import Pagination from '../../components/common/Pagination'
+import { readSearchQuery, toSearchParams } from '../../util/searchQuery'
 import { PAYMENT_STATUS_VALUES, paymentStatusBadge, paymentStatusLabel } from '../../util/paymentStatusUtil'
 
 // 결제 상태 필터 — 서버 PaymentStatus 값 그대로 (전에는 서버에 없는 PENDING · FAILED를 보내 400, util/paymentStatusUtil.js)
@@ -11,16 +13,21 @@ const PAYMENT_STATUS_OPTIONS = [
 
 const formatDateTime = (value) => (value ? value.replace('T', ' ').slice(0, 16) : '-')
 
+const EMPTY_PAGE = { dtoList: [], pageNumList: [], prev: false, next: false, prevPage: 0, nextPage: 0, totalCount: 0 }
+
 const PaymentManagePage = () => {
-  const [formInputs, setFormInputs] = useState({ status: '', from: '', to: '', keyword: '' })
-  const [appliedFilter, setAppliedFilter] = useState({ page: 1, status: '', from: '', to: '', keyword: '' })
+  // 검색 조건 · 쪽은 주소에 남긴다 (?status=&from=&to=&keyword=&page=) — 새로고침 · 뒤로 가기에도 그대로 (11-25, 팀원 1 목록 #152와 같은 방식)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryString = searchParams.toString()
+  const appliedFilter = useMemo(() => readSearchQuery(new URLSearchParams(queryString), PAYMENT_STATUS_VALUES), [queryString])
+  const [reloadKey, setReloadKey] = useState(0)  // 같은 조건으로 [검색]을 다시 눌러도 새로 불러오고, [초기화]는 입력 칸도 비운다
   const [fetchState, setFetchState] = useState({
     resolvedKey: '',
-    data: { dtoList: [], pageNumList: [], prev: false, next: false, prevPage: 0, nextPage: 0, totalCount: 0 },
+    data: EMPTY_PAGE,
     error: '',
   })
 
-  const requestKey = JSON.stringify(appliedFilter)
+  const requestKey = `${JSON.stringify(appliedFilter)}#${reloadKey}`
   const loading = fetchState.resolvedKey !== requestKey
 
   useEffect(() => {
@@ -36,6 +43,7 @@ const PaymentManagePage = () => {
         setFetchState((prev) => ({
           ...prev,
           resolvedKey: requestKey,
+          data: EMPTY_PAGE,  // 오류 때는 이전 검색의 건수 · 쪽 버튼을 남기지 않는다
           error: err.response?.data?.message || '결제 내역 조회에 실패했습니다.',
         }))
       })
@@ -43,15 +51,23 @@ const PaymentManagePage = () => {
     return () => { active = false }
   }, [appliedFilter, requestKey])
 
+  // 검색: 입력 칸 값을 주소로 (1쪽부터)
   const handleSearch = (e) => {
     e.preventDefault()
-    setAppliedFilter({ ...formInputs, page: 1 })
+    const form = new FormData(e.currentTarget)
+    setReloadKey((key) => key + 1)
+    setSearchParams(toSearchParams({
+      status: String(form.get('status') ?? ''),
+      from: String(form.get('from') ?? ''),
+      to: String(form.get('to') ?? ''),
+      keyword: String(form.get('keyword') ?? ''),
+      page: 1,
+    }))
   }
 
   const handleReset = () => {
-    const empty = { status: '', from: '', to: '', keyword: '' }
-    setFormInputs(empty)
-    setAppliedFilter({ ...empty, page: 1 })
+    setReloadKey((key) => key + 1)
+    setSearchParams({})
   }
 
   const { data, error } = fetchState
@@ -69,11 +85,12 @@ const PaymentManagePage = () => {
       </div>
 
       {/* 검색 필터 바 */}
-      <form onSubmit={handleSearch} className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
+      {/* 주소가 바뀌면(뒤로 가기 · 초기화) 폼을 새로 만들어 주소의 조건으로 채운다 */}
+      <form key={`${queryString}#${reloadKey}`} onSubmit={handleSearch} className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <select
-            value={formInputs.status}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, status: e.target.value }))}
+            name="status"
+            defaultValue={appliedFilter.status}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           >
             {PAYMENT_STATUS_OPTIONS.map((opt) => (
@@ -83,24 +100,24 @@ const PaymentManagePage = () => {
 
           <input
             type="date"
-            value={formInputs.from}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, from: e.target.value }))}
+            name="from"
+            defaultValue={appliedFilter.from}
             aria-label="시작일"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
             type="date"
-            value={formInputs.to}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, to: e.target.value }))}
+            name="to"
+            defaultValue={appliedFilter.to}
             aria-label="종료일"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
 
           <input
             type="text"
-            value={formInputs.keyword}
-            onChange={(e) => setFormInputs((prev) => ({ ...prev, keyword: e.target.value }))}
+            name="keyword"
+            defaultValue={appliedFilter.keyword}
             placeholder="주문번호, 배송번호, 고객명, 화물명"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2 focus:border-blue-500 focus:outline-none"
           />
@@ -184,7 +201,7 @@ const PaymentManagePage = () => {
 
       {/* 페이지네이션 */}
       {!loading && data.pageNumList?.length > 0 && (
-        <Pagination pageData={data} onMove={(page) => setAppliedFilter((prev) => ({ ...prev, page }))} />
+        <Pagination pageData={data} onMove={(page) => setSearchParams(toSearchParams({ ...appliedFilter, page }))} />
       )}
     </section>
   )
