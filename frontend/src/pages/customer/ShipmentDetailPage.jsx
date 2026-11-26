@@ -12,6 +12,7 @@ import LiveTrackingMap from '../../components/tracking/LiveTrackingMap'
 import ReviewSection from '../../components/review/ReviewSection'
 import { SHIPMENT_LOCATION_EVENT } from '../../hooks/useNotification'
 import StatusBadge from '../../components/common/StatusBadge'
+import { formatKm } from '../../util/formatUtil'
 
 // 배차 뒤부터 도착까지 지도를 보여 준다 (기사 위치는 운송 중에만 — LiveTrackingMap이 처리)
 const TRACKING_STATUSES = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED']
@@ -167,7 +168,8 @@ const ShipmentDetailPage = () => {
 
   const canPay = shipment.status === 'PENDING_PAYMENT'
   const canCancel = shipment.status === 'PENDING_PAYMENT' || shipment.status === 'REQUESTED'
-  const cancelLocked = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED', 'DELIVERED', 'COMPLETED'].includes(shipment.status)
+  // 배차 뒤 운송 중일 때만 '취소 불가' 안내를 남긴다 — 수령 확인 대기 · 운송 완료는 끝난 배송이라 막대를 숨긴다 (11-26 점검)
+  const cancelLocked = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED'].includes(shipment.status)
 
   return (
     <section className="mx-auto min-h-screen w-full max-w-[640px] bg-gray-50 pb-28">
@@ -208,7 +210,7 @@ const ShipmentDetailPage = () => {
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-blue-600">ROUTE & SCHEDULE</p>
             <span className="text-xs font-semibold text-gray-500">
-              {shipment.distanceKm}km{shipment.durationMin != null ? ` · 약 ${shipment.durationMin}분` : ''}
+              {formatKm(shipment.distanceKm)}{shipment.durationMin != null ? ` · 약 ${shipment.durationMin}분` : ''}
             </span>
           </div>
 

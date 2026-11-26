@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getAvailableShipments } from '../../api/dispatchApi'
 import { getVehicleTypes } from '../../api/vehicleApi'
 import { Link } from 'react-router-dom'
+import { formatDateTime } from '../../util/formatUtil'
 
 // 기사: 배차 대기 중인 운송 요청 목록 화면
 const DriverShipmentListPage = () => {
@@ -244,15 +245,14 @@ const DriverShipmentListPage = () => {
                   <div>
                     <p className="text-xs text-gray-500">요청 차종</p>
                     <p className="font-semibold text-gray-800">
-                      차종 {shipment.vehicleTypeId}
-                      {' '}({vehicleTypeNames[shipment.vehicleTypeId] || '정보 없음'})
+                      {vehicleTypeNames[shipment.vehicleTypeId] || '-'}
                     </p>
                   </div>
 
                   <div>
                     <p className="text-xs text-gray-500">상차 예정일</p>
                     <p className="font-semibold text-gray-800">
-                      {new Date(shipment.pickupAt).toLocaleString('ko-KR')}
+                      {formatDateTime(shipment.pickupAt)}
                     </p>
                   </div>
 

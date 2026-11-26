@@ -37,9 +37,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {
 
-	// 진행 중: 배차된 뒤 도착까지 (결제대기 · 배차 대기 · 완료 · 취소는 빠진다)
-	private static final Set<ShipmentStatus> IN_PROGRESS =
-			EnumSet.of(ShipmentStatus.ASSIGNED, ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED);
+	// 진행 중: 배차된 뒤 고객 수령 확인 전까지 (결제대기 · 배차 대기 · 운송 완료 · 취소는 빠진다)
+	// 11-26: 수령 확인 대기(DELIVERED)를 넣었다 — 11-24에 상태가 생긴 뒤 어느 숫자에도 잡히지 않았다
+	private static final Set<ShipmentStatus> IN_PROGRESS = EnumSet.of(ShipmentStatus.ASSIGNED, ShipmentStatus.PICKED_UP,
+			ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED, ShipmentStatus.DELIVERED);
 
 	// 기사 순위에 보여 줄 기사 수
 	static final int DRIVER_RANK_SIZE = 5;

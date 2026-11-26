@@ -220,9 +220,9 @@
 // GET /api/admin/dashboard — 기준일은 서버 날짜, 접수 · 매출은 결제 완료(PAID) 기준
 { "baseDate": "2026-11-06",
   "todayReceivedCount": 3, "todayRevenue": 150000,       // 오늘 결제가 끝난 건수 · 금액
-  "todayCompletedCount": 4,                               // 오늘 배송완료(COMPLETED)로 바뀐 건수 (상태 이력)
+  "todayCompletedCount": 4,                               // 오늘 운송 완료(COMPLETED, 고객 수령 확인)로 바뀐 건수 (상태 이력)
   "waitingDispatchCount": 2,                              // 지금 REQUESTED
-  "inProgressCount": 5,                                   // 지금 ASSIGNED · PICKED_UP · IN_TRANSIT · ARRIVED
+  "inProgressCount": 7,                                   // 지금 ASSIGNED · PICKED_UP · IN_TRANSIT · ARRIVED · DELIVERED (11-26부터 DELIVERED 포함)
   "monthPaidCount": 42, "monthRevenue": 4200000,         // 이번 달 1일 0시 ~ 지금
   "vehicleTypeStats": [{ "vehicleTypeId": 1, "vehicleTypeName": "소형 (다마스 · 라보)", "count": 0, "revenue": 0 },
                        { "vehicleTypeId": 2, "vehicleTypeName": "1톤", "count": 40, "revenue": 4000000 }],
@@ -270,14 +270,14 @@
 | GET · PUT · DELETE | /api/driver/schedules/work (?year&month), /work/{date} { startTime, endTime } | 근무 가능 시간 조회 · 등록(있으면 바꿈) · 삭제 (DRV-01) — 오늘 이후, 휴무일이면 400, 시작 = 끝이면 400, 끝 < 시작이면 자정을 넘기는 근무(`overnight: true`). 운송 요청 목록이 근무 끝 시간을 넘기는 요청에 경고를 붙인다 | DRIVER |
 | POST | /api/admin/shipments/{id}/dispatch/cancel | 배차 취소(재배차) { reason 180자 이하 } — 배차 완료(ASSIGNED)만, 접수(REQUESTED)로 되돌리고 배차 해제 · 이력 · 기사 · 고객 알림 (#124). 관리자 후보 추천 · 직접 배정은 하지 않는다(11-06 결정) | ADMIN |
 | GET | /api/driver/dispatches, /{shipmentId} | 내 확정 배차 — 진행 중 목록 · 상세 | DRIVER |
-| GET | /api/driver/dispatches/history, /history/{applicationId} | 지난 신청 · 배송 내역(선택 안 됨 · 거절 · 철회 · 완료 · 취소) · 상세 | DRIVER |
+| GET | /api/driver/dispatches/history, /history/{applicationId} | 지난 신청 · 배송 내역(선택 안 됨 · 거절 · 철회 · 완료 · 취소) · 상세 (거리 distanceKm 포함, 11-26부터) | DRIVER |
 | GET | /api/driver/settlements/monthly?month, /monthly/items?month, /range?from&to, /range/items?from&to | 내 실적: 월별 · 기간별 완료 건수 · 운임 합계 · 운임 내역 (#107). `/monthly`는 그 달 정산 상태도 준다 — settlementStatus(OPEN 마감 전 · PENDING 지급 대기 · PAID 지급 완료 · NONE 마감했지만 실적이 없어 정산 없음), commissionRate · payoutAmount · paidAt(지급 대기 · 지급 완료일 때만, 아니면 null) | DRIVER |
 | GET | /api/driver/settlements/reviews | 내 평균 평점 · 리뷰 (DRV-07) — { averageRating(소수 첫째 자리, 없으면 0.0), reviewCount, reviews(최신순, 고객 이름 가림) }. `ReviewService` 약속 메서드를 `driver.id`로 부른다 | DRIVER |
 | GET | /api/admin/settlements?month | 월 정산 — 기사별 건수 · 운임 · 수수료 · 지급액 · 상태(정산 전 · 지급 대기 · 지급 완료 · 마감 후 실적) | ADMIN |
 | GET | /api/admin/settlements/trend?endMonth | 끝 달까지 6개월 운임 · 수수료 추이 | ADMIN |
 | GET | /api/admin/settlements/differences?month&driverId | 마감 뒤 달라진 실적(마감 후 완료된 과거 배송) 상세 | ADMIN |
 | POST | /api/admin/settlements/{id}/paid | 지급 완료 기록 { transferReference 1~100자 } — 실제 송금은 하지 않음, 기록한 관리자 이메일을 남긴다. 마감된 달 · 지급 예정일(다음 달 5일)부터만 | ADMIN |
-| GET | /api/driver/shipments | 기사가 지원할 수 있는 배송 목록 조회 | DRIVER |
+| GET | /api/driver/shipments | 기사가 지원할 수 있는 배송 목록 조회 (예상 시간 durationMin · 거리 distanceKm 포함, 거리는 11-26부터) | DRIVER |
 | POST | /api/driver/shipments/{shipmentId}/applications | 기사의 배송 배차 신청 | DRIVER |
 | DELETE | /api/driver/shipments/{shipmentId}/applications/my | 배차 신청 취소 — 배차 대기(REQUESTED) 중인 내 대기 신청만, `WITHDRAWN`이 되고 다시 지원 가능 (204) | DRIVER |
 | GET | /api/customer/shipments/application-counts | 내 배송별 대기 중인 지원 기사 수 { shipmentId: 건수 } | CUSTOMER |

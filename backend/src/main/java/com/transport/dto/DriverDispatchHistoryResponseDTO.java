@@ -25,6 +25,7 @@ public class DriverDispatchHistoryResponseDTO {
     private String originAddress;
     private String destAddress;
     private LocalDateTime pickupAt;
+    private double distanceKm;     // 도로 거리 (km) — 지난 내역 상세의 경로 카드 (11-26 전체 점검)
 
     private LocalDateTime appliedAt;
     private LocalDateTime updatedAt;

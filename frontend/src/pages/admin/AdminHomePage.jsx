@@ -77,9 +77,9 @@ const DashboardSummary = ({ dashboard }) => {
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label="오늘 접수" value={dashboard.todayReceivedCount} unit="건" note={`오늘 매출 ${won(dashboard.todayRevenue)}`} />
-        <StatCard label="오늘 완료" value={dashboard.todayCompletedCount} unit="건" note="기사가 배송완료로 처리한 건" />
+        <StatCard label="오늘 완료" value={dashboard.todayCompletedCount} unit="건" note="고객이 수령 확인한 건 (운송 완료)" />
         <StatCard label="배차 대기" value={dashboard.waitingDispatchCount} unit="건" note="결제가 끝나고 배차 전" />
-        <StatCard label="진행 중" value={dashboard.inProgressCount} unit="건" note="배차 완료부터 도착까지" />
+        <StatCard label="진행 중" value={dashboard.inProgressCount} unit="건" note="배차 완료부터 수령 확인 대기까지" />
         <StatCard
           label="이번 달 매출"
           value={dashboard.monthRevenue}

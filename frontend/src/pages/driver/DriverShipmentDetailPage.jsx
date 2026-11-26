@@ -5,6 +5,7 @@ import { getMyVehicles } from '../../api/vehicleApi'
 import { DriverRouteCard, DriverCargoCard, DriverMemoCard } from '../../components/driver/DriverDetailCards'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import useConfirm from '../../hooks/useConfirm'
+import useVehicleTypeNames from '../../hooks/useVehicleTypeNames'
 
 // 기사: 운송 요청 상세 페이지
 const DriverShipmentDetailPage = () => {
@@ -40,13 +41,8 @@ const DriverShipmentDetailPage = () => {
     const [cancelError, setCancelError] = useState('')
     const [cancelSuccess, setCancelSuccess] = useState(false)
 
-    // 차종별 이름 (목록 화면과 동일)
-    const vehicleTypeNames = {
-        1: '소형·다마스/라보',
-        2: '1톤',
-        3: '2.5톤',
-        4: '5톤',
-    }
+    // 차종 이름은 차종 목록 API에서 (관리자가 바꾼 이름 그대로, 11-26)
+    const vehicleTypeNames = useVehicleTypeNames()
 
     useEffect(() => {
         const loadShipment = async () => {
@@ -246,6 +242,7 @@ const DriverShipmentDetailPage = () => {
                         destAddress={shipment.destAddress}
                         pickupAt={shipment.pickupAt}
                         durationMin={shipment.durationMin}
+                        distanceKm={shipment.distanceKm}
                     />
 
                     {/* 운송 상세 정보 */}
@@ -253,7 +250,7 @@ const DriverShipmentDetailPage = () => {
                     <DriverCargoCard
                         cargoName={shipment.cargoName}
                         cargoWeightKg={shipment.cargoWeightKg}
-                        vehicleTypeLabel={`차종 ${shipment.vehicleTypeId} (${vehicleTypeNames[shipment.vehicleTypeId] || '정보 없음'})`}
+                        vehicleTypeLabel={vehicleTypeNames[shipment.vehicleTypeId] || '-'}
                         fare={shipment.fare}
                     />
 
@@ -349,7 +346,7 @@ const DriverShipmentDetailPage = () => {
                                             {vehiclesLoading
                                                 ? '차량 불러오는 중...'
                                                 : selectedVehicle
-                                                    ? `${selectedVehicle.plateNo} (차종 ${selectedVehicle.vehicleTypeId})`
+                                                    ? `${selectedVehicle.plateNo} · ${vehicleTypeNames[selectedVehicle.vehicleTypeId] || '-'}`
                                                     : '차량을 선택해 주세요'}
                                         </span>
                                         <span aria-hidden="true" className="ml-3 text-xs text-gray-500">▼</span>
@@ -380,7 +377,7 @@ const DriverShipmentDetailPage = () => {
                                                         className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 text-left text-sm enabled:hover:bg-gray-50 disabled:cursor-not-allowed"
                                                     >
                                                         <span className={cannotSelect ? 'text-gray-500' : 'text-gray-800'}>
-                                                            {cannotSelect ? '🚫 ' : ''}{vehicle.plateNo} (차종 {vehicle.vehicleTypeId})
+                                                            {cannotSelect ? '🚫 ' : ''}{vehicle.plateNo} · {vehicleTypeNames[vehicle.vehicleTypeId] || '-'}
                                                         </span>
                                                         {isTypeMismatch && (
                                                             <span className="font-medium text-red-600">차종 불일치</span>

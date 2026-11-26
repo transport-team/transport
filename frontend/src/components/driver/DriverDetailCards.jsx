@@ -1,3 +1,5 @@
+import { formatKm } from '../../util/formatUtil'
+
 // 고객 배송 상세페이지와 통일한 기사 상세 정보 카드
 const formatDateTime = (value) => {
     if (!value) return '정보 없음'
@@ -5,13 +7,18 @@ const formatDateTime = (value) => {
 }
 
 export const DriverRouteCard = ({
-    originAddress, originDetail, destAddress, destDetail, pickupAt, durationMin,
+    originAddress, originDetail, destAddress, destDetail, pickupAt, durationMin, distanceKm,
 }) => (
     <div className="rounded-2xl bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-semibold text-blue-600">ROUTE & SCHEDULE</p>
-            {durationMin > 0 && (
-                <span className="text-xs font-medium text-gray-500">약 {durationMin}분</span>
+            {/* 거리 · 예상 시간 (고객 배송 상세와 같은 모양: "40.5km · 약 76분", 11-26) */}
+            {(distanceKm > 0 || durationMin > 0) && (
+                <span className="text-xs font-medium text-gray-500">
+                    {[distanceKm > 0 ? formatKm(distanceKm) : null, durationMin > 0 ? `약 ${durationMin}분` : null]
+                        .filter(Boolean)
+                        .join(' · ')}
+                </span>
             )}
         </div>
 

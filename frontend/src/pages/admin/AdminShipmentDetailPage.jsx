@@ -5,6 +5,7 @@ import ShipmentProgress from '../../components/tracking/ShipmentProgress'
 import ShipmentPhotoGallery from '../../components/tracking/ShipmentPhotoGallery'
 import { cancelAdminShipment, cancelAdminShipmentDispatch } from '../../api/adminTransportApi'
 import StatusBadge from '../../components/common/StatusBadge'
+import { formatKm } from '../../util/formatUtil'
 import { shipmentStatusLabel } from '../../util/shipmentStatusUtil'
 import { paymentStatusLabel } from '../../util/paymentStatusUtil'
 import ConfirmModal from '../../components/common/ConfirmModal'
@@ -285,7 +286,7 @@ const AdminShipmentDetailPage = () => {
             </div>
             <div className="mt-4 grid gap-3 rounded-xl bg-gray-50 p-4 text-sm sm:grid-cols-3">
               <div><p className="text-xs text-gray-500">상차 예정일</p><p className="mt-1 font-semibold">{formatDateTime(shipment.pickupAt)}</p></div>
-              <div><p className="text-xs text-gray-500">예상 거리</p><p className="mt-1 font-semibold">{shipment.distanceKm ?? '-'}km</p></div>
+              <div><p className="text-xs text-gray-500">예상 거리</p><p className="mt-1 font-semibold">{formatKm(shipment.distanceKm)}</p></div>
               <div><p className="text-xs text-gray-500">예상 운송 시간</p><p className="mt-1 font-semibold">{shipment.durationMin != null ? `${shipment.durationMin}분` : '-'}</p></div>
             </div>
           </div>
