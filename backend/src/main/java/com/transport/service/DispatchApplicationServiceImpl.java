@@ -580,6 +580,7 @@ public class DispatchApplicationServiceImpl implements DispatchApplicationServic
 					.pickupAt(shipment.getPickupAt())
 					// 길찾기 실패로 소요시간이 null이면 0 (int 칸에 null을 넣으면 목록 전체가 500)
 					.durationMin(shipment.getDurationMin() != null ? shipment.getDurationMin() : 0)
+					.distanceKm(shipment.getDistanceKm())
 					.canApply(blockReasons.isEmpty()).alreadyApplied(alreadyApplied)
 					.blockReasons(blockReasons).warningMessages(warningMessages)
 					.build();

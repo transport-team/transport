@@ -12,6 +12,7 @@ import {
   deleteDriverWorkHours,
 } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
+import { formatDateTime } from '../../util/formatUtil'
 
 // 서버 시간("09:00:00")을 화면용 "09:00"으로
 const hhmm = (time) => time?.slice(0, 5) || ''
@@ -876,9 +877,7 @@ const DriverHomePage = () => {
                       상차 예정일
                     </p>
                     <p className="mt-1 text-sm font-semibold text-gray-800">
-                      {shipment.pickupAt
-                        ? new Date(shipment.pickupAt).toLocaleString('ko-KR')
-                        : '정보 없음'}
+                      {formatDateTime(shipment.pickupAt, '정보 없음')}
                     </p>
                   </div>
 
@@ -938,9 +937,7 @@ const DriverHomePage = () => {
                       상차 예정일
                     </p>
                     <p className="mt-1 text-sm font-semibold text-gray-800">
-                      {dispatch.pickupAt
-                        ? new Date(dispatch.pickupAt).toLocaleString('ko-KR')
-                        : '정보 없음'}
+                      {formatDateTime(dispatch.pickupAt, '정보 없음')}
                     </p>
                   </div>
 
@@ -1003,7 +1000,7 @@ const DriverHomePage = () => {
                       배송 완료 일시
                     </p>
                     <p className="mt-1 text-sm font-semibold text-gray-800">
-                      {new Date(history.completedAt).toLocaleString('ko-KR')}
+                      {formatDateTime(history.completedAt, '정보 없음')}
                     </p>
                   </div>
 

@@ -206,6 +206,7 @@ public class DriverMyDispatchServiceImpl implements DriverMyDispatchService {
                 .originAddress(shipment.getOriginAddress())
                 .destAddress(shipment.getDestAddress())
                 .pickupAt(shipment.getPickupAt())
+                .distanceKm(shipment.getDistanceKm())
                 .appliedAt(application.getCreatedAt())
                 .updatedAt(application.getUpdatedAt())
                 .completedAt(completedAt)

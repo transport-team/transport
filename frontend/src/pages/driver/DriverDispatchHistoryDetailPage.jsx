@@ -6,6 +6,8 @@ import { Link, useParams } from 'react-router-dom'
 import { getMyDispatchHistoryDetail } from '../../api/dispatchApi'
 import { DriverRouteCard, DriverCargoCard, DriverMemoCard } from '../../components/driver/DriverDetailCards'
 import { shipmentStatusBadge, shipmentStatusLabel } from '../../util/shipmentStatusUtil'
+import { formatDateTime } from '../../util/formatUtil'
+import useVehicleTypeNames from '../../hooks/useVehicleTypeNames'
 
 // 기사: 지난 배차 신청 및 배송 내역 상세
 const DriverDispatchHistoryDetailPage = () => {
@@ -15,13 +17,8 @@ const DriverDispatchHistoryDetailPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // 차종별 이름
-  const vehicleTypeNames = {
-    1: '소형·다마스/라보',
-    2: '1톤',
-    3: '2.5톤',
-    4: '5톤',
-  }
+  // 차종 이름은 차종 목록 API에서 (관리자가 바꾼 이름 그대로, 11-26)
+  const vehicleTypeNames = useVehicleTypeNames()
 
   // 신청 상태 이름 · 배지 색 (선정된 신청은 배송 상태라 공통 표 util/shipmentStatusUtil.js를 쓴다)
   const applicationStatusNames = {
@@ -129,13 +126,14 @@ const DriverDispatchHistoryDetailPage = () => {
             originAddress={history.originAddress}
             destAddress={history.destAddress}
             pickupAt={history.pickupAt}
+            distanceKm={history.distanceKm}
           />
 
           {/* 운송 상세 정보 */}
           <DriverCargoCard
             cargoName={history.cargoName}
             cargoWeightKg={history.cargoWeightKg}
-            vehicleTypeLabel={`차종 ${history.vehicleTypeId} (${vehicleTypeNames[history.vehicleTypeId] || '정보 없음'})`}
+            vehicleTypeLabel={vehicleTypeNames[history.vehicleTypeId] || '-'}
             fare={history.fare}
           />
 
@@ -162,18 +160,14 @@ const DriverDispatchHistoryDetailPage = () => {
               <div>
                 <p className="mb-1 text-xs text-gray-500">신청 일시</p>
                 <p className="font-medium text-gray-800">
-                  {history.appliedAt
-                    ? new Date(history.appliedAt).toLocaleString('ko-KR')
-                    : '정보 없음'}
+                  {formatDateTime(history.appliedAt, '정보 없음')}
                 </p>
               </div>
 
               <div>
                 <p className="mb-1 text-xs text-gray-500">마지막 변경 일시</p>
                 <p className="font-medium text-gray-800">
-                  {history.updatedAt
-                    ? new Date(history.updatedAt).toLocaleString('ko-KR')
-                    : '정보 없음'}
+                  {formatDateTime(history.updatedAt, '정보 없음')}
                 </p>
               </div>
             </div>

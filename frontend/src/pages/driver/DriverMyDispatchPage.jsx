@@ -7,6 +7,8 @@ import {
 } from '../../api/dispatchApi'
 import StatusBadge from '../../components/common/StatusBadge'
 import { shipmentStatusBadge, shipmentStatusLabel } from '../../util/shipmentStatusUtil'
+import { formatDateTime } from '../../util/formatUtil'
+import useVehicleTypeNames from '../../hooks/useVehicleTypeNames'
 
 // 기사: 내가 신청한 운송 요청 및 배차 내역 관리
 const DriverMyDispatchPage = () => {
@@ -132,13 +134,8 @@ const DriverMyDispatchPage = () => {
     { id: 'history', label: '지난 내역' },
   ]
 
-  // 차종별 이름 (운송 요청 목록과 동일)
-  const vehicleTypeNames = {
-    1: '소형·다마스/라보',
-    2: '1톤',
-    3: '2.5톤',
-    4: '5톤',
-  }
+  // 차종 이름은 차종 목록 API에서 (관리자가 바꾼 이름 그대로, 11-26)
+  const vehicleTypeNames = useVehicleTypeNames()
 
   // 지난 내역의 신청 상태 이름 · 배지 색 (선정된 신청은 배송 상태라 공통 표 util/shipmentStatusUtil.js를 쓴다)
   const applicationStatusNames = {
@@ -263,17 +260,14 @@ const DriverMyDispatchPage = () => {
                     <div>
                       <p className="text-xs text-gray-500">요청 차종</p>
                       <p className="font-semibold text-gray-800">
-                        차종 {shipment.vehicleTypeId}
-                        {' '}({vehicleTypeNames[shipment.vehicleTypeId] || '정보 없음'})
+                        {vehicleTypeNames[shipment.vehicleTypeId] || '-'}
                       </p>
                     </div>
 
                     <div>
                       <p className="text-xs text-gray-500">상차 예정일</p>
                       <p className="font-semibold text-gray-800">
-                        {shipment.pickupAt
-                          ? new Date(shipment.pickupAt).toLocaleString('ko-KR')
-                          : '정보 없음'}
+                        {formatDateTime(shipment.pickupAt, '정보 없음')}
                       </p>
                     </div>
 
@@ -364,17 +358,14 @@ const DriverMyDispatchPage = () => {
                     <div>
                       <p className="text-xs text-gray-500">요청 차종</p>
                       <p className="font-semibold text-gray-800">
-                        차종 {dispatch.vehicleTypeId}
-                        {' '}({vehicleTypeNames[dispatch.vehicleTypeId] || '정보 없음'})
+                        {vehicleTypeNames[dispatch.vehicleTypeId] || '-'}
                       </p>
                     </div>
 
                     <div>
                       <p className="text-xs text-gray-500">상차 예정일</p>
                       <p className="font-semibold text-gray-800">
-                        {dispatch.pickupAt
-                          ? new Date(dispatch.pickupAt).toLocaleString('ko-KR')
-                          : '정보 없음'}
+                        {formatDateTime(dispatch.pickupAt, '정보 없음')}
                       </p>
                     </div>
 
@@ -473,17 +464,14 @@ const DriverMyDispatchPage = () => {
                       <div>
                         <p className="text-xs text-gray-500">요청 차종</p>
                         <p className="font-semibold text-gray-800">
-                          차종 {history.vehicleTypeId}
-                          {' '}({vehicleTypeNames[history.vehicleTypeId] || '정보 없음'})
+                          {vehicleTypeNames[history.vehicleTypeId] || '-'}
                         </p>
                       </div>
 
                       <div>
                         <p className="text-xs text-gray-500">상차 예정일</p>
                         <p className="font-semibold text-gray-800">
-                          {history.pickupAt
-                            ? new Date(history.pickupAt).toLocaleString('ko-KR')
-                            : '정보 없음'}
+                          {formatDateTime(history.pickupAt, '정보 없음')}
                         </p>
                       </div>
 
@@ -503,17 +491,12 @@ const DriverMyDispatchPage = () => {
                       ? '배송 완료 일시'
                       : '최근 변경 일시'}: {' '}
 
-                    {(history.applicationStatus === 'SELECTED' &&
-                      history.shipmentStatus === 'COMPLETED'
-                      ? history.completedAt
-                      : history.updatedAt)
-                      ? new Date(
-                        history.applicationStatus === 'SELECTED' &&
-                          history.shipmentStatus === 'COMPLETED'
-                          ? history.completedAt
-                          : history.updatedAt
-                      ).toLocaleString('ko-KR')
-                      : '정보 없음'}
+                    {formatDateTime(
+                      history.applicationStatus === 'SELECTED' && history.shipmentStatus === 'COMPLETED'
+                        ? history.completedAt
+                        : history.updatedAt,
+                      '정보 없음',
+                    )}
                   </p>
 
                   <p className="mt-2 text-right text-sm font-semibold text-blue-600">

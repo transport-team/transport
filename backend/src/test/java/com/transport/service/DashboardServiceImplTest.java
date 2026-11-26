@@ -105,7 +105,7 @@ class DashboardServiceImplTest {
 		assertThat(dashboard.getAverageRating()).isEqualTo(4.6);
 		assertThat(dashboard.getReviewCount()).isEqualTo(12);
 		assertThat(dashboard.getWaitingDispatchCount()).isEqualTo(2);  // REQUESTED
-		assertThat(dashboard.getInProgressCount()).isEqualTo(5);       // ASSIGNED 1 + PICKED_UP 1 + IN_TRANSIT 2 + ARRIVED 1
+		assertThat(dashboard.getInProgressCount()).isEqualTo(7);       // ASSIGNED 1 + PICKED_UP 1 + IN_TRANSIT 2 + ARRIVED 1 + DELIVERED 2 (수령 확인 대기도 진행 중, 11-26)
 		assertThat(dashboard.getMonthPaidCount()).isEqualTo(42);
 		assertThat(dashboard.getMonthRevenue()).isEqualTo(4_200_000);
 		assertThat(dashboard.getPendingDriverCount()).isEqualTo(5);
@@ -252,6 +252,7 @@ class DashboardServiceImplTest {
 		counts.put(ShipmentStatus.PICKED_UP, 1L);
 		counts.put(ShipmentStatus.IN_TRANSIT, 2L);
 		counts.put(ShipmentStatus.ARRIVED, 1L);
+		counts.put(ShipmentStatus.DELIVERED, 2L);
 		counts.put(ShipmentStatus.COMPLETED, 9L);
 		counts.put(ShipmentStatus.CANCELED, 3L);
 		return counts;

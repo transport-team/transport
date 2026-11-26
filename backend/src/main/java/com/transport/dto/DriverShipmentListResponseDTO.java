@@ -31,6 +31,9 @@ public class DriverShipmentListResponseDTO {
 	// 예상 운송 소요 시간 (분)
 	private int durationMin;
 
+	// 도로 거리 (km) — 기사 화면에 "40.5km · 약 76분"으로 보인다 (11-26 전체 점검)
+	private double distanceKm;
+
 	// 배차 신청 가능 여부
 	private boolean canApply;
 

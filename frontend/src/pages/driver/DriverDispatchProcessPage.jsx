@@ -24,7 +24,7 @@ const NEXT_STEP = {
 
 // PHOTO_REQUIRED 등 에러 코드 → 사람이 읽는 문장 (UI 점검표: 에러 코드 그대로 X)
 const ERROR_MESSAGES = {
-    PHOTO_REQUIRED: '사진이 필요해요. 아래에서 사진을 먼저 올려주세요.',
+    PHOTO_REQUIRED: '사진이 필요해요. 위 사진 칸에서 사진을 골라 주세요.',
     NOT_ASSIGNED_DRIVER: '이 배송의 배정 기사가 아니에요.',
     INVALID_STATUS_CHANGE: '지금 상태에서는 이 작업을 할 수 없어요. 새로고침 후 다시 시도해 주세요.',
 }
@@ -102,6 +102,8 @@ const DriverDispatchProcessPage = () => {
     // 경로 지도 좌표 (DRV-03): 배차 상세에는 좌표가 없어 배송 상세 API(배정 기사도 조회 가능)로 받는다.
     // 실패해도 화면은 그대로 — 지도 없이 주소 글자만 보인다
     const [route, setRoute] = useState(null)
+    // 요청 차종 이름 · 거리도 배차 상세에는 없어 배송 상세에서 받는다 (11-26 점검: '차종 2'처럼 번호만 보이던 곳)
+    const [detailInfo, setDetailInfo] = useState(null)
     useEffect(() => {
         let active = true
         getShipment(shipmentId)
@@ -111,6 +113,7 @@ const DriverDispatchProcessPage = () => {
                     origin: { lat: detail.originLat, lng: detail.originLng, label: detail.originAddress },
                     dest: { lat: detail.destLat, lng: detail.destLng, label: detail.destAddress },
                 })
+                setDetailInfo({ vehicleTypeName: detail.vehicleTypeName, distanceKm: detail.distanceKm })
             })
             .catch(() => {})
         return () => { active = false }
@@ -135,16 +138,21 @@ const DriverDispatchProcessPage = () => {
         )
     }
 
+    // 고른 사진을 서버에 올린다 — [N장 업로드] 버튼과 다음 단계 버튼이 같이 쓴다
+    const saveSelectedPhotos = async () => {
+        const saved = await uploadShipmentImages(shipmentId, photos, step.photoType)
+        setUploadedCount((prev) => prev + saved.length)
+        setUploadedPhotos((prev) => [...prev, ...photos.slice(0, saved.length)])
+        setPhotos([])
+        clearPhotoInput()
+    }
+
     const handleUpload = async () => {
-        if (!step?.photoType || photos.length === 0 || uploading) return
+        if (!step?.photoType || photos.length === 0 || uploading || changing) return
         setUploading(true)
         setUploadError('')
         try {
-            const saved = await uploadShipmentImages(shipmentId, photos, step.photoType)
-            setUploadedCount((prev) => prev + saved.length)
-            setUploadedPhotos((prev) => [...prev, ...photos.slice(0, saved.length)])
-            setPhotos([])
-            clearPhotoInput()
+            await saveSelectedPhotos()
         } catch (err) {
             setUploadError(toMessage(err))
         } finally {
@@ -160,10 +168,12 @@ const DriverDispatchProcessPage = () => {
 
     // "다음 단계" 버튼 → 상태 변경
     const handleNextStep = async () => {
-        if (!step || changing) return
+        if (!step || changing || uploading) return
         setChanging(true)
         setActionError('')
         try {
+            // 사진을 골라만 두고 [N장 업로드]를 안 눌렀으면 먼저 올린다 (11-26 점검: 바로 누르면 '사진이 필요해요'로 실패했다)
+            if (step.photoType && photos.length > 0) await saveSelectedPhotos()
             await changeShipmentStatus(shipmentId, step.next)
             // 성공: 화면 데이터의 상태를 바로 갱신 (상세 API 머지 후에는 재조회로 교체)
             setShipment((prev) => ({ ...prev, status: step.next }))
@@ -205,7 +215,7 @@ const DriverDispatchProcessPage = () => {
             <DriverCargoCard
                 cargoName={shipment.cargoName}
                 cargoWeightKg={shipment.cargoWeightKg}
-                vehicleTypeLabel={shipment.vehicleTypeId != null ? `차종 ${shipment.vehicleTypeId}` : undefined}
+                vehicleTypeLabel={detailInfo?.vehicleTypeName}
                 fare={shipment.fare}
             />
 
@@ -218,6 +228,7 @@ const DriverDispatchProcessPage = () => {
                 destDetail={shipment.destDetail}
                 pickupAt={shipment.pickupAt}
                 durationMin={shipment.durationMin}
+                distanceKm={detailInfo?.distanceKm}
             />
 
             {/* 고객 요청사항 */}

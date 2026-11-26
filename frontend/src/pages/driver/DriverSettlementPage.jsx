@@ -6,12 +6,17 @@ import {
     getDriverSettlementRangeItems,
 } from '../../api/dispatchApi'
 import Badge from '../../components/common/Badge'
+import { formatDateTime } from '../../util/formatUtil'
 
 // 리뷰 카드에 처음 보여 줄 개수 (나머지는 '모두 보기')
 const REVIEW_PREVIEW_COUNT = 3
 
 // 월 정산 상태 → 배지 · 설명 (서버 settlementStatus: OPEN · PENDING · PAID · NONE)
 const getPayoutInfo = (item) => {
+    // 지난달까지인데 마감 전이고 완료 0건 = 정산할 것이 없는 달 (자동 마감은 바로 전달만 한다, 11-26 점검)
+    if (item.settlementStatus === 'OPEN' && item.completedCount === 0 && item.month < getCurrentMonth()) {
+        return { label: '정산 없음', tone: 'gray', detail: '완료한 배송이 없어 정산할 금액이 없어요' }
+    }
     switch (item.settlementStatus) {
         case 'PAID':
             return {
@@ -146,6 +151,7 @@ const DriverSettlementPage = () => {
                     months.map((value, index) => ({
                         month: value,
                         totalFare: Number(summaries[index]?.totalFare ?? 0),
+                        completedCount: Number(summaries[index]?.completedCount ?? 0),
                         // 그 달 정산 상태 · 지급액 (관리자 월 마감 뒤)
                         settlementStatus: summaries[index]?.settlementStatus ?? 'OPEN',
                         commissionRate: summaries[index]?.commissionRate ?? null,
@@ -629,9 +635,7 @@ const DriverSettlementPage = () => {
                                                     </p>
 
                                                     <p className="mt-1 text-xs text-gray-500">
-                                                        {item.completedAt
-                                                            ? new Date(item.completedAt).toLocaleString('ko-KR')
-                                                            : '완료일 정보 없음'}
+                                                        {formatDateTime(item.completedAt, '완료일 정보 없음')}
                                                     </p>
                                                 </div>
                                             </div>

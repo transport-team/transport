@@ -9,7 +9,7 @@ import { requestTossPayment } from '../../util/tossPayments'
 import { getVehicleTypes } from '../../api/vehicleApi'
 import { Input } from '../../components/common'
 import { CARGO_CATEGORIES } from '../../util/cargoCatalog'
-import { formatPhone, PHONE_PATTERN } from '../../util/formatUtil'
+import { formatKm, formatPhone, PHONE_PATTERN } from '../../util/formatUtil'
 import { loadKakaoMapSdk } from '../../util/kakaoMapLoader'
 
 const initialForm = {
@@ -807,7 +807,7 @@ const ShipmentCreatePage = () => {
 
         {fare && (
           <dl className="mt-5 space-y-3 text-sm text-gray-600">
-            <div className="flex justify-between"><dt>거리</dt><dd>{fare.distanceKm}km</dd></div>
+            <div className="flex justify-between"><dt>거리</dt><dd>{formatKm(fare.distanceKm)}</dd></div>
             <div className="flex justify-between"><dt>기본 운임</dt><dd>{fare.baseFare.toLocaleString()}원</dd></div>
             <div className="flex justify-between"><dt>화물 추가</dt><dd>{fare.cargoFare.toLocaleString()}원</dd></div>
           </dl>
@@ -817,7 +817,7 @@ const ShipmentCreatePage = () => {
           <details className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4" open>
             <summary className="cursor-pointer text-sm font-bold text-blue-700">운임 상세 내역 보기</summary>
             <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
-              <div>거리 <strong>{fare.distanceKm}km</strong></div>
+              <div>거리 <strong>{formatKm(fare.distanceKm)}</strong></div>
               <div>기본 운임 <strong>{fare.baseFare.toLocaleString()}원</strong></div>
               <div>거리 추가 <strong>{fare.distanceFare.toLocaleString()}원</strong></div>
               <div>화물 추가 <strong>{fare.cargoFare.toLocaleString()}원</strong></div>
@@ -849,7 +849,7 @@ const ShipmentCreatePage = () => {
         <details className="mx-5 mb-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 lg:hidden" open>
           <summary className="cursor-pointer text-sm font-bold text-blue-700">운임 상세 내역 보기</summary>
           <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
-            <div>거리 <strong>{fare.distanceKm}km</strong></div>
+            <div>거리 <strong>{formatKm(fare.distanceKm)}</strong></div>
             <div>기본 운임 <strong>{fare.baseFare.toLocaleString()}원</strong></div>
             <div>거리 추가 <strong>{fare.distanceFare.toLocaleString()}원</strong></div>
             <div>화물 추가 <strong>{fare.cargoFare.toLocaleString()}원</strong></div>
