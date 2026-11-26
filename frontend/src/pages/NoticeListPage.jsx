@@ -29,7 +29,7 @@ const NoticeListPage = () => {
 
   return (
     <BasicLayout>
-      <div className="mx-auto grid max-w-3xl gap-4">
+      <div className="mx-auto grid w-full max-w-6xl gap-4">
         <h1 className="text-2xl font-bold">공지사항</h1>
         <form onSubmit={handleSearch} className="flex gap-2">
           <input

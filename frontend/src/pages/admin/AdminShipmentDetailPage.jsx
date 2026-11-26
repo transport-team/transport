@@ -134,7 +134,7 @@ const AdminShipmentDetailPage = () => {
   const canCancelShipment = ADMIN_CANCELABLE.includes(shipment?.status)
 
   return (
-    <section className="mx-auto w-full max-w-4xl space-y-4 pb-10">
+    <section className="mx-auto w-full max-w-6xl space-y-4 pb-10">
       {/* 목록의 검색 조건 · 쪽으로 돌아간다 (목록이 넘겨준 주소, 11-25) */}
       <Link to={`/admin/shipments${location.state?.listSearch ?? ''}`} className="inline-block text-sm text-gray-500 hover:text-blue-700">
         ← 배송 통합 검색으로

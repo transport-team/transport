@@ -557,7 +557,7 @@ const ShipmentCreatePage = () => {
   const isDistanceOnlyFare = fare && fare.durationMin == null
 
   return (
-    <section className="mx-auto min-h-screen w-full max-w-[480px] bg-white pb-32 shadow-lg md:max-w-[768px] lg:grid lg:max-w-[1200px] lg:grid-cols-[minmax(0,650px)_380px] lg:gap-8 lg:bg-transparent lg:pb-10 lg:shadow-none">
+    <section className="mx-auto min-h-screen w-full max-w-[480px] bg-white pb-32 shadow-lg md:max-w-[768px] lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,650px)_380px] lg:gap-8 lg:bg-transparent lg:pb-10 lg:shadow-none">
 
       <header className="sticky top-0 z-25 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur lg:col-span-2">
         <div className="flex items-center gap-3">

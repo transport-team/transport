@@ -189,7 +189,7 @@ const DriverShipmentDetailPage = () => {
     }
 
     return (
-        <section className="mx-auto min-h-screen w-full max-w-[640px] space-y-4 bg-gray-50 px-5 pb-24 pt-5">
+        <section className="mx-auto min-h-screen w-full max-w-6xl space-y-4 pb-24">
             {/* 목록으로 돌아가기 */}
             <Link
                 to={backPath}

@@ -13,7 +13,7 @@ const MENUS = [
 const DriverLayout = () => (
   <div className="min-h-screen bg-gray-50">
     <AppHeader menus={MENUS} />
-    <main className="mx-auto w-full max-w-6xl px-4 py-6">
+    <main className="mx-auto w-full min-w-0 max-w-6xl px-4 py-5 sm:px-6 sm:py-7">
       <Outlet />
     </main>
   </div>

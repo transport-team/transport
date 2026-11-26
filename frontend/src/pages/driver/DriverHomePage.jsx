@@ -394,7 +394,7 @@ const DriverHomePage = () => {
   }
 
   return (
-    <section className="grid gap-6">
+    <section className="grid min-w-0 gap-5 sm:gap-6">
 
       {/* 페이지 제목 */}
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -431,7 +431,7 @@ const DriverHomePage = () => {
         {/* 운송 요청 목록 */}
         <Link
           to="/driver/shipments"
-          className="block rounded-2xl border border-blue-100 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-blue-300 hover:shadow-md"
+          className="block rounded-2xl border border-blue-100 bg-white p-4 text-inherit no-underline shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/5 focus-visible:outline-2 focus-visible:outline-blue-600"
         >
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl">
@@ -453,7 +453,7 @@ const DriverHomePage = () => {
         {/* 내 배차 관리 */}
         <Link
           to="/driver/dispatches"
-          className="block rounded-2xl border border-blue-100 bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-blue-300 hover:shadow-md"
+          className="block rounded-2xl border border-blue-100 bg-white p-4 text-inherit no-underline shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/5 focus-visible:outline-2 focus-visible:outline-blue-600"
         >
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl">
@@ -477,7 +477,7 @@ const DriverHomePage = () => {
 
       <div
         id="driver-schedule"
-        className="scroll-mt-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6"
+        className="min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-6"
       >
 
         {/* 달력 제목 및 월 이동 */}
@@ -491,11 +491,11 @@ const DriverHomePage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-between gap-1.5 sm:w-auto sm:justify-start sm:gap-2">
             <button
               type="button"
               onClick={moveToToday}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50"
+              className="min-h-10 rounded-lg border border-gray-200 px-3 text-xs text-gray-600 hover:bg-gray-50"
             >
               오늘
             </button>
@@ -503,19 +503,19 @@ const DriverHomePage = () => {
             <button
               type="button"
               onClick={() => changeMonth(-1)}
-              className="rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"
             >
               ‹
             </button>
 
-            <span className="min-w-28 text-center text-base font-bold text-gray-900 sm:text-lg">
+            <span className="min-w-0 flex-1 text-center text-sm font-bold text-gray-900 sm:min-w-28 sm:flex-none sm:text-lg">
               {currentMonth.year}년 {currentMonth.month + 1}월
             </span>
 
             <button
               type="button"
               onClick={() => changeMonth(1)}
-              className="rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"
             >
               ›
             </button>
@@ -523,7 +523,7 @@ const DriverHomePage = () => {
         </div>
 
         {/* 일정 상태 범례 */}
-        <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-600 sm:gap-x-4 sm:text-sm">
           <div className="flex items-center gap-2">
             <span className="h-4 w-4 rounded-full bg-green-500" />
             신청 대기
@@ -551,7 +551,7 @@ const DriverHomePage = () => {
         </div>
 
         {/* 달력 */}
-        <div className="mt-5 grid grid-cols-7 gap-1 sm:gap-2">
+        <div className="mt-5 grid min-w-0 grid-cols-7 gap-0.5 sm:gap-2">
           {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
             <div
               key={day}
@@ -606,7 +606,7 @@ const DriverHomePage = () => {
                   setWorkEditing(false)
                   setWorkForm({ date: '', start: '', end: '' })
                 }}
-                className={`flex min-h-[92px] flex-col items-center rounded-xl border-2 p-2 transition sm:min-h-[116px] sm:p-3 ${isToday
+                className={`flex min-h-[82px] min-w-0 flex-col items-center rounded-lg border p-0.5 transition sm:min-h-[116px] sm:rounded-xl sm:border-2 sm:p-3 ${isToday
                   ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-100'
                   : isOff
                     ? 'border-slate-300 bg-slate-100 hover:bg-slate-200'
@@ -616,7 +616,7 @@ const DriverHomePage = () => {
                   }`}
               >
                 <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-full text-base font-semibold sm:h-10 sm:w-10 sm:text-lg ${isToday
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10 sm:text-lg ${isToday
                     ? 'bg-amber-500 font-bold text-white'
                     : 'text-gray-900'
                     }`}
@@ -625,44 +625,45 @@ const DriverHomePage = () => {
                 </span>
 
                 {isToday && (
-                  <span className="mt-1 text-[11px] font-bold text-amber-700">
+                  <span className="mt-0.5 text-[10px] font-bold text-amber-700 sm:mt-1 sm:text-[11px]">
                     오늘
                   </span>
                 )}
 
-                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                <div className="mt-1 flex flex-wrap justify-center gap-0.5 sm:mt-2 sm:gap-1.5">
                   {pendingCount > 0 && (
                     <span
                       title={`신청 대기 ${pendingCount}건`}
-                      className="h-4 w-4 rounded-full bg-green-500 shadow-sm"
+                      className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-sm sm:h-4 sm:w-4"
                     />
                   )}
 
                   {assignedCount > 0 && (
                     <span
                       title={`배차 확정 ${assignedCount}건`}
-                      className="h-4 w-4 rounded-full bg-blue-500 shadow-sm"
+                      className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-sm sm:h-4 sm:w-4"
                     />
                   )}
 
                   {completedCount > 0 && (
                     <span
                       title={`배송 완료 ${completedCount}건`}
-                      className="h-4 w-4 rounded-full bg-purple-500 shadow-sm"
+                      className="h-2.5 w-2.5 rounded-full bg-purple-500 shadow-sm sm:h-4 sm:w-4"
                     />
                   )}
                 </div>
 
                 {isOff && (
-                  <span className="mt-1 rounded-md bg-slate-200 px-2 py-1 text-xs font-bold text-slate-700">
-                    {isDefaultOff(dateKey) && !offDays.includes(dateKey) ? '기본 휴무' : '휴무'}
+                  <span className="mt-1 max-w-full rounded-md bg-slate-200 px-1 py-0.5 text-[10px] font-bold text-slate-700 sm:px-2 sm:py-1 sm:text-xs">
+                    <span className="sm:hidden">휴무</span>
+                    <span className="hidden sm:inline">{isDefaultOff(dateKey) && !offDays.includes(dateKey) ? '기본 휴무' : '휴무'}</span>
                   </span>
                 )}
 
                 {!isOff && isChangedWorkTime && (
                   <span
                     title={`변경 근무 ${hhmm(work.startTime)} ~ ${hhmm(work.endTime)}${work.overnight ? ' (다음 날)' : ''}`}
-                    className="mt-1 rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700"
+                    className="mt-1 max-w-full rounded-md border border-emerald-200 bg-emerald-50 px-0.5 py-0.5 text-[10px] font-semibold text-emerald-700 sm:px-1.5 sm:text-[11px]"
                   >
                     <span className="sm:hidden">변경</span>
                     <span className="hidden sm:inline">{hhmm(work.startTime)}~{hhmm(work.endTime)}</span>
@@ -846,7 +847,7 @@ const DriverHomePage = () => {
                 </div>
 
                 {/* 출발지 및 도착지 */}
-                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-gray-50 p-4">
+                <div className="mt-4 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl bg-gray-50 p-3 sm:gap-3 sm:p-4">
                   <div className="min-w-0">
                     <p className="mb-1 text-xs text-gray-500">
                       출발지
@@ -906,7 +907,7 @@ const DriverHomePage = () => {
                 </div>
 
                 {/* 출발지 및 도착지 */}
-                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-gray-50 p-4">
+                <div className="mt-4 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl bg-gray-50 p-3 sm:gap-3 sm:p-4">
                   <div className="min-w-0">
                     <p className="mb-1 text-xs text-gray-500">
                       출발지
@@ -969,7 +970,7 @@ const DriverHomePage = () => {
                 </div>
 
                 {/* 출발지 및 도착지 */}
-                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-gray-50 p-4">
+                <div className="mt-4 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl bg-gray-50 p-3 sm:gap-3 sm:p-4">
                   <div className="min-w-0">
                     <p className="mb-1 text-xs text-gray-500">
                       출발지

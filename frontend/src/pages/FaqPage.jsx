@@ -38,7 +38,7 @@ const FaqPage = () => {
 
   return (
     <BasicLayout>
-      <div className="mx-auto grid max-w-3xl gap-4">
+      <div className="mx-auto grid w-full max-w-6xl gap-4">
         <h1 className="text-2xl font-bold">자주 묻는 질문</h1>
         <div role="group" aria-label="분류" className="flex flex-wrap gap-2">
           {TABS.map((value) => (

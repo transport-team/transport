@@ -242,7 +242,7 @@ const DriverSettlementPage = () => {
     ]
 
     return (
-        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+        <div className="mx-auto w-full max-w-6xl py-4 sm:py-6">
             {/* 페이지 제목 */}
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-900">

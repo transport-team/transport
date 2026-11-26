@@ -94,9 +94,9 @@ const ShipmentListPage = () => {
   }
 
   return (
-    <section className="mx-auto min-h-screen w-full max-w-[640px] bg-gray-50 pb-16">
-      <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
+    <section className="mx-auto min-h-screen w-full max-w-6xl pb-16">
+      <header className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link className="text-2xl leading-none text-gray-700" to="/customer" aria-label="고객 홈으로">←</Link>
             <h1 className="text-lg font-bold text-gray-900">내 배송 내역</h1>
@@ -109,7 +109,7 @@ const ShipmentListPage = () => {
           </Link>
         </div>
 
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="mt-4 flex flex-wrap gap-2">
           {FILTER_TABS.map((tab) => (
             <button
               key={tab.value}
@@ -127,7 +127,7 @@ const ShipmentListPage = () => {
         </div>
       </header>
 
-      <div className="space-y-3 px-5 pt-5">
+      <div className="space-y-4 pt-5">
         <Link to="/customer/dispatch-requests" className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
           <span className="flex items-center gap-2">지원한 기사 및 배차 확정
             {Object.values(applicantCounts).reduce((total, count) => total + Number(count || 0), 0) > 0 && (

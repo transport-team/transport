@@ -145,7 +145,7 @@ const ShipmentDetailPage = () => {
 
   if (loading) {
     return (
-      <section className="mx-auto min-h-screen max-w-[640px] bg-gray-50 p-6">
+      <section className="mx-auto min-h-screen w-full max-w-6xl py-6">
         <div className="rounded-2xl bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
           상세 정보를 불러오는 중입니다...
         </div>
@@ -155,7 +155,7 @@ const ShipmentDetailPage = () => {
 
   if (error || !shipment) {
     return (
-      <section className="mx-auto min-h-screen max-w-[640px] bg-gray-50 p-6">
+      <section className="mx-auto min-h-screen w-full max-w-6xl py-6">
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-600">
           {error || '배송 정보를 찾을 수 없습니다.'}
         </div>
@@ -172,8 +172,8 @@ const ShipmentDetailPage = () => {
   const cancelLocked = ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED'].includes(shipment.status)
 
   return (
-    <section className="mx-auto min-h-screen w-full max-w-[640px] bg-gray-50 pb-28">
-      <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur">
+    <section className="mx-auto min-h-screen w-full max-w-6xl pb-28">
+      <header className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link className="text-2xl leading-none text-gray-700" to={backToList} aria-label="내 배송 목록으로">←</Link>
@@ -183,7 +183,7 @@ const ShipmentDetailPage = () => {
         </div>
       </header>
 
-      <div className="space-y-4 px-5 pt-5">
+      <div className="space-y-4 pt-5">
         <ShipmentProgress status={shipment.status} />
 
         {shipment.status === 'REQUESTED' && (
@@ -322,7 +322,7 @@ const ShipmentDetailPage = () => {
       </div>
 
       {(canPay || canCancel || cancelLocked) && (
-        <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[640px] gap-3 border-t border-gray-100 bg-white/95 px-5 py-3.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur ${cancelLocked ? 'flex flex-col' : 'flex'}`}>
+        <div className={`fixed inset-x-0 bottom-0 z-30 mx-auto max-w-6xl gap-3 border-t border-gray-100 bg-white/95 px-5 py-3.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur ${cancelLocked ? 'flex flex-col' : 'flex'}`}>
           {(canCancel || cancelLocked) && (
             <button
               type="button"

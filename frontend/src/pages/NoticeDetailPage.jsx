@@ -25,7 +25,7 @@ const NoticeDetailPage = () => {
 
   return (
     <BasicLayout>
-      <article className="mx-auto grid max-w-3xl gap-4">
+      <article className="mx-auto grid w-full max-w-6xl gap-4">
         {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         {!notice && !error && <p className="text-sm text-gray-500">공지를 불러오는 중...</p>}
         {notice && (
