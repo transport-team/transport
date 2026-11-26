@@ -6,20 +6,20 @@ const StatCard = ({ label, value, unit = '', note, to }) => {
   const body = (
     <>
       <p className="text-sm text-text-secondary">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-text">
+      <p className="mt-2 break-words text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
         {typeof value === 'number' ? value.toLocaleString('ko-KR') : value}
         {unit && <span className="ml-0.5 text-base font-medium text-text-secondary">{unit}</span>}
       </p>
       {note && <p className="mt-1 text-xs text-gray-neutral">{note}</p>}
     </>
   )
-  const className = 'block rounded-lg border border-border bg-surface p-4'
+  const className = 'block min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5'
 
   if (!to) {
     return <div className={className}>{body}</div>
   }
   return (
-    <Link to={to} className={`${className} transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary`}>
+    <Link to={to} className={`${className} transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary`}>
       {body}
     </Link>
   )

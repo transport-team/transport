@@ -32,19 +32,19 @@ const Modal = ({ open, onClose, title, children, size = 'md' }) => {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className={`${SIZES[size] ?? SIZES.md} max-h-[90vh] w-full overflow-y-auto rounded-xl bg-surface shadow-xl`}
+        className={`${SIZES[size] ?? SIZES.md} max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-2xl bg-surface shadow-xl sm:max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
             <h2 id={titleId} className="text-lg font-semibold text-text">{title}</h2>
             <button
               type="button"
@@ -58,7 +58,7 @@ const Modal = ({ open, onClose, title, children, size = 'md' }) => {
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>,
     document.body

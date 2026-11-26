@@ -26,13 +26,13 @@ const MyPage = () => {
   }, [])
 
   return (
-    <section className="grid max-w-xl gap-4">
-      <h1 className="text-xl font-bold">내 정보</h1>
+    <section className="mx-auto grid w-full min-w-0 max-w-6xl gap-4 sm:gap-5">
+      <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">내 정보</h1>
       {error && <p role="alert" className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       {!member && !error && <p className="text-sm text-gray-500">내 정보 불러오는 중...</p>}
       {member && (
         <>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-lg border border-gray-200 bg-white p-4 text-sm">
+          <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm shadow-sm sm:gap-x-8 sm:p-6">
             <dt className="text-gray-500">이름</dt>
             <dd>{member.name}</dd>
             <dt className="text-gray-500">이메일</dt>
@@ -45,7 +45,7 @@ const MyPage = () => {
           {member.role === 'DRIVER' && (
             <Link
               to="/driver/vehicles"
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-blue-300 hover:bg-blue-50"
+              className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm transition hover:border-blue-300 hover:bg-blue-50"
             >
               <span>
                 <span className="block font-semibold">
@@ -74,7 +74,7 @@ const MyPage = () => {
                 type="button"
                 onClick={() => toggleEdit(id)}
                 aria-expanded={activeEdit === id}
-                className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${activeEdit === id
+                className={`min-h-11 rounded-xl border px-2 py-2.5 text-sm font-semibold transition-colors sm:px-3 ${activeEdit === id
                   ? 'border-blue-700 bg-blue-700 text-white'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-blue-500 hover:text-blue-700'}`}
               >
@@ -88,7 +88,7 @@ const MyPage = () => {
           {member.role !== 'ADMIN' && (
             <Link
               to={`${ROLE_HOME[member.role]}/inquiries`}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-sm hover:border-blue-600"
+              className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm transition hover:border-blue-600"
             >
               <span>
                 <span className="block font-semibold">1:1 문의</span>

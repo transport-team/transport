@@ -266,7 +266,7 @@ const CustomerDispatchRequestsPage = () => {
   }, [shipmentId, loading, listState.items, listState.error])
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-5 pb-12">
+    <section className="mx-auto w-full max-w-6xl space-y-5 pb-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">배차 요청</h1>

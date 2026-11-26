@@ -15,14 +15,14 @@ const Table = forwardRef((
   ref
 ) => {
   return (
-    <div className={`overflow-x-auto rounded-lg border border-border ${className}`} ref={ref} {...props}>
+    <div className={`max-w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`} ref={ref} {...props}>
       <table className="w-full text-sm" role="grid">
-        <thead className="bg-gray-light">
+        <thead className="bg-slate-50">
           <tr>
             {columns.map((col) => (
               <th
                 key={col.key}
-                className={`px-4 py-3 text-left font-medium text-text-secondary ${col.className || ''}`}
+                className={`whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide text-slate-600 ${col.className || ''}`}
                 scope="col"
               >
                 {col.header}

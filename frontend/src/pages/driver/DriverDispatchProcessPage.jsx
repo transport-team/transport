@@ -200,7 +200,7 @@ const DriverDispatchProcessPage = () => {
     }
 
     return (
-        <section className="mx-auto min-h-screen w-full max-w-[640px] space-y-4 bg-gray-50 px-5 pb-24 pt-5">
+        <section className="mx-auto min-h-screen w-full max-w-6xl space-y-4 pb-24">
             <Link to="/driver/dispatches?tab=assigned" className="inline-block text-sm font-semibold text-blue-700 hover:text-blue-800">← 배차 확정 목록으로</Link>
 
             {/* 제목 + 상태 배지 */}

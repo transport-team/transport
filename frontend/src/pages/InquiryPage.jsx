@@ -49,10 +49,10 @@ const InquiryPage = () => {
   }
 
   return (
-    <section className="grid max-w-3xl gap-6">
+    <section className="mx-auto grid w-full max-w-6xl gap-6">
       <h1 className="text-xl font-bold">1:1 문의</h1>
 
-      <form onSubmit={handleSubmit} className="grid gap-3 rounded-lg border border-gray-200 bg-white p-4">
+      <form onSubmit={handleSubmit} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <h2 className="font-semibold">새 문의</h2>
         <label className="grid gap-1 text-sm">
           <span className="font-medium">제목</span>
@@ -78,7 +78,7 @@ const InquiryPage = () => {
         </div>
       </form>
 
-      <div className="grid gap-3">
+      <div className="grid min-w-0 gap-3">
         <h2 className="font-semibold">내 문의</h2>
         {listError && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{listError}</p>}
         {!pageData && !listError && <p className="text-sm text-gray-500">내 문의를 불러오는 중...</p>}
