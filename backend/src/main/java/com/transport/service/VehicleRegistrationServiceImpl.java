@@ -59,16 +59,16 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
             throw new CustomException(ErrorCode.INVALID_INPUT, "현재 등록할 수 없는 차종입니다.");
         }
 
-        // 4. 이미 등록된 차량 또는 승인 대기 신청의 차종 중복 확인
-        if (vehicleRepository.existsByDriverAndVehicleType(driver, vehicleType)
+        // 4. 활성 차량(정비 중 포함) 또는 승인 대기 신청의 차종 중복 확인
+        if (vehicleRepository.existsByDriverAndVehicleTypeAndStatusNot(driver, vehicleType, VehicleStatus.INACTIVE)
                 || requestRepository.existsByDriverAndVehicleTypeAndStatus(
                         driver, vehicleType, VehicleRegistrationStatus.PENDING)) {
 
             throw new CustomException(ErrorCode.DUPLICATE_DRIVER_VEHICLE_TYPE);
         }
 
-        // 5. 차량번호 중복 확인
-        if (vehicleRepository.existsByPlateNo(requestDTO.getPlateNo())
+        // 5. 비활성화된 차량번호는 재등록 가능, 사용 중인 번호 및 승인 대기 신청은 중복 방지
+        if (vehicleRepository.existsByPlateNoAndStatusNot(requestDTO.getPlateNo(), VehicleStatus.INACTIVE)
                 || requestRepository.existsByPlateNoAndStatus(
                         requestDTO.getPlateNo(), VehicleRegistrationStatus.PENDING)) {
 
@@ -191,12 +191,12 @@ public class VehicleRegistrationServiceImpl implements VehicleRegistrationServic
             throw new CustomException(ErrorCode.INVALID_INPUT, "현재 등록할 수 없는 차종입니다.");
         }
 
-        // 4. 승인 시점에 중복 검사
-        if (vehicleRepository.existsByDriverAndVehicleType(driver, vehicleType)) {
+        // 4. 승인 시점에도 INACTIVE 기록을 제외하고 중복 검사
+        if (vehicleRepository.existsByDriverAndVehicleTypeAndStatusNot(driver, vehicleType, VehicleStatus.INACTIVE)) {
             throw new CustomException(ErrorCode.DUPLICATE_DRIVER_VEHICLE_TYPE);
         }
 
-        if (vehicleRepository.existsByPlateNo(request.getPlateNo())) {
+        if (vehicleRepository.existsByPlateNoAndStatusNot(request.getPlateNo(), VehicleStatus.INACTIVE)) {
             throw new CustomException(ErrorCode.DUPLICATE_VEHICLE_PLATE);
         }
 

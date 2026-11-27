@@ -54,7 +54,7 @@ public class VehicleServiceImpl implements VehicleService {
 	public Long registerVehicle(VehicleRequestDTO vehicleRequestDTO) {
 
 		// 1. 차량번호 중복 검사
-		if (vehicleRepository.existsByPlateNo(vehicleRequestDTO.getPlateNo())) {
+		if (vehicleRepository.existsByPlateNoAndStatusNot(vehicleRequestDTO.getPlateNo(), VehicleStatus.INACTIVE)) {
 			throw new CustomException(ErrorCode.DUPLICATE_VEHICLE_PLATE);
 		}
 
@@ -71,7 +71,7 @@ public class VehicleServiceImpl implements VehicleService {
 					.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
 			// 동일 기사가 동일 차종의 차량을 이미 등록했는지 확인
-			if (vehicleRepository.existsByDriverAndVehicleType(driver, vehicleType)) {
+			if (vehicleRepository.existsByDriverAndVehicleTypeAndStatusNot(driver, vehicleType, VehicleStatus.INACTIVE)) {
 			    throw new CustomException(ErrorCode.DUPLICATE_DRIVER_VEHICLE_TYPE);
 			}
 		}
@@ -92,7 +92,7 @@ public class VehicleServiceImpl implements VehicleService {
 		Vehicle vehicle = vehicleRepository.findById(id).orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
 		// 2. 다른 차량과 차량번호가 중복되는지 확인
-		if (vehicleRepository.existsByPlateNoAndIdNot(vehicleRequestDTO.getPlateNo(), id)) {
+		if (vehicleRepository.existsByPlateNoAndIdNotAndStatusNot(vehicleRequestDTO.getPlateNo(), id, VehicleStatus.INACTIVE)) {
 
 			throw new CustomException(ErrorCode.DUPLICATE_VEHICLE_PLATE);
 		}
@@ -110,7 +110,7 @@ public class VehicleServiceImpl implements VehicleService {
 					.orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
 			// 수정 중인 차량을 제외하고 동일 기사 + 동일 차종 중복 확인
-			if (vehicleRepository.existsByDriverAndVehicleTypeAndIdNot(driver, vehicleType, id)) {
+			if (vehicleRepository.existsByDriverAndVehicleTypeAndIdNotAndStatusNot(driver, vehicleType, id, VehicleStatus.INACTIVE)) {
 			    throw new CustomException(ErrorCode.DUPLICATE_DRIVER_VEHICLE_TYPE);
 			}
 		}
