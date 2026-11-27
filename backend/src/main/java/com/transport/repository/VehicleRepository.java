@@ -17,16 +17,17 @@ import java.util.Optional;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
-    boolean existsByPlateNo(String plateNo);
+    // 삭제 승인(INACTIVE)된 이력은 중복 등록 검사에서 제외한다.
+    boolean existsByDriverAndVehicleTypeAndStatusNot(Driver driver, VehicleType vehicleType, VehicleStatus status);
 
-    // 동일 기사가 동일 차종의 차량을 이미 등록했는지 확인
-    boolean existsByDriverAndVehicleType(Driver driver, VehicleType vehicleType);
+    boolean existsByPlateNoAndStatusNot(String plateNo, VehicleStatus status);
 
     // 수정 중인 차량을 제외하고 차량번호 중복 확인
-    boolean existsByPlateNoAndIdNot(String plateNo, Long id);
+    boolean existsByPlateNoAndIdNotAndStatusNot(String plateNo, Long id, VehicleStatus status);
 
     // 수정 중인 차량을 제외하고 동일 기사 + 동일 차종 중복 확인
-    boolean existsByDriverAndVehicleTypeAndIdNot(Driver driver, VehicleType vehicleType, Long id);
+    boolean existsByDriverAndVehicleTypeAndIdNotAndStatusNot(
+            Driver driver, VehicleType vehicleType, Long id, VehicleStatus status);
 
     // 관리자 기사별 차량 보기 (등록일 최신순, 비활성 차량도 포함)
     @EntityGraph(attributePaths = "vehicleType")

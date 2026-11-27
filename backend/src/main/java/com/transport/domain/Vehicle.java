@@ -7,13 +7,7 @@ import lombok.*;
 
 // 차량
 @Entity
-@Table(
-    name = "vehicle",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_vehicle_driver_type",
-        columnNames = {"driver_id", "vehicle_type_id"}
-    )
-)
+@Table(name = "vehicle")
 @Getter
 @ToString(exclude = { "vehicleType", "driver" })
 @Builder
@@ -25,7 +19,7 @@ public class Vehicle extends BaseEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(nullable = false, unique = true, length = 20)
+	@Column(nullable = false, length = 20)
 	private String plateNo; // 차량번호
 
 	@ManyToOne(fetch = FetchType.LAZY)
